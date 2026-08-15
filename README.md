@@ -1,5 +1,21 @@
 # Music Production Library Manager
 
+## Getting Started (Current Implementation)
+
+This repo implements the MVP described below: a scanner CLI, an Express/SQLite API, and a React/Vite frontend. Music.app integration is not implemented; Finder-tag sync is a documented no-op stub (see `src/services/FileTagService.ts`).
+
+```bash
+npm install
+cp .env.example .env      # edit MUSIC_ROOT if ~/Music isn't your production folder
+
+npm run scan -- ~/Music   # one-off CLI scan, prints a summary, populates SQLite
+npm run dev                # starts the API (port 5175) + Vite frontend (port 5173)
+npm test                   # scanner/classifier unit + integration tests
+npm run build && npm start # production build + run
+```
+
+Open `http://localhost:5173` while `npm run dev` is running to use the UI: scan, search/filter, edit status and tags, and reveal files/projects in Finder.
+
 ## Project Goal
 
 Build a local macOS app that scans a music-production folder and gives the user a clear overview of their Ableton projects, exported audio files, drafts, and sample-library content.

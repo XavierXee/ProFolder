@@ -1,10 +1,40 @@
 {
-  "name": "${PROJECT_NAME}",
+  "name": "music-library-manager",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Local macOS app for scanning, indexing, and tagging a music-production folder (Ableton projects, exports, drafts, sample libraries).",
+  "type": "module",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:api": "tsx watch src/api/server.ts",
+    "dev:frontend": "vite",
+    "dev": "concurrently -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:frontend\"",
+    "scan": "tsx src/cli/scan.ts",
+    "build:backend": "tsc -p tsconfig.json && mkdir -p dist/database/migrations && cp src/database/migrations/*.sql dist/database/migrations/",
+    "build:frontend": "vite build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "start": "node dist/api/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "private": true
+  "dependencies": {
+    "better-sqlite3": "^11.9.1",
+    "express": "^4.21.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@tailwindcss/vite": "^4.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
+  }
 }

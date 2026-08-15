@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e2433 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #1e2433; border-radius: 2px; }
+
+body {
+  background-color: #0d0f14;
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Light mode overrides applied when .light is on <html> */
+html.light body {
+  background-color: #f4f6f9;
+  color: #0f172a;
+}
+
+html.light * {
+  scrollbar-color: #cbd5e1 transparent;
+}
+html.light *::-webkit-scrollbar-thumb { background: #cbd5e1; }
+
+/* Light-mode row flash */
+html.light .row-flash {
+  animation: flash-row-light 1.2s ease-out forwards;
+}
+
+@keyframes flash-row-light {
+  0%   { background-color: #dbeafe; }
+  100% { background-color: transparent; }
+}
+
+html.light .skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 800px 100%;
+}
+
+@keyframes flash-row {
+  0%   { background-color: #1e2d4a; }
+  100% { background-color: transparent; }
+}
+
+.row-flash {
+  animation: flash-row 1.2s ease-out forwards;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #13161e 25%, #1e2433 50%, #13161e 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 4px;
+}
