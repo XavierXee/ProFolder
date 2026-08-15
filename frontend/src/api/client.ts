@@ -117,3 +117,21 @@ export function getConfig(): Promise<{ musicRoot: string }> {
 export function getStats(): Promise<LibraryStats> {
   return request<LibraryStats>(`/stats`);
 }
+
+export type FolderNode = {
+  name: string;
+  path: string;
+  children: FolderNode[];
+};
+
+export function getFolderTree(): Promise<FolderNode> {
+  return request<FolderNode>(`/folders/tree`);
+}
+
+export function getExclusions(): Promise<{ excludedPaths: string[] }> {
+  return request(`/scan/exclusions`);
+}
+
+export function setExclusions(excludedPaths: string[]): Promise<{ excludedPaths: string[] }> {
+  return request(`/scan/exclusions`, { method: "PUT", body: JSON.stringify({ excludedPaths }) });
+}

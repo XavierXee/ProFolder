@@ -18,6 +18,7 @@ import {
   markRemoved as markProjectsRemoved,
 } from "../database/repositories/projectRepository.js";
 import { insertScanRun } from "../database/repositories/scanRunRepository.js";
+import { getExcludedPaths } from "../database/repositories/scanExclusionRepository.js";
 
 /** Directories that directly contain a .als file, mapped to the chosen .als path (most recent if several). */
 function collectAlsDirs(files: WalkEntry[]): Map<string, { path: string; mtime: Date }> {
@@ -38,7 +39,8 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
   const rootPath = path.resolve(options.rootPath);
   const audioExtensions = options.audioExtensions ?? DEFAULT_AUDIO_EXTENSIONS;
 
-  const { files, foldersScanned, errors } = await walkDirectory(rootPath);
+  const excludedPaths = new Set(getExcludedPaths(db));
+  const { files, foldersScanned, errors } = await walkDirectory(rootPath, excludedPaths);
   const audioFiles = files.filter((f) => isAudioFile(f.filename, audioExtensions));
   const alsDirsWithMtime = collectAlsDirs(files);
   const alsDirs = new Map<string, string>(

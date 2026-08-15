@@ -20,11 +20,19 @@ export type WalkResult = {
  * Recursively walks rootPath collecting every non-ignored file.
  * One bad directory/file (permission error, broken symlink, race with a
  * deleted file) is recorded in `errors` and skipped — it never aborts the walk.
+ *
+ * `excludedRelativePaths` are relative-path-from-root directories the caller wants
+ * skipped entirely (user-configured scan exclusions) — not recursing into them also
+ * excludes everything beneath, with no extra bookkeeping needed.
  */
-export async function walkDirectory(rootPath: string): Promise<WalkResult> {
+export async function walkDirectory(
+  rootPath: string,
+  excludedRelativePaths: ReadonlySet<string> = new Set()
+): Promise<WalkResult> {
   const files: WalkEntry[] = [];
   const errors: ScanError[] = [];
   let foldersScanned = 0;
+  const normalizedRoot = path.resolve(rootPath);
 
   async function walk(dirAbsPath: string): Promise<void> {
     let entries;
@@ -41,6 +49,8 @@ export async function walkDirectory(rootPath: string): Promise<WalkResult> {
       try {
         if (entry.isDirectory()) {
           if (shouldIgnoreDir(entry.name)) continue;
+          const relativePath = path.relative(normalizedRoot, absolutePath);
+          if (excludedRelativePaths.has(relativePath)) continue;
           await walk(absolutePath);
         } else if (entry.isFile() || entry.isSymbolicLink()) {
           if (shouldIgnoreFile(entry.name)) continue;
@@ -48,7 +58,7 @@ export async function walkDirectory(rootPath: string): Promise<WalkResult> {
           if (!stats.isFile()) continue;
           files.push({
             absolutePath,
-            relativePath: path.relative(rootPath, absolutePath),
+            relativePath: path.relative(normalizedRoot, absolutePath),
             filename: entry.name,
             stats: { size: stats.size, birthtime: stats.birthtime, mtime: stats.mtime },
           });
@@ -59,6 +69,6 @@ export async function walkDirectory(rootPath: string): Promise<WalkResult> {
     }
   }
 
-  await walk(path.resolve(rootPath));
+  await walk(normalizedRoot);
   return { files, foldersScanned, errors };
 }

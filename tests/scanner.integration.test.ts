@@ -7,6 +7,7 @@ import { runScan } from "../src/scanner/scanner.js";
 import { runMigrations } from "../src/database/db.js";
 import { findAllActive as findAllActiveFiles, updateStatus, setTags } from "../src/database/repositories/audioFileRepository.js";
 import { findAllActive as findAllActiveProjects } from "../src/database/repositories/projectRepository.js";
+import { setExcludedPaths } from "../src/database/repositories/scanExclusionRepository.js";
 
 let tmpRoot: string;
 let db: Database.Database;
@@ -106,5 +107,29 @@ describe("runScan", () => {
       | { is_removed: number }
       | undefined;
     expect(raw?.is_removed).toBe(1);
+  });
+
+  it("skips excluded folders entirely and their contents never appear", async () => {
+    setExcludedPaths(db, ["Sample Library"]);
+
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.audioFilesFound).toBe(2);
+    const files = findAllActiveFiles(db);
+    expect(files.find((f) => f.filename === "kick.wav")).toBeUndefined();
+  });
+
+  it("soft-deletes files that fall under a newly-added exclusion on a rescan", async () => {
+    await runScan({ rootPath: tmpRoot }, db);
+    expect(findAllActiveFiles(db)).toHaveLength(3);
+
+    setExcludedPaths(db, [path.join("Ableton Projects", "Track B")]);
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.audioFilesFound).toBe(2);
+    expect(stats.removedFiles).toBe(1);
+    const activeFiles = findAllActiveFiles(db);
+    expect(activeFiles.find((f) => f.filename === "Track B - Draft.wav")).toBeUndefined();
+    expect(activeFiles.find((f) => f.filename === "Track A - Final.wav")).toBeDefined();
   });
 });

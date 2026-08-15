@@ -2,6 +2,7 @@ import { Router } from "express";
 import type Database from "better-sqlite3";
 import { runScan } from "../../scanner/scanner.js";
 import { getLastScanRun } from "../../database/repositories/scanRunRepository.js";
+import { getExcludedPaths, setExcludedPaths } from "../../database/repositories/scanExclusionRepository.js";
 import { config } from "../../config/config.js";
 import { asyncHandler } from "../asyncHandler.js";
 
@@ -26,6 +27,26 @@ export function createScanRouter(db: Database.Database): Router {
         return;
       }
       res.json(last);
+    })
+  );
+
+  router.get(
+    "/exclusions",
+    asyncHandler(async (_req, res) => {
+      res.json({ excludedPaths: getExcludedPaths(db) });
+    })
+  );
+
+  router.put(
+    "/exclusions",
+    asyncHandler(async (req, res) => {
+      const { excludedPaths } = req.body as { excludedPaths?: string[] };
+      if (!Array.isArray(excludedPaths) || !excludedPaths.every((p) => typeof p === "string")) {
+        res.status(400).json({ error: "excludedPaths must be an array of strings" });
+        return;
+      }
+      setExcludedPaths(db, excludedPaths);
+      res.json({ excludedPaths: getExcludedPaths(db) });
     })
   );
 

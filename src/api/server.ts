@@ -7,6 +7,7 @@ import { createProjectsRouter } from "./routes/projects.js";
 import { createScanRouter } from "./routes/scan.js";
 import { createRevealRouter } from "./routes/reveal.js";
 import { createStatsRouter } from "./routes/stats.js";
+import { createFoldersRouter } from "./routes/folders.js";
 
 export function createServer() {
   const db = openDb(config.dbPath);
@@ -24,6 +25,7 @@ export function createServer() {
   app.use("/api/scan", createScanRouter(db));
   app.use("/api/reveal", createRevealRouter(finderService));
   app.use("/api/stats", createStatsRouter(db));
+  app.use("/api/folders", createFoldersRouter());
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error(err);
