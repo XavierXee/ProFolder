@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { shouldIgnoreDir, shouldIgnoreFile } from "./ignoreRules.js";
+import { shouldIgnoreDir, shouldIgnoreFile, type IgnoreDirOptions } from "./ignoreRules.js";
 
 export type FolderNode = {
   name: string;
@@ -23,10 +23,11 @@ const MAX_DEPTH = 8;
  */
 export async function buildFolderTree(
   rootPath: string,
-  options: { includeFiles?: boolean } = {}
+  options: { includeFiles?: boolean; ignoreDirOptions?: IgnoreDirOptions } = {}
 ): Promise<FolderNode> {
   const normalizedRoot = path.resolve(rootPath);
   const includeFiles = options.includeFiles ?? false;
+  const ignoreDirOptions = options.ignoreDirOptions ?? {};
 
   async function walk(absPath: string, relativePath: string, depth: number): Promise<FolderNode[]> {
     if (depth >= MAX_DEPTH) return [];
@@ -39,7 +40,7 @@ export async function buildFolderTree(
     }
 
     const dirs = entries
-      .filter((e) => e.isDirectory() && !shouldIgnoreDir(e.name))
+      .filter((e) => e.isDirectory() && !shouldIgnoreDir(e.name, ignoreDirOptions))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     const nodes: FolderNode[] = [];

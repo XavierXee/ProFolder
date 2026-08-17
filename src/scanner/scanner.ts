@@ -21,6 +21,7 @@ import {
 } from "../database/repositories/projectRepository.js";
 import { insertScanRun } from "../database/repositories/scanRunRepository.js";
 import { getExcludedPaths } from "../database/repositories/scanExclusionRepository.js";
+import { getScanSettings } from "../config/scanSettings.js";
 
 export async function runScan(options: ScanOptions, db: Database.Database): Promise<ScanStats> {
   const startedAt = new Date();
@@ -28,7 +29,8 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
   const audioExtensions = options.audioExtensions ?? DEFAULT_AUDIO_EXTENSIONS;
 
   const excludedPaths = new Set(getExcludedPaths(db));
-  const { files, directories, foldersScanned, errors } = await walkDirectory(rootPath, excludedPaths);
+  const scanSettings = getScanSettings(db);
+  const { files, directories, foldersScanned, errors } = await walkDirectory(rootPath, excludedPaths, scanSettings);
   const audioFiles = files.filter((f) => isAudioFile(f.filename, audioExtensions));
 
   // Every visited folder gets a row (so the UI can list plain folders alongside DAW

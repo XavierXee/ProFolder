@@ -160,6 +160,19 @@ export async function chooseMusicRoot(): Promise<string | undefined> {
   return result.path;
 }
 
+export type ScanSettings = {
+  excludeSamplesFolders: boolean;
+  excludeBackupFolders: boolean;
+};
+
+export function getScanSettings(): Promise<ScanSettings> {
+  return request<ScanSettings>(`/config/scan-settings`);
+}
+
+export function setScanSettings(patch: Partial<ScanSettings>): Promise<ScanSettings> {
+  return request<ScanSettings>(`/config/scan-settings`, { method: "PUT", body: JSON.stringify(patch) });
+}
+
 export function getStats(): Promise<LibraryStats> {
   return request<LibraryStats>(`/stats`);
 }

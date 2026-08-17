@@ -26,6 +26,26 @@ describe("shouldIgnoreDir", () => {
     expect(shouldIgnoreDir("Backups")).toBe(false);
     expect(shouldIgnoreDir("Old Backup Files")).toBe(false);
   });
+
+  it("ignores Backup by default but respects excludeBackupFolders: false", () => {
+    expect(shouldIgnoreDir("Backup")).toBe(true);
+    expect(shouldIgnoreDir("Backup", { excludeBackupFolders: false })).toBe(false);
+  });
+
+  it("ignores Samples folders by default, case-insensitively", () => {
+    expect(shouldIgnoreDir("Samples")).toBe(true);
+    expect(shouldIgnoreDir("samples")).toBe(true);
+    expect(shouldIgnoreDir("SAMPLES")).toBe(true);
+  });
+
+  it("respects excludeSamplesFolders: false", () => {
+    expect(shouldIgnoreDir("Samples", { excludeSamplesFolders: false })).toBe(false);
+  });
+
+  it("does not ignore folders that merely contain the word samples", () => {
+    expect(shouldIgnoreDir("Sample Packs")).toBe(false);
+    expect(shouldIgnoreDir("Samples Old")).toBe(false);
+  });
 });
 
 describe("shouldIgnoreFile", () => {

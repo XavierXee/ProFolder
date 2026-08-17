@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { shouldIgnoreDir, shouldIgnoreFile } from "./ignoreRules.js";
+import { shouldIgnoreDir, shouldIgnoreFile, type IgnoreDirOptions } from "./ignoreRules.js";
 import type { ScanError } from "./types.js";
 
 export type WalkEntry = {
@@ -32,10 +32,13 @@ export type WalkResult = {
  * `excludedRelativePaths` are relative-path-from-root directories the caller wants
  * skipped entirely (user-configured scan exclusions) — not recursing into them also
  * excludes everything beneath, with no extra bookkeeping needed.
+ *
+ * `ignoreDirOptions` controls the toggleable Backup/Samples folder rules (see ignoreRules.ts).
  */
 export async function walkDirectory(
   rootPath: string,
-  excludedRelativePaths: ReadonlySet<string> = new Set()
+  excludedRelativePaths: ReadonlySet<string> = new Set(),
+  ignoreDirOptions: IgnoreDirOptions = {}
 ): Promise<WalkResult> {
   const files: WalkEntry[] = [];
   const directories: WalkDirInfo[] = [];
@@ -62,7 +65,7 @@ export async function walkDirectory(
       const absolutePath = path.join(dirAbsPath, entry.name);
       try {
         if (entry.isDirectory()) {
-          if (shouldIgnoreDir(entry.name)) continue;
+          if (shouldIgnoreDir(entry.name, ignoreDirOptions)) continue;
           const relativePath = path.relative(normalizedRoot, absolutePath);
           if (excludedRelativePaths.has(relativePath)) continue;
           await walk(absolutePath);

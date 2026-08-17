@@ -9,6 +9,7 @@ import {
 import { buildFolderTree } from "../../scanner/folderTree.js";
 import { walkDirectory } from "../../scanner/walk.js";
 import { classifyFolders } from "../../scanner/dawDetector.js";
+import { getScanSettings } from "../../config/scanSettings.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { parsePositiveInt, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "../pagination.js";
 
@@ -56,10 +57,12 @@ export function createProjectsRouter(db: Database.Database): Router {
 
       // Live filesystem read (not DB-driven) so the panel always reflects what's
       // actually on disk right now. walkDirectory/shouldIgnoreDir already skip
-      // Backup folders, node_modules, dot-dirs, etc. — same rules the scanner uses.
+      // Backup/Samples folders (per current scan settings), node_modules, dot-dirs,
+      // etc. — same rules the scanner uses.
+      const scanSettings = getScanSettings(db);
       const [subfolderTree, { files, directories }] = await Promise.all([
-        buildFolderTree(project.path, { includeFiles: true }),
-        walkDirectory(project.path),
+        buildFolderTree(project.path, { includeFiles: true, ignoreDirOptions: scanSettings }),
+        walkDirectory(project.path, new Set(), scanSettings),
       ]);
 
       const classifications = classifyFolders(files, directories);

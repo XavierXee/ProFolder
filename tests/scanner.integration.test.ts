@@ -8,6 +8,7 @@ import { runMigrations } from "../src/database/db.js";
 import { findAllActive as findAllActiveFiles, updateStatus, setTags } from "../src/database/repositories/audioFileRepository.js";
 import { findAllActive as findAllActiveProjects } from "../src/database/repositories/projectRepository.js";
 import { setExcludedPaths } from "../src/database/repositories/scanExclusionRepository.js";
+import { setScanSettings } from "../src/config/scanSettings.js";
 
 let tmpRoot: string;
 let db: Database.Database;
@@ -239,5 +240,37 @@ describe("runScan", () => {
     expect(stats.audioFilesFound).toBe(3);
     const files = findAllActiveFiles(db);
     expect(files.find((f) => f.filename === "old-bounce.wav")).toBeUndefined();
+  });
+
+  it("scans a Backup folder once excludeBackupFolders is turned off", async () => {
+    await writeFile("Ableton Projects/Track A/Backup/old-bounce.wav", "old-bounce-audio");
+    setScanSettings(db, { excludeBackupFolders: false });
+
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.audioFilesFound).toBe(4);
+    const files = findAllActiveFiles(db);
+    expect(files.find((f) => f.filename === "old-bounce.wav")).toBeDefined();
+  });
+
+  it("excludes a project's Samples folder from scanning by default", async () => {
+    await writeFile("Ableton Projects/Track A/Samples/kick.wav", "sample-audio");
+
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.audioFilesFound).toBe(3);
+    const files = findAllActiveFiles(db);
+    expect(files.find((f) => f.filename === "kick.wav" && f.relativePath.includes("Samples"))).toBeUndefined();
+  });
+
+  it("scans a Samples folder once excludeSamplesFolders is turned off", async () => {
+    await writeFile("Ableton Projects/Track A/Samples/kick.wav", "sample-audio");
+    setScanSettings(db, { excludeSamplesFolders: false });
+
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.audioFilesFound).toBe(4);
+    const files = findAllActiveFiles(db);
+    expect(files.find((f) => f.filename === "kick.wav" && f.relativePath.includes("Samples"))).toBeDefined();
   });
 });

@@ -9,6 +9,7 @@ import FileDetailPanel from "./components/FileDetailPanel.js";
 import ProjectDetailPanel from "./components/ProjectDetailPanel.js";
 import MetricsPanel from "./components/MetricsPanel.js";
 import ScanFolderPanel from "./components/ScanFolderPanel.js";
+import SettingsPanel from "./components/SettingsPanel.js";
 import { ProjectsTable } from "./components/ProjectsTable.js";
 import RootPathControl from "./components/RootPathControl.js";
 import * as api from "./api/client.js";
@@ -62,6 +63,7 @@ export default function App() {
   const [stats, setStats] = useState<LibraryStats | undefined>();
   const [showMetrics, setShowMetrics] = useState(false);
   const [showScanPanel, setShowScanPanel] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("projects");
 
   const selectedFile = files.find((f) => f.id === selectedId) ?? null;
@@ -171,6 +173,7 @@ export default function App() {
             onClick={() => {
               setSelectedId(null);
               setSelectedProjectId(null);
+              setShowSettings(false);
               setShowScanPanel(true);
             }}
             className="px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
@@ -201,6 +204,28 @@ export default function App() {
               <MetricsPanel stats={stats} lastScanChanges={lastScanChanges} isDark={isDark} onClose={() => setShowMetrics(false)} />
             )}
           </div>
+
+          <button
+            onClick={() => {
+              setSelectedId(null);
+              setSelectedProjectId(null);
+              setShowScanPanel(false);
+              setShowSettings(true);
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.559-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"
+              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Settings
+          </button>
 
           <div className={`border-l pl-4 ${sectionBorder}`}>
             <button
@@ -328,6 +353,8 @@ export default function App() {
         onClose={() => setShowScanPanel(false)}
         onScanComplete={handleScanComplete}
       />
+
+      <SettingsPanel open={showSettings} isDark={isDark} onClose={() => setShowSettings(false)} />
 
       <footer className={`border-t px-6 py-2 flex items-center justify-between ${isDark ? "border-white/5" : "border-black/5"}`}>
         <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>Music Library Manager · Local, read-only scanner</span>
