@@ -1,11 +1,12 @@
 import path from "node:path";
 import { config } from "../config/config.js";
+import { getEffectiveMusicRoot } from "../config/musicRoot.js";
 import { openDb } from "../database/db.js";
 import { runScan } from "../scanner/scanner.js";
 
 async function main(): Promise<void> {
-  const rootPath = process.argv[2] ? path.resolve(process.argv[2]) : config.musicRoot;
   const db = openDb(config.dbPath);
+  const rootPath = process.argv[2] ? path.resolve(process.argv[2]) : getEffectiveMusicRoot(db);
 
   console.log(`Scanning ${rootPath} ...`);
   const stats = await runScan({ rootPath, audioExtensions: config.audioExtensions }, db);
@@ -18,7 +19,7 @@ async function main(): Promise<void> {
   console.log("");
   console.log(`Folders scanned: ${stats.foldersScanned}`);
   console.log(`Audio files found: ${stats.audioFilesFound}`);
-  console.log(`Ableton projects: ${stats.abletonProjectsFound}`);
+  console.log(`DAW projects: ${stats.dawProjectsFound}`);
   console.log(`Likely exports: ${stats.likelyExports}`);
   console.log(`Likely samples: ${stats.likelySamples}`);
   console.log(`Unknown: ${stats.unknownConfidence}`);

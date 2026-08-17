@@ -1,12 +1,24 @@
 import type Database from "better-sqlite3";
 import type { Project } from "../../models/Project.js";
 import type { TrackStatus } from "../../models/AudioFile.js";
+import type { DawType } from "../../scanner/dawDetector.js";
+import type { PagedResult } from "./audioFileRepository.js";
+
+export type ProjectFilters = {
+  search?: string;
+  limit?: number;
+  offset?: number;
+};
 
 type ProjectRow = {
   id: string;
   name: string;
   path: string;
-  ableton_project_file: string | null;
+  marker_path: string | null;
+  daw_type: DawType | null;
+  detected_via: string | null;
+  has_video: number;
+  has_image: number;
   status: TrackStatus;
   first_seen_at: string;
   last_seen_at: string;
@@ -18,7 +30,11 @@ function rowToProject(row: ProjectRow): Project {
     id: row.id,
     name: row.name,
     path: row.path,
-    abletonProjectFile: row.ableton_project_file ?? undefined,
+    markerPath: row.marker_path ?? undefined,
+    dawType: row.daw_type ?? undefined,
+    detectedVia: row.detected_via ?? undefined,
+    hasVideo: row.has_video === 1,
+    hasImage: row.has_image === 1,
     status: row.status,
     firstSeenAt: row.first_seen_at,
     lastSeenAt: row.last_seen_at,
@@ -38,17 +54,25 @@ export function upsertProject(
   project: Omit<Project, "status" | "isRemoved">
 ): void {
   db.prepare(
-    `INSERT INTO projects (id, name, path, ableton_project_file, status, first_seen_at, last_seen_at, is_removed)
-     VALUES (@id, @name, @path, @abletonProjectFile, 'unknown', @firstSeenAt, @lastSeenAt, 0)
+    `INSERT INTO projects (id, name, path, marker_path, daw_type, detected_via, has_video, has_image, status, first_seen_at, last_seen_at, is_removed)
+     VALUES (@id, @name, @path, @markerPath, @dawType, @detectedVia, @hasVideo, @hasImage, 'unknown', @firstSeenAt, @lastSeenAt, 0)
      ON CONFLICT(id) DO UPDATE SET
        name = excluded.name,
        path = excluded.path,
-       ableton_project_file = excluded.ableton_project_file,
+       marker_path = excluded.marker_path,
+       daw_type = excluded.daw_type,
+       detected_via = excluded.detected_via,
+       has_video = excluded.has_video,
+       has_image = excluded.has_image,
        last_seen_at = excluded.last_seen_at,
        is_removed = 0`
   ).run({
     ...project,
-    abletonProjectFile: project.abletonProjectFile ?? null,
+    markerPath: project.markerPath ?? null,
+    dawType: project.dawType ?? null,
+    detectedVia: project.detectedVia ?? null,
+    hasVideo: project.hasVideo ? 1 : 0,
+    hasImage: project.hasImage ? 1 : 0,
   });
 }
 
@@ -60,11 +84,44 @@ export function markRemoved(db: Database.Database, ids: string[], lastSeenAt: st
   ).run(lastSeenAt, ...ids);
 }
 
-export function findAllActive(db: Database.Database): Project[] {
+function buildProjectWhereClause(filters: ProjectFilters): { where: string; params: Record<string, unknown> } {
+  const clauses: string[] = ["is_removed = 0"];
+  const params: Record<string, unknown> = {};
+
+  if (filters.search) {
+    clauses.push("(name LIKE @search OR id LIKE @search)");
+    params.search = `%${filters.search}%`;
+  }
+
+  return { where: clauses.join(" AND "), params };
+}
+
+/** Paginated, filtered list of active projects, plus the total count matching the filters (ignoring limit/offset). */
+export function findAllActivePaged(
+  db: Database.Database,
+  filters: ProjectFilters = {}
+): PagedResult<Project> {
+  const { where, params } = buildProjectWhereClause(filters);
+
+  const total = (
+    db.prepare(`SELECT COUNT(*) AS count FROM projects WHERE ${where}`).get(params) as {
+      count: number;
+    }
+  ).count;
+
+  const limit = filters.limit ?? total;
+  const offset = filters.offset ?? 0;
+
   const rows = db
-    .prepare(`SELECT * FROM projects WHERE is_removed = 0 ORDER BY name`)
-    .all() as ProjectRow[];
-  return rows.map(rowToProject);
+    .prepare(`SELECT * FROM projects WHERE ${where} ORDER BY name LIMIT @limit OFFSET @offset`)
+    .all({ ...params, limit, offset }) as ProjectRow[];
+
+  return { items: rows.map(rowToProject), total };
+}
+
+/** Unpaginated convenience wrapper — use sparingly (e.g. small internal lookups), not for the main project list. */
+export function findAllActive(db: Database.Database): Project[] {
+  return findAllActivePaged(db).items;
 }
 
 export function findById(db: Database.Database, id: string): Project | undefined {

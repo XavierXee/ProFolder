@@ -9,7 +9,7 @@ type ScanRunRow = {
   duration_ms: number | null;
   folders_scanned: number;
   audio_files_found: number;
-  ableton_projects_found: number;
+  daw_projects_found: number;
   likely_exports: number;
   likely_samples: number;
   unknown_confidence: number;
@@ -27,7 +27,7 @@ function rowToScanStats(row: ScanRunRow): ScanStats {
     durationMs: row.duration_ms ?? 0,
     foldersScanned: row.folders_scanned,
     audioFilesFound: row.audio_files_found,
-    abletonProjectsFound: row.ableton_projects_found,
+    dawProjectsFound: row.daw_projects_found,
     likelyExports: row.likely_exports,
     likelySamples: row.likely_samples,
     unknownConfidence: row.unknown_confidence,
@@ -43,11 +43,11 @@ export function insertScanRun(db: Database.Database, stats: ScanStats): number {
     .prepare(
       `INSERT INTO scan_runs (
         root_path, started_at, finished_at, duration_ms, folders_scanned, audio_files_found,
-        ableton_projects_found, likely_exports, likely_samples, unknown_confidence,
+        daw_projects_found, likely_exports, likely_samples, unknown_confidence,
         new_files, modified_files, removed_files, errors
       ) VALUES (
         @rootPath, @startedAt, @finishedAt, @durationMs, @foldersScanned, @audioFilesFound,
-        @abletonProjectsFound, @likelyExports, @likelySamples, @unknownConfidence,
+        @dawProjectsFound, @likelyExports, @likelySamples, @unknownConfidence,
         @newFiles, @modifiedFiles, @removedFiles, @errors
       )`
     )

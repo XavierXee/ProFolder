@@ -7,11 +7,12 @@ export interface FinderService {
 
 /** Reveals a file/folder in Finder via `open -R`. Only works on macOS. */
 export class MacFinderService implements FinderService {
-  constructor(private readonly allowedRoot: string) {}
+  /** Takes a provider function rather than a fixed path, since the configured music root can change at runtime. */
+  constructor(private readonly getAllowedRoot: () => string) {}
 
   async revealInFinder(absolutePath: string): Promise<void> {
     const resolved = path.resolve(absolutePath);
-    const normalizedRoot = path.resolve(this.allowedRoot);
+    const normalizedRoot = path.resolve(this.getAllowedRoot());
     if (resolved !== normalizedRoot && !resolved.startsWith(normalizedRoot + path.sep)) {
       throw new Error("Refusing to reveal a path outside the configured music root");
     }

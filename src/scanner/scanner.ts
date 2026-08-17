@@ -1,8 +1,10 @@
 import path from "node:path";
 import type Database from "better-sqlite3";
-import { walkDirectory, type WalkEntry } from "./walk.js";
+import { walkDirectory } from "./walk.js";
 import { isAudioFile, DEFAULT_AUDIO_EXTENSIONS } from "./audioDetector.js";
-import { isAbletonProjectFile, findProjectRoot } from "./projectDetector.js";
+import { findProjectRoot } from "./projectDetector.js";
+import { classifyFolders } from "./dawDetector.js";
+import { findMediaAncestors } from "./mediaDetector.js";
 import { computeExportConfidence } from "./exportClassifier.js";
 import type { ScanOptions, ScanStats, ScanError } from "./types.js";
 import {
@@ -20,36 +22,27 @@ import {
 import { insertScanRun } from "../database/repositories/scanRunRepository.js";
 import { getExcludedPaths } from "../database/repositories/scanExclusionRepository.js";
 
-/** Directories that directly contain a .als file, mapped to the chosen .als path (most recent if several). */
-function collectAlsDirs(files: WalkEntry[]): Map<string, { path: string; mtime: Date }> {
-  const alsDirs = new Map<string, { path: string; mtime: Date }>();
-  for (const file of files) {
-    if (!isAbletonProjectFile(file.filename)) continue;
-    const dir = path.dirname(file.absolutePath);
-    const existing = alsDirs.get(dir);
-    if (!existing || file.stats.mtime > existing.mtime) {
-      alsDirs.set(dir, { path: file.absolutePath, mtime: file.stats.mtime });
-    }
-  }
-  return alsDirs;
-}
-
 export async function runScan(options: ScanOptions, db: Database.Database): Promise<ScanStats> {
   const startedAt = new Date();
   const rootPath = path.resolve(options.rootPath);
   const audioExtensions = options.audioExtensions ?? DEFAULT_AUDIO_EXTENSIONS;
 
   const excludedPaths = new Set(getExcludedPaths(db));
-  const { files, foldersScanned, errors } = await walkDirectory(rootPath, excludedPaths);
+  const { files, directories, foldersScanned, errors } = await walkDirectory(rootPath, excludedPaths);
   const audioFiles = files.filter((f) => isAudioFile(f.filename, audioExtensions));
-  const alsDirsWithMtime = collectAlsDirs(files);
-  const alsDirs = new Map<string, string>(
-    [...alsDirsWithMtime.entries()].map(([dir, info]) => [dir, info.path])
+
+  // Every visited folder gets a row (so the UI can list plain folders alongside DAW
+  // projects); the subset actually recognized as a DAW project is used separately to
+  // associate audio files with their nearest containing project, and to omit plain
+  // subfolders nested inside a project from the folder list.
+  const dawClassifications = classifyFolders(files, directories);
+  const projectDirsForAssociation = new Map(
+    [...dawClassifications.entries()].map(([dir, c]) => [dir, c.markerPath])
   );
+  const { hasVideo, hasImage } = findMediaAncestors(files, rootPath);
 
   const existingFingerprints = loadActiveFingerprints(db);
   const existingProjectIds = loadActiveProjectIds(db);
-  const seenProjectIds = new Set<string>();
 
   let newFiles = 0;
   let modifiedFiles = 0;
@@ -61,23 +54,40 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
   const nowIso = new Date().toISOString();
 
   const tx = db.transaction(() => {
+    const seenProjectIds = new Set<string>();
+
+    // Register every visited folder (except the root itself), classified as a DAW
+    // project where recognized (including package-style ones like .logicx, which the
+    // walker visits like any other directory), otherwise a plain folder. Plain
+    // subfolders nested inside a recognized project are omitted entirely — once a
+    // folder is a project, its internal structure (Exports/, Samples/, etc.) isn't
+    // useful noise in the folder list. A project nested inside another project still
+    // gets its own row, since that's a distinct project, not just a subfolder.
+    for (const dir of directories) {
+      if (dir.relativePath === "") continue;
+      const classification = dawClassifications.get(dir.absolutePath);
+      if (!classification && findProjectRoot(dir.absolutePath, rootPath, projectDirsForAssociation)) {
+        continue;
+      }
+      seenProjectIds.add(dir.relativePath);
+      upsertProject(db, {
+        id: dir.relativePath,
+        name: path.basename(dir.absolutePath),
+        path: dir.absolutePath,
+        markerPath: classification?.markerPath ?? undefined,
+        dawType: classification?.dawType,
+        detectedVia: classification?.detectedVia,
+        hasVideo: hasVideo.has(dir.absolutePath),
+        hasImage: hasImage.has(dir.absolutePath),
+        firstSeenAt: nowIso,
+        lastSeenAt: nowIso,
+      });
+    }
+
     for (const file of audioFiles) {
       const id = file.relativePath;
-      const association = findProjectRoot(file.absolutePath, rootPath, alsDirs);
-      let projectId: string | undefined;
-
-      if (association) {
-        projectId = path.relative(rootPath, association.projectPath);
-        seenProjectIds.add(projectId);
-        upsertProject(db, {
-          id: projectId,
-          name: path.basename(association.projectPath),
-          path: association.projectPath,
-          abletonProjectFile: association.abletonProjectFile,
-          firstSeenAt: nowIso,
-          lastSeenAt: nowIso,
-        });
-      }
+      const association = findProjectRoot(file.absolutePath, rootPath, projectDirsForAssociation);
+      const projectId = association ? path.relative(rootPath, association.projectPath) : undefined;
 
       const { confidence, isExportCandidate } = computeExportConfidence(
         file.relativePath,
@@ -140,7 +150,7 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
     durationMs: finishedAt.getTime() - startedAt.getTime(),
     foldersScanned,
     audioFilesFound: audioFiles.length,
-    abletonProjectsFound: alsDirs.size,
+    dawProjectsFound: dawClassifications.size,
     likelyExports,
     likelySamples,
     unknownConfidence,

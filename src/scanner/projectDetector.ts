@@ -1,31 +1,30 @@
 import path from "node:path";
 
-export function isAbletonProjectFile(filename: string): boolean {
-  return filename.toLowerCase().endsWith(".als");
-}
-
 export type ProjectAssociation = {
   projectPath: string;
-  abletonProjectFile?: string;
+  markerPath: string | null;
 };
 
 /**
- * Walks up from an audio file's absolute path to find the nearest ancestor
- * directory that directly contains a .als file (that directory is "the project").
- * Stops at rootPath — files outside any Ableton project folder are unassociated.
+ * Walks up from an audio file's absolute path to find the nearest ancestor directory
+ * recognized as a DAW project (see `projectDirs`) — that directory is "the project".
+ * Stops at rootPath — files outside any recognized project folder are unassociated.
+ *
+ * `projectDirs` maps a project directory's absolute path to the absolute path of the
+ * file/package that marked it as a project, or `null` if it was recognized via a
+ * marker subfolder instead (e.g. Ableton Project Info, with no project file present).
  */
 export function findProjectRoot(
   audioFileAbsPath: string,
   rootPath: string,
-  alsDirs: ReadonlyMap<string, string>
+  projectDirs: ReadonlyMap<string, string | null>
 ): ProjectAssociation | undefined {
   const normalizedRoot = path.resolve(rootPath);
   let dir = path.dirname(path.resolve(audioFileAbsPath));
 
   while (true) {
-    const alsFile = alsDirs.get(dir);
-    if (alsFile) {
-      return { projectPath: dir, abletonProjectFile: alsFile };
+    if (projectDirs.has(dir)) {
+      return { projectPath: dir, markerPath: projectDirs.get(dir) ?? null };
     }
     if (dir === normalizedRoot) return undefined;
     const parent = path.dirname(dir);

@@ -4,6 +4,7 @@ import { runScan } from "../../scanner/scanner.js";
 import { getLastScanRun } from "../../database/repositories/scanRunRepository.js";
 import { getExcludedPaths, setExcludedPaths } from "../../database/repositories/scanExclusionRepository.js";
 import { config } from "../../config/config.js";
+import { getEffectiveMusicRoot } from "../../config/musicRoot.js";
 import { asyncHandler } from "../asyncHandler.js";
 
 export function createScanRouter(db: Database.Database): Router {
@@ -12,7 +13,7 @@ export function createScanRouter(db: Database.Database): Router {
   router.post(
     "/",
     asyncHandler(async (req, res) => {
-      const rootPath = (req.body as { rootPath?: string })?.rootPath ?? config.musicRoot;
+      const rootPath = (req.body as { rootPath?: string })?.rootPath ?? getEffectiveMusicRoot(db);
       const stats = await runScan({ rootPath, audioExtensions: config.audioExtensions }, db);
       res.json(stats);
     })

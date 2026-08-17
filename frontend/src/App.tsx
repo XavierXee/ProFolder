@@ -1,15 +1,21 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useAudioFiles } from "./hooks/useAudioFiles.js";
+import { useProjects } from "./hooks/useProjects.js";
 import FilterBar from "./components/FilterBar.js";
 import ActiveFilterChips from "./components/ActiveFilterChips.js";
 import { FileTable } from "./components/FileTable.js";
 import { Pagination } from "./components/Pagination.js";
 import FileDetailPanel from "./components/FileDetailPanel.js";
+import ProjectDetailPanel from "./components/ProjectDetailPanel.js";
 import MetricsPanel from "./components/MetricsPanel.js";
 import ScanFolderPanel from "./components/ScanFolderPanel.js";
+import { ProjectsTable } from "./components/ProjectsTable.js";
+import RootPathControl from "./components/RootPathControl.js";
 import * as api from "./api/client.js";
 import type { FileFilters, LibraryStats, ScanStats } from "./api/client.js";
 import type { TrackStatus } from "./types.js";
+
+type Tab = "projects" | "files";
 
 const THEME_STORAGE_KEY = "musicLibraryManager.isDark";
 
@@ -33,17 +39,33 @@ export default function App() {
     refetch,
   } = useAudioFiles();
 
+  const {
+    projects,
+    total: projectsTotal,
+    totalPages: projectsTotalPages,
+    page: projectsPage,
+    pageSize: projectsPageSize,
+    filters: projectFilters,
+    updateFilters: updateProjectFilters,
+    setPage: setProjectsPage,
+    loading: projectsLoading,
+    refetch: refetchProjects,
+  } = useProjects();
+
   const [musicRoot, setMusicRoot] = useState<string | undefined>();
   const [lastScanChanges, setLastScanChanges] = useState<number | null>(null);
   const [banner, setBanner] = useState<string | undefined>();
   const [isDark, setIsDark] = useState(loadStoredIsDark);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [stats, setStats] = useState<LibraryStats | undefined>();
   const [showMetrics, setShowMetrics] = useState(false);
   const [showScanPanel, setShowScanPanel] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>("projects");
 
   const selectedFile = files.find((f) => f.id === selectedId) ?? null;
+  const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
 
   function refreshStats() {
     api.getStats().then(setStats).catch(() => {});
@@ -70,6 +92,7 @@ export default function App() {
     );
     refetch();
     refreshStats();
+    refetchProjects();
   }
 
   async function handleSave(id: string, patch: { status: TrackStatus; tags: string[] }) {
@@ -81,6 +104,12 @@ export default function App() {
     refreshStats();
   }
 
+  async function handleRootPathSave(newPath: string) {
+    const { musicRoot: resolved } = await api.setMusicRoot(newPath);
+    setMusicRoot(resolved);
+    setBanner("Production folder updated. Open Prod Folder and run a scan to index the new location.");
+  }
+
   async function handleReveal(path: string) {
     try {
       await api.reveal(path);
@@ -90,7 +119,19 @@ export default function App() {
   }
 
   function handleRowClick(id: string) {
+    setSelectedProjectId(null);
     setSelectedId((prev) => (prev === id ? null : id));
+  }
+
+  function handleProjectRowClick(id: string) {
+    setSelectedId(null);
+    setSelectedProjectId((prev) => (prev === id ? null : id));
+  }
+
+  function handleTabChange(tab: Tab) {
+    setSelectedId(null);
+    setSelectedProjectId(null);
+    setActiveTab(tab);
   }
 
   function handleSortChange(sortBy: NonNullable<FileFilters["sortBy"]>) {
@@ -119,12 +160,17 @@ export default function App() {
             <h1 className={`text-sm font-semibold ${isDark ? "text-slate-100" : "text-slate-800"}`}>Music Library Manager</h1>
             <p className={`text-xs font-mono ${isDark ? "text-slate-600" : "text-slate-400"}`}>Local Scan Console</p>
           </div>
+
+          <div className={`border-l pl-3 ${sectionBorder}`}>
+            <RootPathControl musicRoot={musicRoot} isDark={isDark} onSave={handleRootPathSave} />
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
           <button
             onClick={() => {
               setSelectedId(null);
+              setSelectedProjectId(null);
               setShowScanPanel(true);
             }}
             className="px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
@@ -156,36 +202,56 @@ export default function App() {
             )}
           </div>
 
-          {musicRoot && (
-            <div className={`border-l pl-4 ${sectionBorder}`}>
-              <span className={`text-xs font-mono truncate max-w-48 block ${isDark ? "text-slate-500" : "text-slate-500"}`} title={musicRoot}>
-                {musicRoot}
-              </span>
-            </div>
-          )}
-
           <div className={`border-l pl-4 ${sectionBorder}`}>
             <button
               onClick={() => setIsDark((d) => !d)}
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              className={`flex items-center gap-1.5 text-xs font-mono transition-colors focus:outline-none focus-visible:underline ${
-                isDark ? "text-slate-600 hover:text-slate-400" : "text-slate-400 hover:text-slate-600"
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              className={`flex items-center justify-center p-1 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                isDark ? "text-slate-600 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"
               }`}
             >
-              {isDark ? "Light" : "Dark"}
+              {isDark ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
+                  />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" />
+                </svg>
+              )}
             </button>
           </div>
         </div>
       </header>
 
       <div className="flex flex-col flex-1 min-h-0">
-        <FilterBar filters={filters} onChange={updateFilters} isDark={isDark} />
-        <ActiveFilterChips filters={filters} onChange={updateFilters} isDark={isDark} />
-
-        <div className={`px-6 py-2 flex items-center justify-between border-b ${isDark ? "border-white/5" : "border-black/5"}`}>
-          <span className={`text-xs font-mono ${isDark ? "text-slate-600" : "text-slate-400"}`}>
-            {loading ? "—" : `${files.length} of ${total} files`}
-          </span>
+        <div className={`flex items-center gap-1 px-6 border-b ${sectionBorder}`}>
+          {(
+            [
+              ["projects", "Project Folders"],
+              ["files", "Audio Files"],
+            ] as [Tab, string][]
+          ).map(([tab, label]) => (
+            <button
+              key={tab}
+              onClick={() => handleTabChange(tab)}
+              aria-current={activeTab === tab}
+              className={`px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                activeTab === tab
+                  ? "border-blue-500 text-blue-400"
+                  : isDark
+                    ? "border-transparent text-slate-500 hover:text-slate-300"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {banner && (
@@ -193,30 +259,67 @@ export default function App() {
             {banner}
           </div>
         )}
-        {error && (
-          <div className={`mx-6 mt-3 px-3 py-2 rounded text-xs font-mono ${isDark ? "bg-red-500/10 text-red-300" : "bg-red-50 text-red-700"}`}>
-            {error}
-          </div>
-        )}
 
-        <main className="flex-1 overflow-auto" aria-live="polite" aria-label="Audio file library">
-          <FileTable
-            files={files}
-            filters={filters}
-            loading={loading}
-            flashId={flashId}
+        {activeTab === "projects" ? (
+          <ProjectsTable
+            projects={projects}
+            total={projectsTotal}
+            totalPages={projectsTotalPages}
+            page={projectsPage}
+            pageSize={projectsPageSize}
+            loading={projectsLoading}
             isDark={isDark}
-            selectedId={selectedId}
-            onSortChange={handleSortChange}
-            onRowClick={handleRowClick}
-            onClearFilters={() => updateFilters({ search: undefined, status: undefined, hasExport: undefined, sortBy: undefined, sortDir: undefined })}
+            search={projectFilters.search}
+            selectedId={selectedProjectId}
+            onSearchChange={(search) => updateProjectFilters({ search })}
+            onPageChange={setProjectsPage}
+            onReveal={handleReveal}
+            onRowClick={handleProjectRowClick}
           />
-        </main>
+        ) : (
+          <>
+            <FilterBar filters={filters} onChange={updateFilters} isDark={isDark} />
+            <ActiveFilterChips filters={filters} onChange={updateFilters} isDark={isDark} />
 
-        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} isDark={isDark} onPageChange={setPage} />
+            <div className={`px-6 py-2 flex items-center justify-between border-b ${isDark ? "border-white/5" : "border-black/5"}`}>
+              <span className={`text-xs font-mono ${isDark ? "text-slate-600" : "text-slate-400"}`}>
+                {loading ? "—" : `${files.length} of ${total} files`}
+              </span>
+            </div>
+
+            {error && (
+              <div className={`mx-6 mt-3 px-3 py-2 rounded text-xs font-mono ${isDark ? "bg-red-500/10 text-red-300" : "bg-red-50 text-red-700"}`}>
+                {error}
+              </div>
+            )}
+
+            <main className="flex-1 overflow-auto" aria-live="polite" aria-label="Audio file library">
+              <FileTable
+                files={files}
+                filters={filters}
+                loading={loading}
+                flashId={flashId}
+                isDark={isDark}
+                selectedId={selectedId}
+                onSortChange={handleSortChange}
+                onRowClick={handleRowClick}
+                onClearFilters={() => updateFilters({ search: undefined, status: undefined, hasExport: undefined, sortBy: undefined, sortDir: undefined })}
+              />
+            </main>
+
+            <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} isDark={isDark} onPageChange={setPage} />
+          </>
+        )}
       </div>
 
       <FileDetailPanel file={selectedFile} isDark={isDark} onClose={() => setSelectedId(null)} onSave={handleSave} onReveal={handleReveal} />
+
+      <ProjectDetailPanel
+        project={selectedProject}
+        isDark={isDark}
+        onClose={() => setSelectedProjectId(null)}
+        onReveal={handleReveal}
+      />
 
       <ScanFolderPanel
         open={showScanPanel}

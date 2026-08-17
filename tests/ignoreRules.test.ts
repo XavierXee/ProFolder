@@ -15,6 +15,17 @@ describe("shouldIgnoreDir", () => {
     expect(shouldIgnoreDir("Track A")).toBe(false);
     expect(shouldIgnoreDir("Exports")).toBe(false);
   });
+
+  it("ignores Ableton's auto-generated Backup folder, case-insensitively", () => {
+    expect(shouldIgnoreDir("Backup")).toBe(true);
+    expect(shouldIgnoreDir("backup")).toBe(true);
+    expect(shouldIgnoreDir("BACKUP")).toBe(true);
+  });
+
+  it("does not ignore folders that merely contain the word backup", () => {
+    expect(shouldIgnoreDir("Backups")).toBe(false);
+    expect(shouldIgnoreDir("Old Backup Files")).toBe(false);
+  });
 });
 
 describe("shouldIgnoreFile", () => {

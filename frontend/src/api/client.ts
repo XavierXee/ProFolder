@@ -1,4 +1,4 @@
-import type { AudioFile, Project, TrackStatus } from "../types.js";
+import type { AudioFile, DawType, Project, TrackStatus } from "../types.js";
 
 const API_BASE = "/api";
 
@@ -36,7 +36,7 @@ export type ScanStats = {
   durationMs: number;
   foldersScanned: number;
   audioFilesFound: number;
-  abletonProjectsFound: number;
+  dawProjectsFound: number;
   likelyExports: number;
   likelySamples: number;
   unknownConfidence: number;
@@ -94,8 +94,44 @@ export function updateTags(id: string, tags: string[]): Promise<AudioFile> {
   });
 }
 
-export function getProjects(): Promise<(Project & { audioFileCount: number })[]> {
-  return request(`/projects`);
+export type ProjectFilters = {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type PagedProjects = {
+  projects: (Project & { audioFileCount: number })[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+export function getProjects(filters: ProjectFilters = {}): Promise<PagedProjects> {
+  const params = new URLSearchParams();
+  if (filters.search) params.set("search", filters.search);
+  params.set("page", String(filters.page ?? 1));
+  params.set("pageSize", String(filters.pageSize ?? 50));
+  const qs = params.toString();
+  return request<PagedProjects>(`/projects${qs ? `?${qs}` : ""}`);
+}
+
+export type NestedDawProjectFile = {
+  dawType: DawType;
+  path: string;
+  relativePath: string;
+  detectedVia: string;
+};
+
+export type ProjectDetail = Project & {
+  audioFiles: AudioFile[];
+  subfolderTree: FolderNode;
+  dawProjectFiles: NestedDawProjectFile[];
+};
+
+export function getProjectDetail(id: string): Promise<ProjectDetail> {
+  return request<ProjectDetail>(`/projects/${encodeURIComponent(id)}`);
 }
 
 export function triggerScan(): Promise<ScanStats> {
@@ -114,6 +150,16 @@ export function getConfig(): Promise<{ musicRoot: string }> {
   return request(`/config`);
 }
 
+export function setMusicRoot(musicRoot: string): Promise<{ musicRoot: string }> {
+  return request(`/config/music-root`, { method: "PUT", body: JSON.stringify({ musicRoot }) });
+}
+
+/** Opens the native macOS folder picker. Resolves with the chosen path, or undefined if the user canceled. */
+export async function chooseMusicRoot(): Promise<string | undefined> {
+  const result = await request<{ path?: string }>(`/config/music-root/choose`, { method: "POST" });
+  return result.path;
+}
+
 export function getStats(): Promise<LibraryStats> {
   return request<LibraryStats>(`/stats`);
 }
@@ -121,6 +167,7 @@ export function getStats(): Promise<LibraryStats> {
 export type FolderNode = {
   name: string;
   path: string;
+  type: "folder" | "file";
   children: FolderNode[];
 };
 

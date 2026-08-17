@@ -101,7 +101,8 @@ export default function ScanFolderPanel({ open, isDark, musicRoot, onClose, onSc
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load folders"))
       .finally(() => setLoading(false));
     setTimeout(() => closeRef.current?.focus(), 50);
-  }, [open]);
+    // Re-fetch whenever the panel opens, and also if the production folder changes while it's open.
+  }, [open, musicRoot]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -135,8 +136,14 @@ export default function ScanFolderPanel({ open, isDark, musicRoot, onClose, onSc
     });
   }
 
-  function handleIncludeEverything() {
+  function handleSelectAll() {
     const next = new Set<string>();
+    setExcluded(next);
+    persistExclusions(next);
+  }
+
+  function handleUnselectAll() {
+    const next = new Set(tree?.children.map((c) => c.path) ?? []);
     setExcluded(next);
     persistExclusions(next);
   }
@@ -193,18 +200,26 @@ export default function ScanFolderPanel({ open, isDark, musicRoot, onClose, onSc
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-1 gap-3">
             <span className={`text-xs font-mono uppercase tracking-wider ${meta}`}>
               {excluded.size > 0 ? `${excluded.size} folder${excluded.size === 1 ? "" : "s"} excluded` : "All folders included"}
             </span>
-            {excluded.size > 0 && (
+            <div className="flex items-center gap-3 flex-shrink-0">
               <button
-                onClick={handleIncludeEverything}
-                className={`text-xs font-mono transition-colors focus:outline-none focus-visible:underline ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800"}`}
+                onClick={handleSelectAll}
+                disabled={excluded.size === 0}
+                className={`text-xs font-mono transition-colors focus:outline-none focus-visible:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800"}`}
               >
-                Include everything
+                Select All
               </button>
-            )}
+              <button
+                onClick={handleUnselectAll}
+                disabled={!tree || tree.children.length === 0 || tree.children.every((c) => excluded.has(c.path))}
+                className={`text-xs font-mono transition-colors focus:outline-none focus-visible:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800"}`}
+              >
+                Unselect All
+              </button>
+            </div>
           </div>
           <div className="mb-3 h-4">
             {saveState === "saving" && <span className={`text-xs font-mono ${meta}`}>Saving…</span>}
@@ -241,7 +256,7 @@ export default function ScanFolderPanel({ open, isDark, musicRoot, onClose, onSc
               disabled={loading || scanning}
               className="px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
             >
-              {scanning ? "Scanning…" : "Start Scan"}
+              {scanning ? "Scanning…" : "Scan"}
             </button>
           </div>
         </div>

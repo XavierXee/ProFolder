@@ -40,7 +40,7 @@ describe("runScan", () => {
     const stats = await runScan({ rootPath: tmpRoot }, db);
 
     expect(stats.audioFilesFound).toBe(3);
-    expect(stats.abletonProjectsFound).toBe(2);
+    expect(stats.dawProjectsFound).toBe(2);
     expect(stats.newFiles).toBe(3);
     expect(stats.modifiedFiles).toBe(0);
     expect(stats.removedFiles).toBe(0);
@@ -59,8 +59,20 @@ describe("runScan", () => {
     const kick = files.find((f) => f.filename === "kick.wav");
     expect(kick?.projectId).toBeUndefined();
 
+    // Every visited folder is listed, except plain subfolders nested inside a project
+    // (Track A/Exports and Track B/Bounce are omitted since their parent is a project):
+    // Ableton Projects, Track A, Track B, Sample Library, Sample Library/Drums.
     const projects = findAllActiveProjects(db);
-    expect(projects).toHaveLength(2);
+    expect(projects).toHaveLength(5);
+    expect(projects.find((p) => p.id === path.join("Ableton Projects", "Track A", "Exports"))).toBeUndefined();
+    expect(projects.find((p) => p.id === path.join("Ableton Projects", "Track B", "Bounce"))).toBeUndefined();
+
+    const dawProjects = projects.filter((p) => p.dawType);
+    expect(dawProjects).toHaveLength(2);
+    expect(dawProjects.every((p) => p.dawType === "ableton")).toBe(true);
+
+    const plainFolder = projects.find((p) => p.id === "Sample Library");
+    expect(plainFolder?.dawType).toBeUndefined();
   });
 
   it("does not create duplicate records on a rescan with no filesystem changes", async () => {
@@ -131,5 +143,101 @@ describe("runScan", () => {
     const activeFiles = findAllActiveFiles(db);
     expect(activeFiles.find((f) => f.filename === "Track B - Draft.wav")).toBeUndefined();
     expect(activeFiles.find((f) => f.filename === "Track A - Final.wav")).toBeDefined();
+  });
+
+  it("recognizes a project folder with an Ableton Project Info subfolder but no .als file", async () => {
+    await writeFile("Ableton Projects/Track C/Ableton Project Info/Project.cfg", "cfg");
+    await writeFile("Ableton Projects/Track C/Bounce/Track C - Bounce.wav", "bounce-audio");
+
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.dawProjectsFound).toBe(3);
+    const files = findAllActiveFiles(db);
+    const bounce = files.find((f) => f.filename === "Track C - Bounce.wav");
+    expect(bounce?.projectId).toBe(path.join("Ableton Projects", "Track C"));
+
+    const projects = findAllActiveProjects(db);
+    const trackC = projects.find((p) => p.id === path.join("Ableton Projects", "Track C"));
+    expect(trackC).toBeDefined();
+    expect(trackC?.dawType).toBe("ableton");
+    expect(trackC?.detectedVia).toBe("Ableton Project Info folder");
+    expect(trackC?.markerPath).toBeUndefined();
+  });
+
+  it("lists a project folder even when it has no audio files at all", async () => {
+    await writeFile("Ableton Projects/Empty Idea/Ableton Project Info/Project.cfg", "cfg");
+
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const projects = findAllActiveProjects(db);
+    expect(projects.find((p) => p.id === path.join("Ableton Projects", "Empty Idea"))).toBeDefined();
+  });
+
+  it("recognizes multiple DAW types in the same library alongside plain folders", async () => {
+    await writeFile("Cubase Projects/My Song/My Song.cpr", "cpr");
+    await writeFile("FL Studio Projects/Beat One/Beat One.flp", "flp");
+    await writeFile("Notes/todo.txt", "todo");
+
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const projects = findAllActiveProjects(db);
+    expect(projects.find((p) => p.id === path.join("Cubase Projects", "My Song"))?.dawType).toBe("cubase");
+    expect(projects.find((p) => p.id === path.join("FL Studio Projects", "Beat One"))?.dawType).toBe("flstudio");
+    expect(projects.find((p) => p.id === "Notes")?.dawType).toBeUndefined();
+  });
+
+  it("excludes plain subfolders nested inside a project from the folder list", async () => {
+    await writeFile("Ableton Projects/Track A/Samples/Imported/loop.wav", "loop-audio");
+
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const projects = findAllActiveProjects(db);
+    // Track A itself is listed, but nothing beneath it is.
+    expect(projects.find((p) => p.id === path.join("Ableton Projects", "Track A"))).toBeDefined();
+    expect(projects.find((p) => p.id === path.join("Ableton Projects", "Track A", "Exports"))).toBeUndefined();
+    expect(projects.find((p) => p.id === path.join("Ableton Projects", "Track A", "Samples"))).toBeUndefined();
+    expect(
+      projects.find((p) => p.id === path.join("Ableton Projects", "Track A", "Samples", "Imported"))
+    ).toBeUndefined();
+    // Folders outside any project are unaffected.
+    expect(projects.find((p) => p.id === "Sample Library")).toBeDefined();
+  });
+
+  it("flags a project's row as having video/image media even when the file is buried in an unlisted subfolder", async () => {
+    await writeFile("Ableton Projects/Track A/Extras/Media/behind-the-scenes.mp4", "video");
+    await writeFile("Ableton Projects/Track A/cover.jpg", "image");
+    await writeFile("Sample Library/kick.wav", "audio-only");
+
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const projects = findAllActiveProjects(db);
+    const trackA = projects.find((p) => p.id === path.join("Ableton Projects", "Track A"))!;
+    expect(trackA.hasVideo).toBe(true);
+    expect(trackA.hasImage).toBe(true);
+
+    const sampleLibrary = projects.find((p) => p.id === "Sample Library")!;
+    expect(sampleLibrary.hasVideo).toBe(false);
+    expect(sampleLibrary.hasImage).toBe(false);
+  });
+
+  it("still lists a project nested inside another project's folder, not just its subfolders", async () => {
+    await writeFile("Ableton Projects/Track A/Nested Cubase/Song.cpr", "cpr");
+
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const projects = findAllActiveProjects(db);
+    const nested = projects.find((p) => p.id === path.join("Ableton Projects", "Track A", "Nested Cubase"));
+    expect(nested?.dawType).toBe("cubase");
+  });
+
+  it("never scans anything inside a project's Backup folder", async () => {
+    await writeFile("Ableton Projects/Track A/Backup/Track A [2026-01-01 120000].als", "old-als");
+    await writeFile("Ableton Projects/Track A/Backup/old-bounce.wav", "old-bounce-audio");
+
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.audioFilesFound).toBe(3);
+    const files = findAllActiveFiles(db);
+    expect(files.find((f) => f.filename === "old-bounce.wav")).toBeUndefined();
   });
 });

@@ -10,8 +10,16 @@ export type WalkEntry = {
   stats: { size: number; birthtime: Date; mtime: Date };
 };
 
+/** A visited directory and the names of its immediate subdirectories (used to detect project markers like "Ableton Project Info"). */
+export type WalkDirInfo = {
+  absolutePath: string;
+  relativePath: string;
+  childDirNames: string[];
+};
+
 export type WalkResult = {
   files: WalkEntry[];
+  directories: WalkDirInfo[];
   foldersScanned: number;
   errors: ScanError[];
 };
@@ -30,6 +38,7 @@ export async function walkDirectory(
   excludedRelativePaths: ReadonlySet<string> = new Set()
 ): Promise<WalkResult> {
   const files: WalkEntry[] = [];
+  const directories: WalkDirInfo[] = [];
   const errors: ScanError[] = [];
   let foldersScanned = 0;
   const normalizedRoot = path.resolve(rootPath);
@@ -43,6 +52,11 @@ export async function walkDirectory(
       return;
     }
     foldersScanned++;
+    directories.push({
+      absolutePath: dirAbsPath,
+      relativePath: path.relative(normalizedRoot, dirAbsPath),
+      childDirNames: entries.filter((e) => e.isDirectory()).map((e) => e.name),
+    });
 
     for (const entry of entries) {
       const absolutePath = path.join(dirAbsPath, entry.name);
@@ -70,5 +84,5 @@ export async function walkDirectory(
   }
 
   await walk(normalizedRoot);
-  return { files, foldersScanned, errors };
+  return { files, directories, foldersScanned, errors };
 }

@@ -9,16 +9,9 @@ import {
 import { findAllActive as findAllActiveProjects } from "../../database/repositories/projectRepository.js";
 import type { AudioFile, TrackStatus } from "../../models/AudioFile.js";
 import { asyncHandler } from "../asyncHandler.js";
+import { parsePositiveInt, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "../pagination.js";
 
 const VALID_STATUSES: TrackStatus[] = ["unknown", "draft", "finished"];
-const DEFAULT_PAGE_SIZE = 50;
-const MAX_PAGE_SIZE = 500;
-
-function parsePositiveInt(value: unknown, fallback: number, max?: number): number {
-  const parsed = typeof value === "string" ? Number.parseInt(value, 10) : NaN;
-  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
-  return max ? Math.min(parsed, max) : parsed;
-}
 
 /** Attaches each project's absolute folder path, so the frontend can offer "reveal project folder" without string-splitting file paths. */
 function withProjectPath(db: Database.Database, file: AudioFile): AudioFile & { projectPath?: string } {

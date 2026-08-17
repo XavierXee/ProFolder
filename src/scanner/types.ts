@@ -12,7 +12,7 @@ export type ScanStats = {
   durationMs: number;
   foldersScanned: number;
   audioFilesFound: number;
-  abletonProjectsFound: number;
+  dawProjectsFound: number;
   likelyExports: number;
   likelySamples: number;
   unknownConfidence: number;
