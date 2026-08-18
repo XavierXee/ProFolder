@@ -1,14 +1,16 @@
 import path from "node:path";
 import { Router } from "express";
 import type Database from "better-sqlite3";
-import { findAllActivePaged, findById } from "../../database/repositories/projectRepository.js";
+import { findAllActive, findAllActivePaged, findById } from "../../database/repositories/projectRepository.js";
 import {
   findAllActive as findAllFiles,
   countActiveGroupedByProject,
 } from "../../database/repositories/audioFileRepository.js";
+import { getExcludedPaths } from "../../database/repositories/scanExclusionRepository.js";
 import { buildFolderTree } from "../../scanner/folderTree.js";
 import { walkDirectory } from "../../scanner/walk.js";
 import { classifyFolders } from "../../scanner/dawDetector.js";
+import { collectSampleFiles, findDuplicateMatches } from "../../scanner/duplicateDetector.js";
 import { getScanSettings } from "../../config/scanSettings.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { parsePositiveInt, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "../pagination.js";
@@ -76,6 +78,44 @@ export function createProjectsRouter(db: Database.Database): Router {
         }));
 
       res.json({ ...project, audioFiles, subfolderTree, dawProjectFiles });
+    })
+  );
+
+  router.get(
+    "/:id/duplicates",
+    asyncHandler(async (req, res) => {
+      const id = req.params.id!;
+      const project = findById(db, id);
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      // Only a recognized DAW project can be a "duplicate" — plain container folders
+      // (which also get rows in `projects`) have no DAW type and are never compared.
+      if (!project.dawType) {
+        res.json({ projectId: id, sampleCount: 0, matches: [] });
+        return;
+      }
+
+      // Only compare against projects currently in the scan list — active (non-removed),
+      // not nested under a user-configured scan exclusion, and made with the same DAW.
+      const excludedPaths = getExcludedPaths(db);
+      const isExcluded = (projectId: string) =>
+        excludedPaths.some((ex) => projectId === ex || projectId.startsWith(`${ex}${path.sep}`));
+      const candidateProjects = findAllActive(db).filter(
+        (p) => p.id !== id && p.dawType === project.dawType && !isExcluded(p.id)
+      );
+
+      const [targetSamples, candidates] = await Promise.all([
+        collectSampleFiles(project.path),
+        Promise.all(
+          candidateProjects.map(async (p) => ({ project: p, samples: await collectSampleFiles(p.path) }))
+        ),
+      ]);
+
+      const matches = findDuplicateMatches(targetSamples, project, candidates);
+      res.json({ projectId: id, sampleCount: targetSamples.length, matches });
     })
   );
 

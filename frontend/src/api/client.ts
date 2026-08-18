@@ -1,4 +1,4 @@
-import type { AudioFile, DawType, Project, TrackStatus } from "../types.js";
+import type { AudioFile, DawType, Project, ProjectDuplicateMatch, TrackStatus } from "../types.js";
 
 const API_BASE = "/api";
 
@@ -132,6 +132,16 @@ export type ProjectDetail = Project & {
 
 export function getProjectDetail(id: string): Promise<ProjectDetail> {
   return request<ProjectDetail>(`/projects/${encodeURIComponent(id)}`);
+}
+
+export type ProjectDuplicatesResult = {
+  projectId: string;
+  sampleCount: number;
+  matches: ProjectDuplicateMatch[];
+};
+
+export function getProjectDuplicates(id: string): Promise<ProjectDuplicatesResult> {
+  return request<ProjectDuplicatesResult>(`/projects/${encodeId(id)}/duplicates`);
 }
 
 export function triggerScan(): Promise<ScanStats> {
