@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
 import type { FolderNode, ScanStats } from "../api/client.js";
 
-function isDescendantOrSelf(candidate: string, ancestor: string): boolean {
+export function isDescendantOrSelf(candidate: string, ancestor: string): boolean {
   return candidate === ancestor || candidate.startsWith(`${ancestor}/`);
 }
 
-function FolderTreeNode({
+export function FolderTreeNode({
   node,
   excluded,
   onToggle,

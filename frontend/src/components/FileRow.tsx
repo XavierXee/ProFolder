@@ -1,8 +1,8 @@
 import type { RefObject } from "react";
 import type { AudioFile } from "../types.js";
 import StatusBadge from "./StatusBadge.js";
-import ExportBadge from "./ExportBadge.js";
-import ConfidenceBar from "./ConfidenceBar.js";
+import ScoreBadge from "./ScoreBadge.js";
+import { RowCheckbox } from "./RowCheckbox.js";
 
 function formatTime(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -14,6 +14,13 @@ function formatTime(iso: string) {
   }).format(new Date(iso));
 }
 
+/** Derives the display location from a file's relative path: everything but the
+ * filename itself, joined with " / ", or "(root)" when the file has no containing folder. */
+export function computeLocation(relativePath: string): string {
+  const locationParts = relativePath.split("/").slice(0, -1);
+  return locationParts.length > 0 ? locationParts.join(" / ") : "(root)";
+}
+
 export function FileRow({
   file,
   isDark,
@@ -21,6 +28,10 @@ export function FileRow({
   isFlash,
   flashRef,
   onClick,
+  checked,
+  onToggleCheck,
+  isPlayingThis,
+  onPlayClick,
 }: {
   file: AudioFile;
   isDark: boolean;
@@ -28,9 +39,12 @@ export function FileRow({
   isFlash: boolean;
   flashRef: RefObject<HTMLTableRowElement> | null;
   onClick: () => void;
+  checked: boolean;
+  onToggleCheck: () => void;
+  isPlayingThis: boolean;
+  onPlayClick: () => void;
 }) {
-  const locationParts = file.relativePath.split("/").slice(0, -1);
-  const location = locationParts.length > 0 ? locationParts.join(" / ") : "(root)";
+  const location = computeLocation(file.relativePath);
 
   return (
     <tr
@@ -47,11 +61,44 @@ export function FileRow({
             : "border-black/5 hover:bg-black/3"
       }`}
     >
-      <td className="px-4 py-3.5">
-        <div className={`text-sm font-medium ${isDark ? "text-slate-200" : "text-slate-800"}`}>{file.filename}</div>
-        <div className={`text-xs font-mono mt-0.5 ${isDark ? "text-slate-600" : "text-slate-400"}`}>{file.extension}</div>
+      <td className="px-4 py-3.5 w-8">
+        <RowCheckbox checked={checked} onChange={onToggleCheck} ariaLabel={`Select ${file.filename}`} />
       </td>
       <td className="px-4 py-3.5">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlayClick();
+            }}
+            aria-label={isPlayingThis ? `Pause ${file.filename}` : `Play ${file.filename}`}
+            className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              isPlayingThis
+                ? isDark
+                  ? "text-blue-400 bg-blue-500/15"
+                  : "text-blue-700 bg-blue-100"
+                : isDark
+                  ? "text-slate-400 hover:text-slate-100 hover:bg-white/10"
+                  : "text-slate-500 hover:text-slate-900 hover:bg-black/10"
+            }`}
+          >
+            {isPlayingThis ? (
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+              </svg>
+            ) : (
+              <svg className="w-3 h-3 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+          </button>
+          <div className="min-w-0">
+            <div className={`text-sm font-medium truncate ${isDark ? "text-slate-200" : "text-slate-800"}`}>{file.filename}</div>
+            <div className={`text-xs font-mono mt-0.5 ${isDark ? "text-slate-600" : "text-slate-400"}`}>{file.extension}</div>
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3.5 w-32">
         <StatusBadge status={file.status} isDark={isDark} />
       </td>
       <td className="px-4 py-3.5 max-w-40">
@@ -74,10 +121,7 @@ export function FileRow({
         <span className={`text-xs font-mono ${isDark ? "text-slate-400" : "text-slate-600"}`}>{file.projectId ?? "—"}</span>
       </td>
       <td className="px-4 py-3.5 min-w-28">
-        <ExportBadge isExportCandidate={file.isExportCandidate} exportConfidence={file.exportConfidence} isDark={isDark} />
-        <div className="mt-1">
-          <ConfidenceBar value={file.exportConfidence} isDark={isDark} />
-        </div>
+        <ScoreBadge score={file.score} isDark={isDark} />
       </td>
       <td className="px-4 py-3.5 max-w-xs">
         <p className={`text-xs leading-relaxed truncate ${isDark ? "text-slate-500" : "text-slate-400"}`} title={file.path}>

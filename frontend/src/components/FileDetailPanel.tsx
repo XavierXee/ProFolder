@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import type { AudioFile, TrackStatus } from "../types.js";
 import StatusBadge from "./StatusBadge.js";
-import ExportBadge from "./ExportBadge.js";
-import ConfidenceBar from "./ConfidenceBar.js";
+import ScoreBadge from "./ScoreBadge.js";
+import { ScoreEditor } from "./ScoreEditor.js";
 import { TagEditor } from "./TagEditor.js";
 import { ALL_STATUSES, STATUS_LABELS, STATUS_PILL_DARK, STATUS_PILL_LIGHT, STATUS_PILL_UNSELECTED_DARK, STATUS_PILL_UNSELECTED_LIGHT } from "../statusStyles.js";
 
-function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatFull(iso: string) {
+export function formatFull(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -26,25 +26,28 @@ function formatFull(iso: string) {
 type Props = {
   file: AudioFile | null;
   isDark: boolean;
+  allTags?: string[];
   onClose: () => void;
-  onSave: (id: string, patch: { status: TrackStatus; tags: string[] }) => Promise<void>;
+  onSaveStatus: (id: string, status: TrackStatus) => Promise<void>;
+  onSaveTags: (id: string, tags: string[]) => Promise<void>;
+  onSaveScore: (id: string, score: number | null) => Promise<void>;
   onReveal: (path: string) => void;
 };
 
-export default function FileDetailPanel({ file, isDark, onClose, onSave, onReveal }: Props) {
+export default function FileDetailPanel({ file, isDark, allTags = [], onClose, onSaveStatus, onSaveTags, onSaveScore, onReveal }: Props) {
   const [status, setStatus] = useState<TrackStatus>("unknown");
   const [tags, setTags] = useState<string[]>([]);
-  const [dirty, setDirty] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [score, setScore] = useState<number | null>(null);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [tagsSaving, setTagsSaving] = useState(false);
+  const [scoreSaving, setScoreSaving] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (file) {
       setStatus(file.status);
       setTags(file.tags);
-      setDirty(false);
-      setSaved(false);
+      setScore(file.score);
       setTimeout(() => closeRef.current?.focus(), 50);
     }
   }, [file?.id]);
@@ -57,34 +60,45 @@ export default function FileDetailPanel({ file, isDark, onClose, onSave, onRevea
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  function handleStatusChange(s: TrackStatus) {
-    setStatus(s);
-    setDirty(s !== file?.status || tagsChanged(tags, file?.tags ?? []));
-    setSaved(false);
-  }
-
-  function handleTagsChange(next: string[]) {
-    setTags(next);
-    setDirty(status !== file?.status || tagsChanged(next, file?.tags ?? []));
-    setSaved(false);
-  }
-
-  function tagsChanged(a: string[], b: string[]): boolean {
-    if (a.length !== b.length) return true;
-    const sortedA = [...a].sort();
-    const sortedB = [...b].sort();
-    return sortedA.some((t, i) => t !== sortedB[i]);
-  }
-
-  async function handleSave() {
-    if (!file) return;
-    setSaving(true);
+  async function handleStatusChange(next: TrackStatus) {
+    if (!file || next === status || statusSaving) return;
+    const previous = status;
+    setStatus(next);
+    setStatusSaving(true);
     try {
-      await onSave(file.id, { status, tags });
-      setDirty(false);
-      setSaved(true);
+      await onSaveStatus(file.id, next);
+    } catch {
+      setStatus(previous);
     } finally {
-      setSaving(false);
+      setStatusSaving(false);
+    }
+  }
+
+  async function handleTagsChange(next: string[]) {
+    if (!file) return;
+    const previous = tags;
+    setTags(next);
+    setTagsSaving(true);
+    try {
+      await onSaveTags(file.id, next);
+    } catch {
+      setTags(previous);
+    } finally {
+      setTagsSaving(false);
+    }
+  }
+
+  async function handleScoreChange(next: number | null) {
+    if (!file || scoreSaving) return;
+    const previous = score;
+    setScore(next);
+    setScoreSaving(true);
+    try {
+      await onSaveScore(file.id, next);
+    } catch {
+      setScore(previous);
+    } finally {
+      setScoreSaving(false);
     }
   }
 
@@ -133,23 +147,15 @@ export default function FileDetailPanel({ file, isDark, onClose, onSave, onRevea
                 <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Project</p>
                 <p className="text-lg font-semibold truncate">{file.projectId ?? "Unassociated"}</p>
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
-                  <StatusBadge status={file.status} isDark={isDark} />
-                  <ExportBadge isExportCandidate={file.isExportCandidate} exportConfidence={file.exportConfidence} isDark={isDark} />
+                  <StatusBadge status={status} isDark={isDark} />
+                  <ScoreBadge score={score} isDark={isDark} />
                   <span className={`text-xs font-mono ${meta}`}>{file.extension}</span>
                 </div>
               </div>
 
-              <div className={`grid grid-cols-2 gap-3 p-4 rounded-lg border ${isDark ? "bg-white/3 border-white/8" : "bg-slate-50 border-slate-200"}`}>
-                <div>
-                  <p className={`text-xs font-mono uppercase tracking-wider mb-1 ${meta}`}>Size</p>
-                  <p className="text-xl font-mono font-semibold tabular-nums">{formatBytes(file.size)}</p>
-                </div>
-                <div>
-                  <p className={`text-xs font-mono uppercase tracking-wider mb-1 ${meta}`}>Export Confidence</p>
-                  <div className="pt-1">
-                    <ConfidenceBar value={file.exportConfidence} isDark={isDark} />
-                  </div>
-                </div>
+              <div className={`p-4 rounded-lg border ${isDark ? "bg-white/3 border-white/8" : "bg-slate-50 border-slate-200"}`}>
+                <p className={`text-xs font-mono uppercase tracking-wider mb-1 ${meta}`}>Size</p>
+                <p className="text-xl font-mono font-semibold tabular-nums">{formatBytes(file.size)}</p>
               </div>
 
               <div>
@@ -177,7 +183,10 @@ export default function FileDetailPanel({ file, isDark, onClose, onSave, onRevea
               <div className={`border-t ${divider}`} />
 
               <div>
-                <p className={`text-xs font-mono uppercase tracking-wider mb-3 ${meta}`}>Status</p>
+                <p className={`text-xs font-mono uppercase tracking-wider mb-3 flex items-center gap-2 ${meta}`}>
+                  Status
+                  {statusSaving && <span className="normal-case tracking-normal">Saving…</span>}
+                </p>
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Select status">
                   {ALL_STATUSES.map((s) => {
                     const selected = status === s;
@@ -185,8 +194,9 @@ export default function FileDetailPanel({ file, isDark, onClose, onSave, onRevea
                       <button
                         key={s}
                         onClick={() => handleStatusChange(s)}
+                        disabled={statusSaving}
                         aria-pressed={selected}
-                        className={`px-3 py-1.5 rounded text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                        className={`px-3 py-1.5 rounded text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed ${
                           selected ? `ring-1 ${statusColors[s]}` : statusUnselected
                         }`}
                       >
@@ -198,36 +208,19 @@ export default function FileDetailPanel({ file, isDark, onClose, onSave, onRevea
               </div>
 
               <div>
-                <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Tags</p>
-                <TagEditor tags={tags} onChange={handleTagsChange} isDark={isDark} />
+                <p className={`text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 ${meta}`}>
+                  Score
+                  {scoreSaving && <span className="normal-case tracking-normal">Saving…</span>}
+                </p>
+                <ScoreEditor score={score} onChange={handleScoreChange} disabled={scoreSaving} isDark={isDark} />
               </div>
-            </div>
 
-            <div className={`px-6 py-4 border-t ${divider} flex items-center justify-between gap-3`}>
-              {saved ? (
-                <span className="text-xs font-mono text-emerald-400 flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                  Saved
-                </span>
-              ) : (
-                <span className={`text-xs font-mono ${dirty ? "text-amber-400" : meta}`}>{dirty ? "Unsaved changes" : "No changes"}</span>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={onClose}
-                  className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20" : "border-black/10 text-slate-500 hover:text-slate-700 hover:border-black/20"}`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={!dirty || saving}
-                  className="px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-                >
-                  {saving ? "Saving…" : "Save changes"}
-                </button>
+              <div>
+                <p className={`text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 ${meta}`}>
+                  Tags
+                  {tagsSaving && <span className="normal-case tracking-normal">Saving…</span>}
+                </p>
+                <TagEditor tags={tags} onChange={handleTagsChange} allTags={allTags} isDark={isDark} />
               </div>
             </div>
           </>

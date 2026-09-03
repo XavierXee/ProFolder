@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AudioFile } from "../types.js";
 import { getFiles, type FileFilters } from "../api/client.js";
+import { PAGE_SIZE } from "../constants.js";
 
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = PAGE_SIZE;
 
 export function useAudioFiles() {
   const [files, setFiles] = useState<AudioFile[]>([]);
@@ -15,17 +16,29 @@ export function useAudioFiles() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>(undefined);
 
+  // Monotonic request counter: guards against a stale response (from a request superseded
+  // by a newer one before it resolved) overwriting state with out-of-date results.
+  const latestRequestId = useRef(0);
+
   const refetch = useCallback(() => {
+    const requestId = ++latestRequestId.current;
     setLoading(true);
     setError(undefined);
     getFiles(filters)
       .then((result) => {
+        if (latestRequestId.current !== requestId) return; // superseded by a newer request
         setFiles(result.files);
         setTotal(result.total);
         setTotalPages(result.totalPages);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (latestRequestId.current !== requestId) return;
+        setError(err.message);
+      })
+      .finally(() => {
+        if (latestRequestId.current !== requestId) return;
+        setLoading(false);
+      });
   }, [filters]);
 
   useEffect(() => {

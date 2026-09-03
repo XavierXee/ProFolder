@@ -1,0 +1,221 @@
+import type { Project } from "../types.js";
+import { DAW_LABELS } from "../types.js";
+import StatusBadge from "./StatusBadge.js";
+import ScoreBadge from "./ScoreBadge.js";
+import { RowCheckbox } from "./RowCheckbox.js";
+import { Pagination } from "./Pagination.js";
+
+type ProjectRow = Project & { audioFileCount: number };
+
+export function ProjectsTable({
+  projects,
+  total,
+  totalPages,
+  page,
+  pageSize,
+  loading,
+  isDark,
+  selectedId,
+  selectedIds,
+  onPageChange,
+  onReveal,
+  onRowClick,
+  onToggleSelect,
+  onToggleSelectAll,
+  playerActive = false,
+}: {
+  projects: ProjectRow[];
+  total: number;
+  totalPages: number;
+  page: number;
+  pageSize: number;
+  loading: boolean;
+  isDark: boolean;
+  selectedId?: string | null;
+  selectedIds: Set<string>;
+  onPageChange: (page: number) => void;
+  onReveal: (path: string) => void;
+  onRowClick: (id: string) => void;
+  onToggleSelect: (id: string) => void;
+  onToggleSelectAll: () => void;
+  /** Whether the persistent (fixed-to-viewport) audio player bar is currently showing,
+   * so the last rows don't end up permanently hidden behind it. */
+  playerActive?: boolean;
+}) {
+  const meta = isDark ? "text-slate-600" : "text-slate-400";
+  const thBase = `px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`;
+  const staticTh = `${thBase} text-center`;
+  const leftTh = `${thBase} text-left`;
+  const allSelected = projects.length > 0 && projects.every((p) => selectedIds.has(p.id));
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <main className={`flex-1 overflow-auto ${playerActive ? "pb-20" : ""}`} aria-live="polite" aria-label="Project folders">
+        <table className="w-full border-collapse" aria-label="Project folders">
+          <thead className={`border-b sticky top-0 z-10 ${isDark ? "bg-[#0d0f14] border-white/8" : "bg-[#f4f6f9] border-black/8"}`}>
+            <tr>
+              <th scope="col" className={`${staticTh} w-8`}>
+                <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible project folders" />
+              </th>
+              <th scope="col" className={leftTh}>
+                Project Folder
+              </th>
+              <th scope="col" className={staticTh}>
+                Type
+              </th>
+              <th scope="col" className={`${staticTh} w-32`}>
+                Status
+              </th>
+              <th scope="col" className={leftTh}>
+                Tags
+              </th>
+              <th scope="col" className={staticTh}>
+                Score
+              </th>
+              <th scope="col" className={staticTh}>
+                Audio Files
+              </th>
+              <th scope="col" className={staticTh}>
+                Media
+              </th>
+              <th scope="col" className={staticTh}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={9} className={`px-6 py-10 text-center text-sm ${meta}`}>
+                  Loading project folders…
+                </td>
+              </tr>
+            ) : projects.length === 0 ? (
+              <tr>
+                <td colSpan={9} className={`px-6 py-10 text-center text-sm ${meta}`}>
+                  {total === 0 ? "No folders found yet. Try running a scan." : "No folders match your filters."}
+                </td>
+              </tr>
+            ) : (
+              projects.map((project) => {
+                const typeLabel = project.dawType ? DAW_LABELS[project.dawType] : "Folder";
+                const typeTooltip = project.dawType
+                  ? `${typeLabel} — detected via ${project.detectedVia ?? "unknown marker"}`
+                  : "Folder — no DAW project detected";
+                const isSelected = project.id === selectedId;
+                return (
+                  <tr
+                    key={project.id}
+                    onClick={() => onRowClick(project.id)}
+                    aria-selected={isSelected}
+                    className={`border-b cursor-pointer transition-colors ${
+                      isSelected
+                        ? isDark
+                          ? "border-white/5 bg-blue-500/8"
+                          : "border-black/5 bg-blue-50"
+                        : isDark
+                          ? "border-white/5 hover:bg-white/3"
+                          : "border-black/5 hover:bg-black/3"
+                    }`}
+                  >
+                    <td className="px-4 py-3.5 w-8">
+                      <RowCheckbox checked={selectedIds.has(project.id)} onChange={() => onToggleSelect(project.id)} ariaLabel={`Select ${project.name}`} />
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className={`text-sm font-medium ${isDark ? "text-slate-200" : "text-slate-800"}`}>{project.name}</div>
+                      <div className={`text-xs font-mono mt-0.5 truncate max-w-xs ${meta}`} title={project.path}>
+                        {project.id}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        title={typeTooltip}
+                        className={`text-xs font-mono cursor-default ${project.dawType ? (isDark ? "text-blue-400" : "text-blue-700") : isDark ? "text-slate-500" : "text-slate-500"}`}
+                      >
+                        {typeLabel}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-center w-32">
+                      <StatusBadge status={project.status} isDark={isDark} />
+                    </td>
+                    <td className="px-4 py-3.5 max-w-40">
+                      {project.tags.length === 0 ? (
+                        <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>—</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {project.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono ${isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-600"}`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <ScoreBadge score={project.score} isDark={isDark} />
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <span className={`text-sm font-mono tabular-nums ${isDark ? "text-slate-300" : "text-slate-700"}`}>{project.audioFileCount}</span>
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {project.hasVideo && (
+                          <svg
+                            className={`w-4 h-4 ${isDark ? "text-purple-400" : "text-purple-700"}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            aria-label="Contains video files"
+                          >
+                            <title>Contains video files</title>
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"
+                            />
+                          </svg>
+                        )}
+                        {project.hasImage && (
+                          <svg
+                            className={`w-4 h-4 ${isDark ? "text-emerald-400" : "text-emerald-700"}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            aria-label="Contains image files"
+                          >
+                            <title>Contains image files</title>
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+                            />
+                          </svg>
+                        )}
+                        {!project.hasVideo && !project.hasImage && (
+                          <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>—</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => onReveal(project.path)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                      >
+                        Reveal in Finder
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </main>
+
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} isDark={isDark} onPageChange={onPageChange} />
+    </div>
+  );
+}

@@ -26,20 +26,15 @@ export default function MetricsPanel({ stats, lastScanChanges, isDark, onClose }
     };
   }, [onClose]);
 
-  const s = stats ?? { total: 0, likelyExports: 0, needsReview: 0, draftCount: 0, lowConfidenceCount: 0 };
+  const s = stats ?? { total: 0, draftCount: 0, unscoredCount: 0 };
 
   const tiles = [
     { label: "Total Files", value: s.total, highlight: null as string | null },
-    { label: "Likely Exports", value: s.likelyExports, highlight: null },
+    { label: "Draft", value: s.draftCount, highlight: null },
     {
-      label: "Needs Review",
-      value: s.needsReview,
-      highlight: s.needsReview > 0 ? (isDark ? "text-purple-400" : "text-purple-700") : null,
-    },
-    {
-      label: "Low Confidence",
-      value: s.lowConfidenceCount,
-      highlight: s.lowConfidenceCount > 0 ? (isDark ? "text-amber-400" : "text-amber-700") : null,
+      label: "Unscored",
+      value: s.unscoredCount,
+      highlight: s.unscoredCount > 0 ? (isDark ? "text-purple-400" : "text-purple-700") : null,
     },
   ];
 
