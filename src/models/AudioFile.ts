@@ -1,4 +1,6 @@
-export type TrackStatus = "unknown" | "draft" | "finished";
+export type TrackStatus = "unknown" | "draft" | "needs_mixing" | "done" | "released";
+
+export const ALL_TRACK_STATUSES: TrackStatus[] = ["unknown", "draft", "needs_mixing", "done", "released"];
 
 export type AudioFile = {
   id: string;
@@ -17,8 +19,8 @@ export type AudioFile = {
   status: TrackStatus;
   tags: string[];
 
-  isExportCandidate: boolean;
-  exportConfidence: number;
+  /** User-set quality/readiness score, 1 (worst) to 5 (best); null if not yet scored. */
+  score: number | null;
 
   firstSeenAt: string;
   lastSeenAt: string;

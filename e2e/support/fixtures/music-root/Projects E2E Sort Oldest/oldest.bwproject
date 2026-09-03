@@ -1,0 +1,2 @@
+This is a minimal e2e fixture stub standing in for a Bitwig Studio project file.
+It only needs the .bwproject extension to be recognized by src/scanner/dawDetector.ts.

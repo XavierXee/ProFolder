@@ -1,0 +1,4 @@
+This is a minimal e2e fixture stub. The presence of an "Ableton Project Info"
+subfolder (not this file's contents) is what src/scanner/dawDetector.ts uses as
+a fallback marker to recognize the parent folder as an Ableton Live project when
+no .als project file itself is present.

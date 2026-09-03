@@ -20,9 +20,6 @@ async function main(): Promise<void> {
   console.log(`Folders scanned: ${stats.foldersScanned}`);
   console.log(`Audio files found: ${stats.audioFilesFound}`);
   console.log(`DAW projects: ${stats.dawProjectsFound}`);
-  console.log(`Likely exports: ${stats.likelyExports}`);
-  console.log(`Likely samples: ${stats.likelySamples}`);
-  console.log(`Unknown: ${stats.unknownConfidence}`);
   console.log("");
   console.log(`New files: ${stats.newFiles}`);
   console.log(`Modified files: ${stats.modifiedFiles}`);

@@ -13,9 +13,6 @@ export type ScanStats = {
   foldersScanned: number;
   audioFilesFound: number;
   dawProjectsFound: number;
-  likelyExports: number;
-  likelySamples: number;
-  unknownConfidence: number;
   newFiles: number;
   modifiedFiles: number;
   removedFiles: number;

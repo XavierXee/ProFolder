@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import type { AudioFile, TrackStatus } from "../../models/AudioFile.js";
 
-export type AudioFileUpsertInput = Omit<AudioFile, "tags" | "status"> & {
+export type AudioFileUpsertInput = Omit<AudioFile, "tags" | "status" | "score"> & {
   status?: TrackStatus;
 };
 
@@ -17,8 +17,7 @@ type AudioFileRow = {
   containing_folder: string;
   project_id: string | null;
   status: TrackStatus;
-  is_export_candidate: number;
-  export_confidence: number;
+  score: number | null;
   first_seen_at: string;
   last_seen_at: string;
   is_removed: number;
@@ -26,9 +25,12 @@ type AudioFileRow = {
 
 export type AudioFileFilters = {
   search?: string;
-  status?: TrackStatus;
-  hasExport?: boolean;
-  tag?: string;
+  /** OR'd together (any matching status counts); omit/empty means no status filter. */
+  statuses?: TrackStatus[];
+  /** OR'd together; `null` in the list means "unscored" (score IS NULL). */
+  scores?: (number | null)[];
+  /** OR'd together (has any of these tags); omit/empty means no tag filter. */
+  tags?: string[];
   projectId?: string;
   sortBy?: "name" | "modifiedAt" | "folder";
   sortDir?: "asc" | "desc";
@@ -49,19 +51,35 @@ function buildWhereClause(filters: AudioFileFilters): { where: string; params: R
     clauses.push("(filename LIKE @search OR relative_path LIKE @search)");
     params.search = `%${filters.search}%`;
   }
-  if (filters.status) {
-    clauses.push("status = @status");
-    params.status = filters.status;
+  if (filters.statuses && filters.statuses.length > 0) {
+    const names = filters.statuses.map((_, i) => `@status${i}`);
+    clauses.push(`status IN (${names.join(",")})`);
+    filters.statuses.forEach((s, i) => {
+      params[`status${i}`] = s;
+    });
   }
-  if (filters.hasExport !== undefined) {
-    clauses.push("is_export_candidate = @hasExport");
-    params.hasExport = filters.hasExport ? 1 : 0;
+  if (filters.scores && filters.scores.length > 0) {
+    const numericScores = filters.scores.filter((s): s is number => s !== null);
+    const includeUnscored = filters.scores.includes(null);
+    const scoreParts: string[] = [];
+    if (numericScores.length > 0) {
+      const names = numericScores.map((_, i) => `@score${i}`);
+      scoreParts.push(`score IN (${names.join(",")})`);
+      numericScores.forEach((n, i) => {
+        params[`score${i}`] = n;
+      });
+    }
+    if (includeUnscored) scoreParts.push("score IS NULL");
+    if (scoreParts.length > 0) clauses.push(`(${scoreParts.join(" OR ")})`);
   }
-  if (filters.tag) {
+  if (filters.tags && filters.tags.length > 0) {
+    const names = filters.tags.map((_, i) => `@tag${i}`);
     clauses.push(
-      `id IN (SELECT aft.audio_file_id FROM audio_file_tags aft JOIN tags t ON t.id = aft.tag_id WHERE t.name = @tag)`
+      `id IN (SELECT aft.audio_file_id FROM audio_file_tags aft JOIN tags t ON t.id = aft.tag_id WHERE t.name IN (${names.join(",")}))`
     );
-    params.tag = filters.tag;
+    filters.tags.forEach((t, i) => {
+      params[`tag${i}`] = t;
+    });
   }
   if (filters.projectId) {
     clauses.push("project_id = @projectId");
@@ -85,24 +103,26 @@ function rowToAudioFile(row: AudioFileRow, tags: string[]): AudioFile {
     projectId: row.project_id ?? undefined,
     status: row.status,
     tags,
-    isExportCandidate: row.is_export_candidate === 1,
-    exportConfidence: row.export_confidence,
+    score: row.score,
     firstSeenAt: row.first_seen_at,
     lastSeenAt: row.last_seen_at,
     isRemoved: row.is_removed === 1,
   };
 }
 
-/** Existing rows keyed by id, loaded once before a scan for change detection. */
-export function loadActiveFingerprints(
+/** Existing rows keyed by id, loaded once before a scan for change detection. Includes
+ * soft-removed rows (with `isRemoved: true`) so a reappearing file's id/path is
+ * recognized as already occupying a row — routing it to a reactivation/update path
+ * instead of a plain INSERT, which would otherwise hit `UNIQUE constraint failed`. */
+export function loadFingerprints(
   db: Database.Database
-): Map<string, { size: number; modifiedAt: string }> {
+): Map<string, { size: number; modifiedAt: string; isRemoved: boolean }> {
   const rows = db
-    .prepare(`SELECT id, size, modified_at FROM audio_files WHERE is_removed = 0`)
-    .all() as { id: string; size: number; modified_at: string }[];
-  const map = new Map<string, { size: number; modifiedAt: string }>();
+    .prepare(`SELECT id, size, modified_at, is_removed FROM audio_files`)
+    .all() as { id: string; size: number; modified_at: string; is_removed: number }[];
+  const map = new Map<string, { size: number; modifiedAt: string; isRemoved: boolean }>();
   for (const row of rows) {
-    map.set(row.id, { size: row.size, modifiedAt: row.modified_at });
+    map.set(row.id, { size: row.size, modifiedAt: row.modified_at, isRemoved: row.is_removed === 1 });
   }
   return map;
 }
@@ -112,11 +132,11 @@ export function insertAudioFile(db: Database.Database, file: AudioFileUpsertInpu
   db.prepare(
     `INSERT INTO audio_files (
       id, path, relative_path, filename, extension, size, created_at, modified_at,
-      containing_folder, project_id, status, is_export_candidate, export_confidence,
+      containing_folder, project_id, status,
       first_seen_at, last_seen_at, is_removed
     ) VALUES (
       @id, @path, @relativePath, @filename, @extension, @size, @createdAt, @modifiedAt,
-      @containingFolder, @projectId, @status, @isExportCandidate, @exportConfidence,
+      @containingFolder, @projectId, @status,
       @firstSeenAt, @lastSeenAt, 0
     )`
   ).run({
@@ -124,25 +144,23 @@ export function insertAudioFile(db: Database.Database, file: AudioFileUpsertInpu
     createdAt: file.createdAt ?? null,
     projectId: file.projectId ?? null,
     status: file.status ?? "unknown",
-    isExportCandidate: file.isExportCandidate ? 1 : 0,
   });
 }
 
-/** Update filesystem-derived fields for a modified file; preserves user-set status/tags. */
+/** Update filesystem-derived fields for a modified (or reactivated, soft-removed → reappeared)
+ * file; preserves user-set status/tags/score and clears is_removed. */
 export function updateAudioFileMetadata(db: Database.Database, file: AudioFileUpsertInput): void {
   db.prepare(
     `UPDATE audio_files SET
       path = @path, relative_path = @relativePath, filename = @filename, extension = @extension,
       size = @size, created_at = @createdAt, modified_at = @modifiedAt,
       containing_folder = @containingFolder, project_id = @projectId,
-      is_export_candidate = @isExportCandidate, export_confidence = @exportConfidence,
       last_seen_at = @lastSeenAt, is_removed = 0
     WHERE id = @id`
   ).run({
     ...file,
     createdAt: file.createdAt ?? null,
     projectId: file.projectId ?? null,
-    isExportCandidate: file.isExportCandidate ? 1 : 0,
   });
 }
 
@@ -228,13 +246,9 @@ export function findAllActive(db: Database.Database, filters: AudioFileFilters =
 
 export type LibraryStats = {
   total: number;
-  likelyExports: number;
-  needsReview: number;
   draftCount: number;
-  lowConfidenceCount: number;
+  unscoredCount: number;
 };
-
-export const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
 /** Library-wide aggregate counts (unfiltered, ignores pagination) for the stat bar. */
 export function getLibraryStats(db: Database.Database): LibraryStats {
@@ -242,27 +256,21 @@ export function getLibraryStats(db: Database.Database): LibraryStats {
     .prepare(
       `SELECT
         COUNT(*) AS total,
-        SUM(CASE WHEN is_export_candidate = 1 THEN 1 ELSE 0 END) AS likelyExports,
-        SUM(CASE WHEN status = 'unknown' AND is_export_candidate = 1 THEN 1 ELSE 0 END) AS needsReview,
         SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) AS draftCount,
-        SUM(CASE WHEN export_confidence < @lowConfidenceThreshold THEN 1 ELSE 0 END) AS lowConfidenceCount
+        SUM(CASE WHEN score IS NULL THEN 1 ELSE 0 END) AS unscoredCount
       FROM audio_files
       WHERE is_removed = 0`
     )
-    .get({ lowConfidenceThreshold: LOW_CONFIDENCE_THRESHOLD }) as {
+    .get() as {
     total: number;
-    likelyExports: number | null;
-    needsReview: number | null;
     draftCount: number | null;
-    lowConfidenceCount: number | null;
+    unscoredCount: number | null;
   };
 
   return {
     total: row.total,
-    likelyExports: row.likelyExports ?? 0,
-    needsReview: row.needsReview ?? 0,
     draftCount: row.draftCount ?? 0,
-    lowConfidenceCount: row.lowConfidenceCount ?? 0,
+    unscoredCount: row.unscoredCount ?? 0,
   };
 }
 
@@ -288,6 +296,18 @@ export function findById(db: Database.Database, id: string): AudioFile | undefin
   return rowToAudioFile(row, tagsById.get(row.id) ?? []);
 }
 
+export function setScore(db: Database.Database, id: string, score: number | null): void {
+  db.prepare(`UPDATE audio_files SET score = ? WHERE id = ?`).run(score, id);
+}
+
+/** Batch version of setScore — overwrites the score for every listed file (used by
+ * batch-edit and by a project cascading its own score onto all its files). */
+export function setScoreForFiles(db: Database.Database, ids: string[], score: number | null): void {
+  if (ids.length === 0) return;
+  const placeholders = ids.map(() => "?").join(",");
+  db.prepare(`UPDATE audio_files SET score = ? WHERE id IN (${placeholders})`).run(score, ...ids);
+}
+
 export function updateStatus(db: Database.Database, id: string, status: TrackStatus): void {
   db.prepare(`UPDATE audio_files SET status = ? WHERE id = ?`).run(status, id);
 }
@@ -305,6 +325,32 @@ export function setTags(db: Database.Database, id: string, tagNames: string[]): 
         db.prepare(
           `INSERT OR IGNORE INTO audio_file_tags (audio_file_id, tag_id) VALUES (?, ?)`
         ).run(id, tagRow.id);
+      }
+    }
+  });
+  tx();
+}
+
+/** Adds tags to every listed file, on top of whatever tags each already has (union,
+ * not replace) — used by batch-edit and by a project cascading its own tags onto
+ * all its files. */
+export function addTagsToFiles(db: Database.Database, ids: string[], tagNames: string[]): void {
+  const unique = [...new Set(tagNames.map((t) => t.trim()).filter(Boolean))];
+  if (ids.length === 0 || unique.length === 0) return;
+
+  const tx = db.transaction(() => {
+    for (const name of unique) {
+      db.prepare(`INSERT OR IGNORE INTO tags (name) VALUES (?)`).run(name);
+    }
+    const placeholders = unique.map(() => "?").join(",");
+    const tagRows = db
+      .prepare(`SELECT id FROM tags WHERE name IN (${placeholders}) COLLATE NOCASE`)
+      .all(...unique) as { id: number }[];
+
+    const insert = db.prepare(`INSERT OR IGNORE INTO audio_file_tags (audio_file_id, tag_id) VALUES (?, ?)`);
+    for (const id of ids) {
+      for (const tagRow of tagRows) {
+        insert.run(id, tagRow.id);
       }
     }
   });

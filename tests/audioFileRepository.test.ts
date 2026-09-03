@@ -4,9 +4,14 @@ import { runMigrations } from "../src/database/db.js";
 import {
   findAllActivePaged,
   insertAudioFile,
-  setTags,
-  getLibraryStats,
+  updateAudioFileMetadata,
   updateStatus,
+  setTags,
+  setScore,
+  setScoreForFiles,
+  addTagsToFiles,
+  findById,
+  getLibraryStats,
   markRemoved,
   type AudioFileUpsertInput,
 } from "../src/database/repositories/audioFileRepository.js";
@@ -26,8 +31,6 @@ function makeFile(overrides: Partial<AudioFileUpsertInput> & { id: string }): Au
     firstSeenAt: now,
     lastSeenAt: now,
     isRemoved: false,
-    isExportCandidate: false,
-    exportConfidence: 0.3,
     ...overrides,
   };
 }
@@ -68,9 +71,18 @@ describe("findAllActivePaged", () => {
     setTags(db, "file-00.wav", ["favorite"]);
     setTags(db, "file-01.wav", ["favorite"]);
 
-    const { items, total } = findAllActivePaged(db, { tag: "favorite", limit: 10, offset: 0 });
+    const { items, total } = findAllActivePaged(db, { tags: ["favorite"], limit: 10, offset: 0 });
     expect(total).toBe(2);
     expect(items).toHaveLength(2);
+  });
+
+  it("matches any of several tags (OR)", () => {
+    setTags(db, "file-00.wav", ["favorite"]);
+    setTags(db, "file-01.wav", ["archived"]);
+    setTags(db, "file-02.wav", ["unrelated"]);
+
+    const { total } = findAllActivePaged(db, { tags: ["favorite", "archived"], limit: 10, offset: 0 });
+    expect(total).toBe(2);
   });
 
   it("attaches the correct tags per file without leaking tags across rows", () => {
@@ -86,34 +98,50 @@ describe("findAllActivePaged", () => {
     expect(file1.tags).toEqual(["c"]);
     expect(file2.tags).toEqual([]);
   });
+
+  it("filters by an exact score", () => {
+    setScore(db, "file-00.wav", 3);
+    setScore(db, "file-01.wav", 5);
+
+    const { items, total } = findAllActivePaged(db, { scores: [3], limit: 10, offset: 0 });
+
+    expect(total).toBe(1);
+    expect(items[0]!.id).toBe("file-00.wav");
+  });
+
+  it("matches any of several scores (OR), including unscored via null", () => {
+    setScore(db, "file-00.wav", 3);
+    setScore(db, "file-01.wav", 5);
+    // file-02.wav stays unscored (null)
+
+    const { total } = findAllActivePaged(db, { scores: [3, null], limit: 30, offset: 0 });
+
+    expect(total).toBe(24); // file-00.wav (score 3) + all 23 remaining unscored files
+  });
+
+  it("filters for unscored files with scores: [null]", () => {
+    setScore(db, "file-00.wav", 3);
+
+    const { total } = findAllActivePaged(db, { scores: [null], limit: 30, offset: 0 });
+
+    expect(total).toBe(24); // all 25 fixtures minus file-00.wav
+  });
 });
 
 describe("getLibraryStats", () => {
   it("computes unfiltered, library-wide aggregate counts", () => {
-    // Base fixture: 25 files, all unknown/non-export/0.3 confidence (below the 0.5 threshold).
-    insertAudioFile(
-      db,
-      makeFile({ id: "export-ready.wav", isExportCandidate: true, exportConfidence: 0.9 })
-    );
-    insertAudioFile(
-      db,
-      makeFile({
-        id: "needs-review.wav",
-        isExportCandidate: true,
-        exportConfidence: 0.75,
-        status: "unknown",
-      })
-    );
-    insertAudioFile(db, makeFile({ id: "draft.wav", status: "draft", exportConfidence: 0.6 }));
-    updateStatus(db, "export-ready.wav", "finished");
+    // Base fixture: 25 files, all unknown status and unscored.
+    insertAudioFile(db, makeFile({ id: "scored.wav" }));
+    insertAudioFile(db, makeFile({ id: "draft.wav", status: "draft" }));
+    insertAudioFile(db, makeFile({ id: "draft-scored.wav", status: "draft" }));
+    setScore(db, "scored.wav", 4);
+    setScore(db, "draft-scored.wav", 2);
 
     const stats = getLibraryStats(db);
 
     expect(stats.total).toBe(28);
-    expect(stats.likelyExports).toBe(2); // export-ready + needs-review
-    expect(stats.needsReview).toBe(1); // needs-review only (export-ready is 'finished', not 'unknown')
-    expect(stats.draftCount).toBe(1);
-    expect(stats.lowConfidenceCount).toBe(25); // the base fixture, all at 0.3 confidence
+    expect(stats.draftCount).toBe(2); // draft.wav + draft-scored.wav
+    expect(stats.unscoredCount).toBe(26); // everything except scored.wav and draft-scored.wav
   });
 
   it("excludes removed files from every bucket", () => {
@@ -124,5 +152,74 @@ describe("getLibraryStats", () => {
 
     const after = getLibraryStats(db);
     expect(after.total).toBe(24);
+  });
+});
+
+describe("setScore", () => {
+  it("sets and clears a file's score", () => {
+    setScore(db, "file-00.wav", 5);
+    expect(findById(db, "file-00.wav")!.score).toBe(5);
+
+    setScore(db, "file-00.wav", null);
+    expect(findById(db, "file-00.wav")!.score).toBeNull();
+  });
+
+  it("leaves other files' scores untouched", () => {
+    setScore(db, "file-00.wav", 3);
+    expect(findById(db, "file-01.wav")!.score).toBeNull();
+  });
+});
+
+describe("setScoreForFiles", () => {
+  it("overwrites the score for every listed file, leaving others untouched", () => {
+    setScore(db, "file-00.wav", 1);
+
+    setScoreForFiles(db, ["file-00.wav", "file-01.wav"], 4);
+
+    expect(findById(db, "file-00.wav")!.score).toBe(4);
+    expect(findById(db, "file-01.wav")!.score).toBe(4);
+    expect(findById(db, "file-02.wav")!.score).toBeNull();
+  });
+
+  it("does nothing for an empty id list", () => {
+    expect(() => setScoreForFiles(db, [], 4)).not.toThrow();
+    expect(findById(db, "file-00.wav")!.score).toBeNull();
+  });
+});
+
+describe("reactivating a soft-removed file (updateAudioFileMetadata)", () => {
+  it("reappearing file is reactivated without throwing, preserving its prior status/tags/score", () => {
+    updateStatus(db, "file-00.wav", "released");
+    setScore(db, "file-00.wav", 5);
+    setTags(db, "file-00.wav", ["favorite", "mix-ready"]);
+
+    markRemoved(db, ["file-00.wav"], new Date().toISOString());
+    expect(findById(db, "file-00.wav")!.isRemoved).toBe(true);
+
+    // Reappearance: the row's id/path already exists (soft-removed), so the scanner
+    // routes it through updateAudioFileMetadata rather than insertAudioFile — this must
+    // not throw a UNIQUE constraint error, and must leave status/tags/score untouched.
+    expect(() =>
+      updateAudioFileMetadata(db, makeFile({ id: "file-00.wav", size: 200 }))
+    ).not.toThrow();
+
+    const reactivated = findById(db, "file-00.wav")!;
+    expect(reactivated.isRemoved).toBe(false);
+    expect(reactivated.status).toBe("released");
+    expect(reactivated.score).toBe(5);
+    expect(reactivated.tags.sort()).toEqual(["favorite", "mix-ready"]);
+    expect(reactivated.size).toBe(200); // filesystem-derived fields do refresh
+  });
+});
+
+describe("addTagsToFiles", () => {
+  it("adds tags to every listed file without removing a file's existing tags", () => {
+    setTags(db, "file-00.wav", ["existing"]);
+
+    addTagsToFiles(db, ["file-00.wav", "file-01.wav"], ["batch"]);
+
+    expect(findById(db, "file-00.wav")!.tags.sort()).toEqual(["batch", "existing"]);
+    expect(findById(db, "file-01.wav")!.tags).toEqual(["batch"]);
+    expect(findById(db, "file-02.wav")!.tags).toEqual([]);
   });
 });

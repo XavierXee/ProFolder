@@ -5,8 +5,19 @@ import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runScan } from "../src/scanner/scanner.js";
 import { runMigrations } from "../src/database/db.js";
-import { findAllActive as findAllActiveFiles, updateStatus, setTags } from "../src/database/repositories/audioFileRepository.js";
-import { findAllActive as findAllActiveProjects } from "../src/database/repositories/projectRepository.js";
+import {
+  findAllActive as findAllActiveFiles,
+  updateStatus,
+  setTags,
+  setScoreForFiles,
+} from "../src/database/repositories/audioFileRepository.js";
+import {
+  findAllActive as findAllActiveProjects,
+  findAllActivePaged as findAllActiveProjectsPaged,
+  findById as findProjectById,
+  setScore as setProjectScore,
+  setTags as setProjectTags,
+} from "../src/database/repositories/projectRepository.js";
 import { setExcludedPaths } from "../src/database/repositories/scanExclusionRepository.js";
 import { setScanSettings } from "../src/config/scanSettings.js";
 
@@ -50,11 +61,9 @@ describe("runScan", () => {
     expect(files).toHaveLength(3);
 
     const finalTrack = files.find((f) => f.filename === "Track A - Final.wav");
-    expect(finalTrack?.isExportCandidate).toBe(true);
     expect(finalTrack?.projectId).toBe(path.join("Ableton Projects", "Track A"));
 
     const draftTrack = files.find((f) => f.filename === "Track B - Draft.wav");
-    expect(draftTrack?.isExportCandidate).toBe(false);
     expect(draftTrack?.projectId).toBe(path.join("Ableton Projects", "Track B"));
 
     const kick = files.find((f) => f.filename === "kick.wav");
@@ -90,7 +99,7 @@ describe("runScan", () => {
     await runScan({ rootPath: tmpRoot }, db);
     const files = findAllActiveFiles(db);
     const finalTrack = files.find((f) => f.filename === "Track A - Final.wav")!;
-    updateStatus(db, finalTrack.id, "finished");
+    updateStatus(db, finalTrack.id, "done");
     setTags(db, finalTrack.id, ["electronic", "album"]);
 
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -102,8 +111,26 @@ describe("runScan", () => {
     expect(stats.newFiles).toBe(0);
 
     const updated = findAllActiveFiles(db).find((f) => f.filename === "Track A - Final.wav")!;
-    expect(updated.status).toBe("finished");
+    expect(updated.status).toBe("done");
     expect(updated.tags.sort()).toEqual(["album", "electronic"]);
+  });
+
+  it("applies a project's existing score and tags to a newly-detected file inside it", async () => {
+    await runScan({ rootPath: tmpRoot }, db);
+    const trackAId = path.join("Ableton Projects", "Track A");
+    setProjectScore(db, trackAId, 4);
+    setProjectTags(db, trackAId, ["reviewed"]);
+
+    await writeFile("Ableton Projects/Track A/Exports/Track A - Alt.wav", "alt-audio");
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.newFiles).toBe(1);
+    const altTrack = findAllActiveFiles(db).find((f) => f.filename === "Track A - Alt.wav")!;
+    expect(altTrack.score).toBe(4);
+    expect(altTrack.tags).toEqual(["reviewed"]);
+
+    // The project itself is untouched by this — inheritance only flows into the new file.
+    expect(findProjectById(db, trackAId)!.score).toBe(4);
   });
 
   it("soft-deletes files that disappear from disk instead of hard-deleting them", async () => {
@@ -120,6 +147,38 @@ describe("runScan", () => {
       | { is_removed: number }
       | undefined;
     expect(raw?.is_removed).toBe(1);
+  });
+
+  it("reactivates a soft-deleted file that reappears after its folder is un-excluded, without crashing, preserving its prior status/tags/score", async () => {
+    // Scan 1: file present, active.
+    await runScan({ rootPath: tmpRoot }, db);
+    const kick = findAllActiveFiles(db).find((f) => f.filename === "kick.wav")!;
+    updateStatus(db, kick.id, "released");
+    setTags(db, kick.id, ["drums"]);
+    setScoreForFiles(db, [kick.id], 5);
+
+    // Scan 2: exclude its folder — the row is soft-deleted (is_removed = 1), stays in the table.
+    setExcludedPaths(db, ["Sample Library"]);
+    const scan2 = await runScan({ rootPath: tmpRoot }, db);
+    expect(scan2.removedFiles).toBe(1);
+    expect(findAllActiveFiles(db).find((f) => f.filename === "kick.wav")).toBeUndefined();
+    const removedRow = db.prepare("SELECT * FROM audio_files WHERE id = ?").get(kick.id) as {
+      is_removed: number;
+    };
+    expect(removedRow.is_removed).toBe(1);
+
+    // Scan 3: un-exclude — the file reappears. This must not crash with a UNIQUE
+    // constraint error, and the reactivated row must keep its own prior
+    // status/tags/score rather than reinitializing as a fresh file.
+    setExcludedPaths(db, []);
+    const scan3 = await runScan({ rootPath: tmpRoot }, db);
+
+    const reactivated = findAllActiveFiles(db).find((f) => f.filename === "kick.wav")!;
+    expect(reactivated).toBeDefined();
+    expect(reactivated.status).toBe("released");
+    expect(reactivated.tags).toEqual(["drums"]);
+    expect(reactivated.score).toBe(5);
+    expect(scan3.newFiles).toBe(0);
   });
 
   it("skips excluded folders entirely and their contents never appear", async () => {
@@ -272,5 +331,37 @@ describe("runScan", () => {
     expect(stats.audioFilesFound).toBe(4);
     const files = findAllActiveFiles(db);
     expect(files.find((f) => f.filename === "kick.wav" && f.relativePath.includes("Samples"))).toBeDefined();
+  });
+
+  it("computes content_modified_at from the DAW marker file's mtime when it's newer than the folder's", async () => {
+    await runScan({ rootPath: tmpRoot }, db);
+    const trackAId = path.join("Ableton Projects", "Track A");
+
+    const alsPath = path.join(tmpRoot, "Ableton Projects", "Track A", "Track A.als");
+    const future = new Date(Date.now() + 10 * 60_000);
+    await fs.utimes(alsPath, future, future);
+
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const trackA = findProjectById(db, trackAId)!;
+    expect(trackA.contentModifiedAt).not.toBeNull();
+    expect(new Date(trackA.contentModifiedAt!).getTime()).toBeGreaterThanOrEqual(future.getTime());
+  });
+
+  it("sorts projects by content_modified_at, most recently modified first", async () => {
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const older = new Date(Date.now() - 10 * 60_000);
+    const newer = new Date(Date.now() + 10 * 60_000);
+    await fs.utimes(path.join(tmpRoot, "Ableton Projects", "Track A", "Track A.als"), older, older);
+    await fs.utimes(path.join(tmpRoot, "Ableton Projects", "Track B", "Track B.als"), newer, newer);
+
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const { items } = findAllActiveProjectsPaged(db, { sortBy: "modifiedAt", sortDir: "desc", limit: 10, offset: 0 });
+    const ids = items.map((p) => p.id);
+    const trackAIndex = ids.indexOf(path.join("Ableton Projects", "Track A"));
+    const trackBIndex = ids.indexOf(path.join("Ableton Projects", "Track B"));
+    expect(trackBIndex).toBeLessThan(trackAIndex);
   });
 });

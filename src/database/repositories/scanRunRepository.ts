@@ -10,9 +10,6 @@ type ScanRunRow = {
   folders_scanned: number;
   audio_files_found: number;
   daw_projects_found: number;
-  likely_exports: number;
-  likely_samples: number;
-  unknown_confidence: number;
   new_files: number;
   modified_files: number;
   removed_files: number;
@@ -28,9 +25,6 @@ function rowToScanStats(row: ScanRunRow): ScanStats {
     foldersScanned: row.folders_scanned,
     audioFilesFound: row.audio_files_found,
     dawProjectsFound: row.daw_projects_found,
-    likelyExports: row.likely_exports,
-    likelySamples: row.likely_samples,
-    unknownConfidence: row.unknown_confidence,
     newFiles: row.new_files,
     modifiedFiles: row.modified_files,
     removedFiles: row.removed_files,
@@ -43,11 +37,11 @@ export function insertScanRun(db: Database.Database, stats: ScanStats): number {
     .prepare(
       `INSERT INTO scan_runs (
         root_path, started_at, finished_at, duration_ms, folders_scanned, audio_files_found,
-        daw_projects_found, likely_exports, likely_samples, unknown_confidence,
+        daw_projects_found,
         new_files, modified_files, removed_files, errors
       ) VALUES (
         @rootPath, @startedAt, @finishedAt, @durationMs, @foldersScanned, @audioFilesFound,
-        @dawProjectsFound, @likelyExports, @likelySamples, @unknownConfidence,
+        @dawProjectsFound,
         @newFiles, @modifiedFiles, @removedFiles, @errors
       )`
     )

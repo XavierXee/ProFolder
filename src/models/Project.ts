@@ -18,10 +18,18 @@ export type Project = {
   hasImage: boolean;
 
   status: TrackStatus;
+  tags: string[];
+  /** User-set quality/readiness score, 1 (worst) to 5 (best); null if not yet scored. */
+  score: number | null;
 
   firstSeenAt: string;
   lastSeenAt: string;
   isRemoved: boolean;
+
+  /** Max of the project folder's own mtime and its DAW marker file's mtime — the
+   * actual "last worked on" signal, as opposed to lastSeenAt (scan bookkeeping).
+   * Null only for rows scanned before this field existed, until their next rescan. */
+  contentModifiedAt: string | null;
 };
 
 export type ProjectWithFiles = Project & {

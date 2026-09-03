@@ -1,0 +1,2 @@
+This is a minimal e2e fixture stub standing in for a FL Studio project file.
+It only needs the .flp extension to be recognized by src/scanner/dawDetector.ts.

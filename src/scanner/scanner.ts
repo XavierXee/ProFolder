@@ -5,10 +5,9 @@ import { isAudioFile, DEFAULT_AUDIO_EXTENSIONS } from "./audioDetector.js";
 import { findProjectRoot } from "./projectDetector.js";
 import { classifyFolders } from "./dawDetector.js";
 import { findMediaAncestors } from "./mediaDetector.js";
-import { computeExportConfidence } from "./exportClassifier.js";
 import type { ScanOptions, ScanStats, ScanError } from "./types.js";
 import {
-  loadActiveFingerprints,
+  loadFingerprints,
   insertAudioFile,
   updateAudioFileMetadata,
   touchLastSeen,
@@ -21,6 +20,7 @@ import {
 } from "../database/repositories/projectRepository.js";
 import { insertScanRun } from "../database/repositories/scanRunRepository.js";
 import { getExcludedPaths } from "../database/repositories/scanExclusionRepository.js";
+import { applyProjectMetadataToNewFile } from "../database/repositories/linkSync.js";
 import { getScanSettings } from "../config/scanSettings.js";
 
 export async function runScan(options: ScanOptions, db: Database.Database): Promise<ScanStats> {
@@ -42,15 +42,13 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
     [...dawClassifications.entries()].map(([dir, c]) => [dir, c.markerPath])
   );
   const { hasVideo, hasImage } = findMediaAncestors(files, rootPath);
+  const fileByPath = new Map(files.map((f) => [f.absolutePath, f]));
 
-  const existingFingerprints = loadActiveFingerprints(db);
+  const existingFingerprints = loadFingerprints(db);
   const existingProjectIds = loadActiveProjectIds(db);
 
   let newFiles = 0;
   let modifiedFiles = 0;
-  let likelyExports = 0;
-  let likelySamples = 0;
-  let unknownConfidence = 0;
   const walkErrors: ScanError[] = [...errors];
 
   const nowIso = new Date().toISOString();
@@ -72,6 +70,15 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
         continue;
       }
       seenProjectIds.add(dir.relativePath);
+
+      // "Last worked on" = whichever is more recent: the folder's own mtime (changes
+      // when a file is directly added/removed/renamed inside it) or its DAW marker
+      // file's mtime (changes on every save in the DAW, e.g. the .als file).
+      const markerMtime = classification?.markerPath
+        ? fileByPath.get(classification.markerPath)?.stats.mtime
+        : undefined;
+      const contentModifiedAt = (markerMtime && markerMtime > dir.mtime ? markerMtime : dir.mtime).toISOString();
+
       upsertProject(db, {
         id: dir.relativePath,
         name: path.basename(dir.absolutePath),
@@ -83,6 +90,7 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
         hasImage: hasImage.has(dir.absolutePath),
         firstSeenAt: nowIso,
         lastSeenAt: nowIso,
+        contentModifiedAt,
       });
     }
 
@@ -90,15 +98,6 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
       const id = file.relativePath;
       const association = findProjectRoot(file.absolutePath, rootPath, projectDirsForAssociation);
       const projectId = association ? path.relative(rootPath, association.projectPath) : undefined;
-
-      const { confidence, isExportCandidate } = computeExportConfidence(
-        file.relativePath,
-        file.filename
-      );
-
-      if (isExportCandidate) likelyExports++;
-      else if (confidence <= 0.3) likelySamples++;
-      else unknownConfidence++;
 
       const fingerprint = existingFingerprints.get(id);
       const modifiedAtIso = file.stats.mtime.toISOString();
@@ -114,8 +113,6 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
         modifiedAt: modifiedAtIso,
         containingFolder: path.dirname(file.absolutePath),
         projectId,
-        isExportCandidate,
-        exportConfidence: confidence,
         firstSeenAt: nowIso,
         lastSeenAt: nowIso,
         isRemoved: false,
@@ -123,7 +120,17 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
 
       if (!fingerprint) {
         insertAudioFile(db, record);
+        // A newly-detected file inherits its project's score/tags immediately,
+        // rather than starting blank while every sibling file already carries them.
+        if (projectId) applyProjectMetadataToNewFile(db, projectId, id);
         newFiles++;
+      } else if (fingerprint.isRemoved) {
+        // Row already occupies this id/path (soft-removed, not gone) — reactivate it
+        // rather than INSERT (which would hit UNIQUE constraint failed). The file keeps
+        // its own prior status/tags/score; it is not treated as a fresh file, so no
+        // applyProjectMetadataToNewFile here.
+        updateAudioFileMetadata(db, record);
+        modifiedFiles++;
       } else if (fingerprint.size !== file.stats.size || fingerprint.modifiedAt !== modifiedAtIso) {
         updateAudioFileMetadata(db, record);
         modifiedFiles++;
@@ -153,9 +160,6 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
     foldersScanned,
     audioFilesFound: audioFiles.length,
     dawProjectsFound: dawClassifications.size,
-    likelyExports,
-    likelySamples,
-    unknownConfidence,
     newFiles,
     modifiedFiles,
     removedFiles: removedFileIds.length,

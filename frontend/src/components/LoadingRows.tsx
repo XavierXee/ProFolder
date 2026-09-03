@@ -1,4 +1,4 @@
-const COLUMN_WIDTHS = [140, 64, 96, 96, 80, 90, 56];
+const COLUMN_WIDTHS = [14, 140, 64, 96, 96, 80, 90, 56];
 
 export default function LoadingRows() {
   return (

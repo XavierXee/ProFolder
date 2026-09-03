@@ -1,0 +1,2 @@
+This is a minimal e2e fixture stub standing in for a Cubase project file.
+It only needs the .cpr extension to be recognized by src/scanner/dawDetector.ts.

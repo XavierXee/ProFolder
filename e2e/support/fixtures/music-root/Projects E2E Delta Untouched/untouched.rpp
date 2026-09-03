@@ -1,0 +1,5 @@
+This is a minimal e2e fixture stub standing in for a Reaper project file.
+It only needs the .rpp extension to be recognized by src/scanner/dawDetector.ts.
+
+This folder is deliberately left at plain scan defaults (unknown status, null
+score, no tags) — it is the negative case that filtering scenarios must exclude.

@@ -1,0 +1,2 @@
+This is a minimal e2e fixture stub standing in for a Pro Tools project file.
+It only needs the .ptx extension to be recognized by src/scanner/dawDetector.ts.

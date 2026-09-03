@@ -1,12 +1,16 @@
 import type { AudioFile, DawType, Project, ProjectDuplicateMatch, TrackStatus } from "../types.js";
+import { PAGE_SIZE } from "../constants.js";
 
 const API_BASE = "/api";
 
 export type FileFilters = {
   search?: string;
-  status?: TrackStatus;
-  hasExport?: boolean;
-  tag?: string;
+  /** OR'd together (any matching status counts). */
+  statuses?: TrackStatus[];
+  /** OR'd together; "unscored" matches files with no score set. */
+  scores?: (number | "unscored")[];
+  /** OR'd together (has any of these tags). */
+  tags?: string[];
   sortBy?: "name" | "modifiedAt" | "folder";
   sortDir?: "asc" | "desc";
   page?: number;
@@ -23,10 +27,8 @@ export type PagedFiles = {
 
 export type LibraryStats = {
   total: number;
-  likelyExports: number;
-  needsReview: number;
   draftCount: number;
-  lowConfidenceCount: number;
+  unscoredCount: number;
 };
 
 export type ScanStats = {
@@ -37,9 +39,6 @@ export type ScanStats = {
   foldersScanned: number;
   audioFilesFound: number;
   dawProjectsFound: number;
-  likelyExports: number;
-  likelySamples: number;
-  unknownConfidence: number;
   newFiles: number;
   modifiedFiles: number;
   removedFiles: number;
@@ -65,19 +64,26 @@ function encodeId(id: string): string {
 export function getFiles(filters: FileFilters = {}): Promise<PagedFiles> {
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
-  if (filters.status) params.set("status", filters.status);
-  if (filters.hasExport !== undefined) params.set("hasExport", String(filters.hasExport));
-  if (filters.tag) params.set("tag", filters.tag);
+  for (const s of filters.statuses ?? []) params.append("status", s);
+  for (const s of filters.scores ?? []) params.append("score", String(s));
+  for (const t of filters.tags ?? []) params.append("tag", t);
   if (filters.sortBy) params.set("sortBy", filters.sortBy);
   if (filters.sortDir) params.set("sortDir", filters.sortDir);
   params.set("page", String(filters.page ?? 1));
-  params.set("pageSize", String(filters.pageSize ?? 50));
+  params.set("pageSize", String(filters.pageSize ?? PAGE_SIZE));
   const qs = params.toString();
   return request<PagedFiles>(`/files${qs ? `?${qs}` : ""}`);
 }
 
 export function getFile(id: string): Promise<AudioFile> {
   return request<AudioFile>(`/files/${encodeId(id)}`);
+}
+
+/** Streaming URL for in-app playback — passed straight to an <audio> element's src,
+ * not fetched via `request`. The server supports Range requests, so this also works
+ * for seeking. */
+export function getFileAudioUrl(id: string): string {
+  return `${API_BASE}/files/${encodeId(id)}/audio`;
 }
 
 export function updateStatus(id: string, status: TrackStatus): Promise<AudioFile> {
@@ -94,8 +100,32 @@ export function updateTags(id: string, tags: string[]): Promise<AudioFile> {
   });
 }
 
+export function updateFileScore(id: string, score: number | null): Promise<AudioFile> {
+  return request<AudioFile>(`/files/${encodeId(id)}/score`, {
+    method: "PATCH",
+    body: JSON.stringify({ score }),
+  });
+}
+
+export function batchUpdateFileScore(ids: string[], score: number | null): Promise<{ updated: number }> {
+  return request(`/files/batch/score`, { method: "PATCH", body: JSON.stringify({ ids, score }) });
+}
+
+/** Adds these tags to every listed file (union — a file keeps its own existing tags too). */
+export function batchAddFileTags(ids: string[], tags: string[]): Promise<{ updated: number }> {
+  return request(`/files/batch/tags`, { method: "PATCH", body: JSON.stringify({ ids, tags }) });
+}
+
 export type ProjectFilters = {
   search?: string;
+  /** OR'd together (any matching status counts). */
+  statuses?: TrackStatus[];
+  /** OR'd together; "unscored" matches projects with no score set. */
+  scores?: (number | "unscored")[];
+  /** OR'd together (has any of these tags). */
+  tags?: string[];
+  sortBy?: "name" | "modifiedAt";
+  sortDir?: "asc" | "desc";
   page?: number;
   pageSize?: number;
 };
@@ -111,8 +141,13 @@ export type PagedProjects = {
 export function getProjects(filters: ProjectFilters = {}): Promise<PagedProjects> {
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
+  for (const s of filters.statuses ?? []) params.append("status", s);
+  for (const s of filters.scores ?? []) params.append("score", String(s));
+  for (const t of filters.tags ?? []) params.append("tag", t);
+  if (filters.sortBy) params.set("sortBy", filters.sortBy);
+  if (filters.sortDir) params.set("sortDir", filters.sortDir);
   params.set("page", String(filters.page ?? 1));
-  params.set("pageSize", String(filters.pageSize ?? 50));
+  params.set("pageSize", String(filters.pageSize ?? PAGE_SIZE));
   const qs = params.toString();
   return request<PagedProjects>(`/projects${qs ? `?${qs}` : ""}`);
 }
@@ -132,6 +167,36 @@ export type ProjectDetail = Project & {
 
 export function getProjectDetail(id: string): Promise<ProjectDetail> {
   return request<ProjectDetail>(`/projects/${encodeURIComponent(id)}`);
+}
+
+export function updateProjectStatus(id: string, status: TrackStatus): Promise<Project> {
+  return request<Project>(`/projects/${encodeId(id)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function updateProjectTags(id: string, tags: string[]): Promise<Project> {
+  return request<Project>(`/projects/${encodeId(id)}/tags`, {
+    method: "PATCH",
+    body: JSON.stringify({ tags }),
+  });
+}
+
+export function updateProjectScore(id: string, score: number | null): Promise<Project> {
+  return request<Project>(`/projects/${encodeId(id)}/score`, {
+    method: "PATCH",
+    body: JSON.stringify({ score }),
+  });
+}
+
+export function batchUpdateProjectScore(ids: string[], score: number | null): Promise<{ updated: number }> {
+  return request(`/projects/batch/score`, { method: "PATCH", body: JSON.stringify({ ids, score }) });
+}
+
+/** Adds these tags to every listed project (union — a project keeps its own existing tags too). */
+export function batchAddProjectTags(ids: string[], tags: string[]): Promise<{ updated: number }> {
+  return request(`/projects/batch/tags`, { method: "PATCH", body: JSON.stringify({ ids, tags }) });
 }
 
 export type ProjectDuplicatesResult = {
@@ -196,6 +261,11 @@ export type FolderNode = {
 
 export function getFolderTree(): Promise<FolderNode> {
   return request<FolderNode>(`/folders/tree`);
+}
+
+export async function getAllTags(): Promise<string[]> {
+  const result = await request<{ tags: string[] }>(`/tags`);
+  return result.tags;
 }
 
 export function getExclusions(): Promise<{ excludedPaths: string[] }> {

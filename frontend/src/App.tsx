@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { useAudioFiles } from "./hooks/useAudioFiles.js";
 import { useProjects } from "./hooks/useProjects.js";
 import FilterBar from "./components/FilterBar.js";
-import ActiveFilterChips from "./components/ActiveFilterChips.js";
 import { FileTable } from "./components/FileTable.js";
 import { Pagination } from "./components/Pagination.js";
 import FileDetailPanel from "./components/FileDetailPanel.js";
@@ -11,10 +10,13 @@ import MetricsPanel from "./components/MetricsPanel.js";
 import ScanFolderPanel from "./components/ScanFolderPanel.js";
 import SettingsPanel from "./components/SettingsPanel.js";
 import { ProjectsTable } from "./components/ProjectsTable.js";
+import ProjectsFilterBar from "./components/ProjectsFilterBar.js";
+import BatchEditPanel from "./components/BatchEditPanel.js";
+import AudioPlayerBar from "./components/AudioPlayerBar.js";
 import RootPathControl from "./components/RootPathControl.js";
 import * as api from "./api/client.js";
 import type { FileFilters, LibraryStats, ScanStats } from "./api/client.js";
-import type { TrackStatus } from "./types.js";
+import type { AudioFile, TrackStatus } from "./types.js";
 
 type Tab = "projects" | "files";
 
@@ -61,16 +63,27 @@ export default function App() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [stats, setStats] = useState<LibraryStats | undefined>();
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [showMetrics, setShowMetrics] = useState(false);
   const [showScanPanel, setShowScanPanel] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("projects");
+  const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
+  const [showFilesBatchPanel, setShowFilesBatchPanel] = useState(false);
+  const [showProjectsBatchPanel, setShowProjectsBatchPanel] = useState(false);
+  const [playingFile, setPlayingFile] = useState<AudioFile | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const selectedFile = files.find((f) => f.id === selectedId) ?? null;
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
 
   function refreshStats() {
     api.getStats().then(setStats).catch(() => {});
+  }
+
+  function refreshTags() {
+    api.getAllTags().then(setAllTags).catch(() => {});
   }
 
   useEffect(() => {
@@ -80,6 +93,7 @@ export default function App() {
       .then((s) => s && setLastScanChanges(s.newFiles + s.modifiedFiles + s.removedFiles))
       .catch(() => {});
     refreshStats();
+    refreshTags();
   }, []);
 
   useLayoutEffect(() => {
@@ -97,13 +111,123 @@ export default function App() {
     refetchProjects();
   }
 
-  async function handleSave(id: string, patch: { status: TrackStatus; tags: string[] }) {
-    await api.updateStatus(id, patch.status);
-    await api.updateTags(id, patch.tags);
+  async function handleFileStatusSave(id: string, status: TrackStatus) {
+    await api.updateStatus(id, status);
     setFlashId(id);
     setTimeout(() => setFlashId(null), 1600);
     refetch();
     refreshStats();
+  }
+
+  async function handleFileTagsSave(id: string, tags: string[]) {
+    await api.updateTags(id, tags);
+    setFlashId(id);
+    setTimeout(() => setFlashId(null), 1600);
+    refetch();
+    refetchProjects(); // tags are linked: this may have changed the file's project's tags too
+    refreshTags();
+  }
+
+  async function handleFileScoreSave(id: string, score: number | null) {
+    await api.updateFileScore(id, score);
+    setFlashId(id);
+    setTimeout(() => setFlashId(null), 1600);
+    refetch();
+    refreshStats();
+    refetchProjects(); // score is linked: this may have changed the file's project's score too
+  }
+
+  async function handleProjectStatusSave(id: string, status: TrackStatus) {
+    await api.updateProjectStatus(id, status);
+    refetchProjects();
+  }
+
+  async function handleProjectTagsSave(id: string, tags: string[]) {
+    await api.updateProjectTags(id, tags);
+    refetchProjects();
+    refetch(); // tags are linked: this was just cascaded onto the project's files
+    refreshTags();
+  }
+
+  async function handleProjectScoreSave(id: string, score: number | null) {
+    await api.updateProjectScore(id, score);
+    refetchProjects();
+    refetch(); // score is linked: this was just cascaded onto the project's files
+  }
+
+  function toggleFileSelect(id: string) {
+    setSelectedFileIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllFileSelect() {
+    setSelectedFileIds((prev) => (files.every((f) => prev.has(f.id)) && files.length > 0 ? new Set() : new Set(files.map((f) => f.id))));
+  }
+
+  function toggleProjectSelect(id: string) {
+    setSelectedProjectIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllProjectSelect() {
+    setSelectedProjectIds((prev) =>
+      projects.every((p) => prev.has(p.id)) && projects.length > 0 ? new Set() : new Set(projects.map((p) => p.id))
+    );
+  }
+
+  function handleFilesFilterChange(patch: Parameters<typeof updateFilters>[0]) {
+    updateFilters(patch);
+    setSelectedFileIds(new Set());
+  }
+
+  function handleFilesPageChange(nextPage: number) {
+    setPage(nextPage);
+    setSelectedFileIds(new Set());
+  }
+
+  function handleProjectsFilterChange(patch: Parameters<typeof updateProjectFilters>[0]) {
+    updateProjectFilters(patch);
+    setSelectedProjectIds(new Set());
+  }
+
+  function handleProjectsPageChange(nextPage: number) {
+    setProjectsPage(nextPage);
+    setSelectedProjectIds(new Set());
+  }
+
+  async function handleBatchFileScore(score: number | null) {
+    await api.batchUpdateFileScore([...selectedFileIds], score);
+    refetch();
+    refreshStats();
+    refetchProjects(); // score is linked: this may have changed the affected projects' scores too
+  }
+
+  async function handleBatchFileTag(tag: string) {
+    await api.batchAddFileTags([...selectedFileIds], [tag]);
+    refetch();
+    refetchProjects(); // tags are linked: this may have changed the affected projects' tags too
+    refreshTags();
+  }
+
+  async function handleBatchProjectScore(score: number | null) {
+    await api.batchUpdateProjectScore([...selectedProjectIds], score);
+    refetchProjects();
+    refetch(); // score is linked: this was just cascaded onto each project's files
+  }
+
+  async function handleBatchProjectTag(tag: string) {
+    await api.batchAddProjectTags([...selectedProjectIds], [tag]);
+    refetchProjects();
+    refetch(); // tags are linked: this was just cascaded onto each project's files
+    refreshTags();
   }
 
   async function handleRootPathSave(newPath: string) {
@@ -120,19 +244,37 @@ export default function App() {
     }
   }
 
+  function handlePlayClick(file: AudioFile) {
+    if (playingFile?.id === file.id) {
+      setIsPlaying((p) => !p);
+    } else {
+      setPlayingFile(file);
+      setIsPlaying(true);
+    }
+  }
+
+  function handleClosePlayer() {
+    setPlayingFile(null);
+    setIsPlaying(false);
+  }
+
   function handleRowClick(id: string) {
     setSelectedProjectId(null);
+    setShowFilesBatchPanel(false);
     setSelectedId((prev) => (prev === id ? null : id));
   }
 
   function handleProjectRowClick(id: string) {
     setSelectedId(null);
+    setShowProjectsBatchPanel(false);
     setSelectedProjectId((prev) => (prev === id ? null : id));
   }
 
   function handleTabChange(tab: Tab) {
     setSelectedId(null);
     setSelectedProjectId(null);
+    setSelectedFileIds(new Set());
+    setSelectedProjectIds(new Set());
     setActiveTab(tab);
   }
 
@@ -174,6 +316,8 @@ export default function App() {
               setSelectedId(null);
               setSelectedProjectId(null);
               setShowSettings(false);
+              setShowFilesBatchPanel(false);
+              setShowProjectsBatchPanel(false);
               setShowScanPanel(true);
             }}
             className="px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
@@ -194,9 +338,9 @@ export default function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5h3v6H3v-6zM10.5 7.5h3v12h-3v-12zM18 10.5h3v9h-3v-9z" />
               </svg>
               Metrics
-              {stats && stats.needsReview > 0 && (
+              {stats && stats.unscoredCount > 0 && (
                 <span className={`px-1.5 rounded-full text-[10px] ${isDark ? "bg-purple-500/20 text-purple-300" : "bg-purple-100 text-purple-700"}`}>
-                  {stats.needsReview}
+                  {stats.unscoredCount}
                 </span>
               )}
             </button>
@@ -210,6 +354,8 @@ export default function App() {
               setSelectedId(null);
               setSelectedProjectId(null);
               setShowScanPanel(false);
+              setShowFilesBatchPanel(false);
+              setShowProjectsBatchPanel(false);
               setShowSettings(true);
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
@@ -286,31 +432,51 @@ export default function App() {
         )}
 
         {activeTab === "projects" ? (
-          <ProjectsTable
-            projects={projects}
-            total={projectsTotal}
-            totalPages={projectsTotalPages}
-            page={projectsPage}
-            pageSize={projectsPageSize}
-            loading={projectsLoading}
-            isDark={isDark}
-            search={projectFilters.search}
-            selectedId={selectedProjectId}
-            onSearchChange={(search) => updateProjectFilters({ search })}
-            onPageChange={setProjectsPage}
-            onReveal={handleReveal}
-            onRowClick={handleProjectRowClick}
-          />
+          <>
+            <ProjectsFilterBar
+              filters={projectFilters}
+              onChange={handleProjectsFilterChange}
+              allTags={allTags}
+              isDark={isDark}
+              resultLabel={projectsLoading ? "—" : `${projects.length} of ${projectsTotal} projects`}
+              selectedCount={selectedProjectIds.size}
+              onOpenBatchPanel={() => {
+                setSelectedProjectId(null);
+                setShowProjectsBatchPanel(true);
+              }}
+            />
+            <ProjectsTable
+              projects={projects}
+              total={projectsTotal}
+              totalPages={projectsTotalPages}
+              page={projectsPage}
+              pageSize={projectsPageSize}
+              loading={projectsLoading}
+              isDark={isDark}
+              selectedId={selectedProjectId}
+              selectedIds={selectedProjectIds}
+              onPageChange={handleProjectsPageChange}
+              onReveal={handleReveal}
+              onRowClick={handleProjectRowClick}
+              onToggleSelect={toggleProjectSelect}
+              onToggleSelectAll={toggleAllProjectSelect}
+              playerActive={playingFile !== null}
+            />
+          </>
         ) : (
           <>
-            <FilterBar filters={filters} onChange={updateFilters} isDark={isDark} />
-            <ActiveFilterChips filters={filters} onChange={updateFilters} isDark={isDark} />
-
-            <div className={`px-6 py-2 flex items-center justify-between border-b ${isDark ? "border-white/5" : "border-black/5"}`}>
-              <span className={`text-xs font-mono ${isDark ? "text-slate-600" : "text-slate-400"}`}>
-                {loading ? "—" : `${files.length} of ${total} files`}
-              </span>
-            </div>
+            <FilterBar
+              filters={filters}
+              onChange={handleFilesFilterChange}
+              allTags={allTags}
+              isDark={isDark}
+              resultLabel={loading ? "—" : `${files.length} of ${total} files`}
+              selectedCount={selectedFileIds.size}
+              onOpenBatchPanel={() => {
+                setSelectedId(null);
+                setShowFilesBatchPanel(true);
+              }}
+            />
 
             {error && (
               <div className={`mx-6 mt-3 px-3 py-2 rounded text-xs font-mono ${isDark ? "bg-red-500/10 text-red-300" : "bg-red-50 text-red-700"}`}>
@@ -318,7 +484,7 @@ export default function App() {
               </div>
             )}
 
-            <main className="flex-1 overflow-auto" aria-live="polite" aria-label="Audio file library">
+            <main className={`flex-1 overflow-auto ${playingFile ? "pb-20" : ""}`} aria-live="polite" aria-label="Audio file library">
               <FileTable
                 files={files}
                 filters={filters}
@@ -326,24 +492,51 @@ export default function App() {
                 flashId={flashId}
                 isDark={isDark}
                 selectedId={selectedId}
+                selectedIds={selectedFileIds}
+                playingFileId={playingFile?.id ?? null}
+                isPlaying={isPlaying}
                 onSortChange={handleSortChange}
                 onRowClick={handleRowClick}
-                onClearFilters={() => updateFilters({ search: undefined, status: undefined, hasExport: undefined, sortBy: undefined, sortDir: undefined })}
+                onClearFilters={() => handleFilesFilterChange({ search: undefined, statuses: undefined, scores: undefined, tags: undefined, sortBy: undefined, sortDir: undefined })}
+                onToggleSelect={toggleFileSelect}
+                onToggleSelectAll={toggleAllFileSelect}
+                onPlayClick={handlePlayClick}
               />
             </main>
 
-            <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} isDark={isDark} onPageChange={setPage} />
+            <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} isDark={isDark} onPageChange={handleFilesPageChange} />
           </>
         )}
       </div>
 
-      <FileDetailPanel file={selectedFile} isDark={isDark} onClose={() => setSelectedId(null)} onSave={handleSave} onReveal={handleReveal} />
+      <AudioPlayerBar
+        file={playingFile}
+        isPlaying={isPlaying}
+        isDark={isDark}
+        onPlayingChange={setIsPlaying}
+        onClose={handleClosePlayer}
+      />
+
+      <FileDetailPanel
+        file={selectedFile}
+        isDark={isDark}
+        allTags={allTags}
+        onClose={() => setSelectedId(null)}
+        onSaveStatus={handleFileStatusSave}
+        onSaveTags={handleFileTagsSave}
+        onSaveScore={handleFileScoreSave}
+        onReveal={handleReveal}
+      />
 
       <ProjectDetailPanel
         project={selectedProject}
         isDark={isDark}
+        allTags={allTags}
         onClose={() => setSelectedProjectId(null)}
         onReveal={handleReveal}
+        onSaveStatus={handleProjectStatusSave}
+        onSaveTags={handleProjectTagsSave}
+        onSaveScore={handleProjectScoreSave}
       />
 
       <ScanFolderPanel
@@ -356,9 +549,31 @@ export default function App() {
 
       <SettingsPanel open={showSettings} isDark={isDark} onClose={() => setShowSettings(false)} />
 
+      <BatchEditPanel
+        open={showFilesBatchPanel}
+        count={selectedFileIds.size}
+        itemLabel="audio file"
+        isDark={isDark}
+        allTags={allTags}
+        onClose={() => setShowFilesBatchPanel(false)}
+        onApplyScore={handleBatchFileScore}
+        onApplyTag={handleBatchFileTag}
+      />
+
+      <BatchEditPanel
+        open={showProjectsBatchPanel}
+        count={selectedProjectIds.size}
+        itemLabel="project folder"
+        isDark={isDark}
+        allTags={allTags}
+        onClose={() => setShowProjectsBatchPanel(false)}
+        onApplyScore={handleBatchProjectScore}
+        onApplyTag={handleBatchProjectTag}
+      />
+
       <footer className={`border-t px-6 py-2 flex items-center justify-between ${isDark ? "border-white/5" : "border-black/5"}`}>
         <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>Music Library Manager · Local, read-only scanner</span>
-        <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>Heuristic export detection · Review before importing</span>
+        <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>Score and tag your tracks · Track what's ready to release</span>
       </footer>
     </div>
   );

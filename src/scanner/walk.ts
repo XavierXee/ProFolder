@@ -10,11 +10,15 @@ export type WalkEntry = {
   stats: { size: number; birthtime: Date; mtime: Date };
 };
 
-/** A visited directory and the names of its immediate subdirectories (used to detect project markers like "Ableton Project Info"). */
+/** A visited directory and the names of its immediate subdirectories (used to detect
+ * project markers like "Ableton Project Info"). `mtime` is the directory's own
+ * filesystem modified time — shallow, only changes when a direct child is
+ * added/removed/renamed, not when a nested file's contents change. */
 export type WalkDirInfo = {
   absolutePath: string;
   relativePath: string;
   childDirNames: string[];
+  mtime: Date;
 };
 
 export type WalkResult = {
@@ -55,10 +59,17 @@ export async function walkDirectory(
       return;
     }
     foldersScanned++;
+    let dirMtime = new Date(0);
+    try {
+      dirMtime = (await fs.stat(dirAbsPath)).mtime;
+    } catch (err) {
+      errors.push({ path: dirAbsPath, message: (err as Error).message });
+    }
     directories.push({
       absolutePath: dirAbsPath,
       relativePath: path.relative(normalizedRoot, dirAbsPath),
       childDirNames: entries.filter((e) => e.isDirectory()).map((e) => e.name),
+      mtime: dirMtime,
     });
 
     for (const entry of entries) {
