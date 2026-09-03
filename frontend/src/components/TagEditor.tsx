@@ -1,23 +1,33 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { TagAutocompleteInput } from "./TagAutocompleteInput.js";
+
+/**
+ * Pure add-tag logic: trims whitespace, rejects empty/whitespace-only input,
+ * and rejects duplicates (returning `tags` unchanged in both reject cases).
+ * Exported for direct unit testing independent of the `input` state reset.
+ */
+export function computeAddTag(tags: string[], raw: string): string[] {
+  const trimmed = raw.trim();
+  if (!trimmed || tags.includes(trimmed)) return tags;
+  return [...tags, trimmed];
+}
 
 export function TagEditor({
   tags,
   onChange,
+  allTags = [],
   isDark = true,
 }: {
   tags: string[];
   onChange: (tags: string[]) => void;
+  allTags?: string[];
   isDark?: boolean;
 }) {
   const [input, setInput] = useState("");
 
-  function addTag() {
-    const trimmed = input.trim();
-    if (!trimmed || tags.includes(trimmed)) {
-      setInput("");
-      return;
-    }
-    onChange([...tags, trimmed]);
+  function addTag(raw: string) {
+    const next = computeAddTag(tags, raw);
+    if (next !== tags) onChange(next);
     setInput("");
   }
 
@@ -25,11 +35,10 @@ export function TagEditor({
     onChange(tags.filter((t) => t !== tag));
   }
 
+  const suggestions = useMemo(() => allTags.filter((t) => !tags.includes(t)), [allTags, tags]);
+
   const chipCls = isDark ? "bg-white/8 text-slate-300" : "bg-slate-100 text-slate-700";
   const removeCls = isDark ? "text-slate-500 hover:text-slate-200" : "text-slate-400 hover:text-slate-700";
-  const inputCls = isDark
-    ? "bg-white/5 border-white/10 text-slate-300 placeholder-slate-600"
-    : "bg-white border-slate-300 text-slate-800 placeholder-slate-400";
 
   return (
     <div className="flex flex-col gap-2">
@@ -45,19 +54,14 @@ export function TagEditor({
           ))}
         </div>
       )}
-      <input
-        type="text"
-        placeholder="Add tag, press Enter…"
+      <TagAutocompleteInput
         value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            addTag();
-          }
-        }}
-        onBlur={addTag}
-        className={`w-full border rounded text-sm px-3 py-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 transition-colors ${inputCls}`}
+        onChange={setInput}
+        onCommit={addTag}
+        onBlur={() => addTag(input)}
+        suggestions={suggestions}
+        placeholder="Add tag, press Enter…"
+        isDark={isDark}
       />
     </div>
   );
