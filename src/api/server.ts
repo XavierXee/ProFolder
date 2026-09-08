@@ -40,8 +40,8 @@ export function createServer(db: ReturnType<typeof openDb>) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const db = openDb(config.dbPath);
   const app = createServer(db);
-  app.listen(config.port, () => {
-    console.log(`API server listening on http://localhost:${config.port}`);
+  app.listen(config.port, config.host, () => {
+    console.log(`API server listening on http://${config.host}:${config.port}`);
     console.log(`Music root: ${getEffectiveMusicRoot(db)}`);
   });
 }

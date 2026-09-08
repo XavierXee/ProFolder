@@ -16,6 +16,8 @@ npm run build && npm start # production build + run
 
 Open `http://localhost:5173` while `npm run dev` is running to use the UI: scan, search/filter, edit status and tags, and reveal files/projects in Finder.
 
+The API server binds to loopback (`127.0.0.1`) only by default, since there is no authentication anywhere in this app. See `.env.example` for the opt-in `HOST` env var if you deliberately want LAN access.
+
 ## Project Goal
 
 Build a local macOS app that scans a music-production folder and gives the user a clear overview of their Ableton projects, exported audio files, drafts, and sample-library content.
