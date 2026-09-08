@@ -245,6 +245,84 @@ describe("ProjectDetailPanel - duplicates banner", () => {
     expect(await screen.findByText("Possible duplicate of 2 other folders")).toBeInTheDocument();
     expect(screen.getByText("1 matching sample (100% overlap)")).toBeInTheDocument();
   });
+
+  it("renders the match's projectPath as visible text and as the row's title attribute", async () => {
+    mockGetProjectDuplicates.mockReset().mockResolvedValue(
+      makeDuplicatesResult({
+        matches: [
+          {
+            projectId: "p2",
+            projectName: "Other Song",
+            projectPath: "/music/Other Song",
+            matchingSampleCount: 2,
+            sampleCount: 3,
+            matchRatio: 0.6666,
+          },
+        ],
+      })
+    );
+    renderPanel();
+
+    const pathEl = await screen.findByText("/music/Other Song");
+    expect(pathEl).toHaveAttribute("title", "/music/Other Song");
+  });
+
+  it("clears the banner when the project prop switches to a different project with no duplicate matches", async () => {
+    mockGetProjectDuplicates
+      .mockReset()
+      .mockResolvedValueOnce(
+        makeDuplicatesResult({
+          matches: [
+            {
+              projectId: "p2",
+              projectName: "Other Song",
+              projectPath: "/music/Other Song",
+              matchingSampleCount: 2,
+              sampleCount: 3,
+              matchRatio: 0.6666,
+            },
+          ],
+        })
+      )
+      .mockResolvedValueOnce(makeDuplicatesResult({ projectId: "p3", matches: [] }));
+
+    const projectA = makeProject({ id: "p1" });
+    const projectB = makeProject({ id: "p3", name: "Third Song" });
+    const { rerender } = renderPanel({ project: projectA });
+
+    expect(await screen.findByText(/Possible duplicate/)).toBeInTheDocument();
+
+    rerender(
+      <ProjectDetailPanel
+        project={projectB}
+        isDark={true}
+        allTags={[]}
+        onClose={() => {}}
+        onReveal={() => {}}
+        onSaveStatus={vi.fn().mockResolvedValue(undefined)}
+        onSaveTags={vi.fn().mockResolvedValue(undefined)}
+        onSaveScore={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    // The banner clears immediately on the id-change effect run, before the
+    // new (empty) getProjectDuplicates call even resolves.
+    expect(screen.queryByText(/Possible duplicate/)).not.toBeInTheDocument();
+
+    await waitFor(() => expect(mockGetProjectDuplicates).toHaveBeenCalledWith("p3"));
+    expect(screen.queryByText(/Possible duplicate/)).not.toBeInTheDocument();
+  });
+
+  it("shows no banner, does not crash, and still renders the rest of the panel when getProjectDuplicates rejects", async () => {
+    mockGetProjectDuplicates.mockReset().mockRejectedValue(new Error("network down"));
+    renderPanel({ project: makeProject({ id: "p1", name: "My Song", path: "/music/My Song" }) });
+
+    await waitFor(() => expect(mockGetProjectDuplicates).toHaveBeenCalledWith("p1"));
+    expect(screen.queryByText(/Possible duplicate/)).not.toBeInTheDocument();
+
+    expect(screen.getByRole("dialog", { name: "Folder detail: My Song" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Empty folder.")).toBeInTheDocument());
+  });
 });
 
 describe("ProjectDetailPanel - DAW project files list", () => {
