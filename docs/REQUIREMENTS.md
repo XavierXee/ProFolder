@@ -96,7 +96,7 @@
 
 7.6. The result count for each view ("N of Total") is shown next to the filter bar.
 
-7.7. If a filter change, edit, or rescan shrinks the result set below the current page, the view automatically clamps back to the last page that still has data.
+7.7. If an edit or rescan shrinks the result set below the current page, the view automatically clamps back to the last page that still has data. (A filter change cannot trigger this: per §7.4, any filter change resets the page to 1 first, which structurally preempts the clamp — confirmed via `useAudioFiles`/`useProjects` test coverage, see `docs/COVERAGE.md` §7.7.)
 
 ## 8. Detail Panels
 
@@ -230,8 +230,6 @@ do not treat the bullets previously here as current, several were stale by the t
   duplicate-warning block, §8.3) have zero coverage at their actual layer; only the underlying
   pure functions are unit-tested.
 - §2.10c — `GET /api/scan/last` (most-recent-scan-run retrieval) has zero coverage at any layer.
-- Pagination (§7.4, §7.7, §9.1's clear-on-page-change) has zero coverage anywhere in the suite —
-  no scenario or unit test exercises multi-page results at all.
 - §12.3 — the "two link-sync directions never call each other, no ping-pong" claim is verified
   only by reading `linkSync.ts`'s two exports, no regression test guards against a future
   regression re-introducing a cycle.

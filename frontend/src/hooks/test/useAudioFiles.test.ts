@@ -214,7 +214,7 @@ describe("useAudioFiles - stale-response guard (request-sequence race)", () => {
 });
 
 describe("useAudioFiles - page clamping", () => {
-  it("clamps the current page back down when a filter change shrinks totalPages below it", async () => {
+  it("clamps the current page back down when a refetch/rescan shrinks totalPages below it", async () => {
     mockGetFiles.mockResolvedValue(makePaged({ totalPages: 5 }));
 
     const { result } = renderHook(() => useAudioFiles());
@@ -225,7 +225,7 @@ describe("useAudioFiles - page clamping", () => {
     });
     await waitFor(() => expect(result.current.page).toBe(5));
 
-    // Next fetch (triggered by the page change) reports a shrunk result set.
+    // Next fetch (triggered explicitly by refetch, e.g. after a rescan) reports a shrunk result set.
     mockGetFiles.mockResolvedValue(makePaged({ totalPages: 2 }));
     act(() => {
       result.current.refetch();
@@ -233,5 +233,130 @@ describe("useAudioFiles - page clamping", () => {
 
     await waitFor(() => expect(result.current.totalPages).toBe(2));
     await waitFor(() => expect(result.current.page).toBe(2));
+    // The clamp must actually trigger a real refetch at the clamped page, not just update local state.
+    await waitFor(() =>
+      expect(mockGetFiles).toHaveBeenLastCalledWith({ page: 2, pageSize: PAGE_SIZE })
+    );
+  });
+
+  it("never fires an intermediate fetch at the stale page when a filter change coincides with a totalPages shrink", async () => {
+    // Documents that the clamp effect is structurally unreachable via the filter path:
+    // updateFilters resets page to 1 synchronously before any request goes out, so
+    // `page > totalPages` can never be true as a result of a filter change alone.
+    mockGetFiles.mockResolvedValue(makePaged({ totalPages: 5 }));
+
+    const { result } = renderHook(() => useAudioFiles());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.setPage(5);
+    });
+    await waitFor(() => expect(result.current.page).toBe(5));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const callsBefore = mockGetFiles.mock.calls.length;
+
+    // The request triggered by the upcoming filter change reports a shrunk result set.
+    mockGetFiles.mockResolvedValue(makePaged({ totalPages: 1 }));
+    act(() => {
+      result.current.updateFilters({ search: "something" });
+    });
+
+    await waitFor(() => expect(result.current.filters.search).toBe("something"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Exactly one further fetch was made, and it was already at page 1 -- never at the stale page 5.
+    expect(mockGetFiles).toHaveBeenCalledTimes(callsBefore + 1);
+    expect(mockGetFiles).toHaveBeenLastCalledWith({
+      search: "something",
+      page: 1,
+      pageSize: PAGE_SIZE,
+    });
+    expect(result.current.page).toBe(1);
+    expect(result.current.totalPages).toBe(1);
+  });
+
+  it("does not move the page when totalPages grows while the current page is still within range", async () => {
+    mockGetFiles.mockResolvedValue(makePaged({ totalPages: 2 }));
+
+    const { result } = renderHook(() => useAudioFiles());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.setPage(2);
+    });
+    await waitFor(() => expect(result.current.page).toBe(2));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const callsBefore = mockGetFiles.mock.calls.length;
+
+    // totalPages grows on the next fetch; page (2) is still <= totalPages, so it must not change.
+    mockGetFiles.mockResolvedValue(makePaged({ totalPages: 5 }));
+    act(() => {
+      result.current.refetch();
+    });
+
+    await waitFor(() => expect(result.current.totalPages).toBe(5));
+    expect(result.current.page).toBe(2);
+    // No extra fetch beyond the explicit refetch -- the clamp effect must not have fired.
+    expect(mockGetFiles).toHaveBeenCalledTimes(callsBefore + 1);
+
+    // Boundary case: totalPages shrinks down to exactly the current page. This must still
+    // NOT be treated as out-of-range (page > totalPages is false when they're equal) --
+    // distinguishing `>` from an off-by-one `>=` requires exercising this exact edge.
+    const callsBeforeBoundary = mockGetFiles.mock.calls.length;
+    mockGetFiles.mockResolvedValue(makePaged({ totalPages: 2 }));
+    act(() => {
+      result.current.refetch();
+    });
+
+    await waitFor(() => expect(result.current.totalPages).toBe(2));
+    expect(result.current.page).toBe(2);
+    // Still no extra fetch beyond this explicit refetch -- the clamp must not fire at the boundary.
+    expect(mockGetFiles).toHaveBeenCalledTimes(callsBeforeBoundary + 1);
+  });
+
+  // The backend route layer guarantees totalPages >= 1 via a Math.max(1, ...) clamp
+  // (see tests/paginationRoutes.test.ts), so totalPages: 0 never actually reaches this
+  // hook in production. This test documents (does not fix) what the current clamp math
+  // would do if that backend invariant were ever violated -- the frontend's correctness
+  // for this edge case rests entirely on that backend guarantee.
+  it("would clamp page to 0 if totalPages were ever 0 (documents an assumption the backend guarantees, not a case reachable in production)", async () => {
+    mockGetFiles.mockResolvedValue(makePaged({ totalPages: 5 }));
+
+    const { result } = renderHook(() => useAudioFiles());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.setPage(3);
+    });
+    await waitFor(() => expect(result.current.page).toBe(3));
+
+    mockGetFiles.mockResolvedValue(makePaged({ totalPages: 0 }));
+    act(() => {
+      result.current.refetch();
+    });
+
+    await waitFor(() => expect(result.current.totalPages).toBe(0));
+    await waitFor(() => expect(result.current.page).toBe(0));
+  });
+});
+
+describe("useAudioFiles - updateFilters edge cases", () => {
+  it("resets page to 1 even when the patch is empty", async () => {
+    const { result } = renderHook(() => useAudioFiles());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.setPage(3);
+    });
+    await waitFor(() => expect(result.current.page).toBe(3));
+
+    act(() => {
+      result.current.updateFilters({});
+    });
+
+    await waitFor(() => expect(result.current.page).toBe(1));
+    expect(result.current.filters.page).toBe(1);
   });
 });
