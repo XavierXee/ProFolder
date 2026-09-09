@@ -10,6 +10,7 @@ import {
   setScore,
   setScoreForProjects,
   addTagsToProjects,
+  filterExistingProjectIds,
 } from "../../database/repositories/projectRepository.js";
 import {
   findAllActive as findAllFiles,
@@ -129,9 +130,10 @@ export function createProjectsRouter(db: Database.Database): Router {
         res.status(400).json({ error: "score must be an integer from 1 to 5, or null" });
         return;
       }
-      setScoreForProjects(db, ids, score);
-      for (const id of ids) cascadeProjectScoreToFiles(db, id, score);
-      res.json({ updated: ids.length });
+      const knownIds = filterExistingProjectIds(db, ids);
+      setScoreForProjects(db, knownIds, score);
+      for (const id of knownIds) cascadeProjectScoreToFiles(db, id, score);
+      res.json({ updated: knownIds.length });
     })
   );
 
@@ -148,9 +150,10 @@ export function createProjectsRouter(db: Database.Database): Router {
         res.status(400).json({ error: "tags must be an array of strings" });
         return;
       }
-      addTagsToProjects(db, ids, tags);
-      for (const id of ids) cascadeProjectTagsToFiles(db, id, tags);
-      res.json({ updated: ids.length });
+      const knownIds = filterExistingProjectIds(db, ids);
+      addTagsToProjects(db, knownIds, tags);
+      for (const id of knownIds) cascadeProjectTagsToFiles(db, id, tags);
+      res.json({ updated: knownIds.length });
     })
   );
 

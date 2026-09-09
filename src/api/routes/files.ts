@@ -8,6 +8,7 @@ import {
   setScore,
   setScoreForFiles,
   addTagsToFiles,
+  filterExistingFileIds,
 } from "../../database/repositories/audioFileRepository.js";
 import { findAllActive as findAllActiveProjects } from "../../database/repositories/projectRepository.js";
 import { syncProjectFromFiles } from "../../database/repositories/linkSync.js";
@@ -143,9 +144,10 @@ export function createFilesRouter(db: Database.Database): Router {
         res.status(400).json({ error: "score must be an integer from 1 to 5, or null" });
         return;
       }
-      setScoreForFiles(db, ids, score);
-      syncProjectsForFiles(db, ids);
-      res.json({ updated: ids.length });
+      const knownIds = filterExistingFileIds(db, ids);
+      setScoreForFiles(db, knownIds, score);
+      syncProjectsForFiles(db, knownIds);
+      res.json({ updated: knownIds.length });
     })
   );
 
@@ -162,9 +164,10 @@ export function createFilesRouter(db: Database.Database): Router {
         res.status(400).json({ error: "tags must be an array of strings" });
         return;
       }
-      addTagsToFiles(db, ids, tags);
-      syncProjectsForFiles(db, ids);
-      res.json({ updated: ids.length });
+      const knownIds = filterExistingFileIds(db, ids);
+      addTagsToFiles(db, knownIds, tags);
+      syncProjectsForFiles(db, knownIds);
+      res.json({ updated: knownIds.length });
     })
   );
 

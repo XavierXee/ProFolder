@@ -308,6 +308,20 @@ export function setScoreForFiles(db: Database.Database, ids: string[], score: nu
   db.prepare(`UPDATE audio_files SET score = ? WHERE id IN (${placeholders})`).run(score, ...ids);
 }
 
+/** Filters a list of ids down to only those with an existing row in `audio_files` —
+ * existence-only, deliberately NOT filtered by `is_removed` (a soft-removed file
+ * still has a row and should still count as "known"). Used by batch routes to drop
+ * unknown ids before they can trip a foreign-key constraint (e.g. audio_file_tags) or
+ * inflate an `updated` count. Also naturally dedupes the input. */
+export function filterExistingFileIds(db: Database.Database, ids: string[]): string[] {
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => "?").join(",");
+  const rows = db.prepare(`SELECT id FROM audio_files WHERE id IN (${placeholders})`).all(...ids) as {
+    id: string;
+  }[];
+  return rows.map((r) => r.id);
+}
+
 export function updateStatus(db: Database.Database, id: string, status: TrackStatus): void {
   db.prepare(`UPDATE audio_files SET status = ? WHERE id = ?`).run(status, id);
 }

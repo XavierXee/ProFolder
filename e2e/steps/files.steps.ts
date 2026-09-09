@@ -171,6 +171,13 @@ Then("the file {string} row should have tag {string}", async ({ page }, filename
   await expect(fileRow(page, filename)).toContainText(tag);
 });
 
+// Negative companion, added for the projects-tab batch-tag-cascade scenario (Task 9 follow-up
+// #3): proves a batch-added project tag didn't leak onto an unselected project's file, mirroring
+// projects.steps.ts's "the projects table row for ... should not show tag ..." exactly.
+Then("the file {string} row should not have tag {string}", async ({ page }, filename: string, tag: string) => {
+  await expect(fileRow(page, filename)).not.toContainText(tag);
+});
+
 // --- Filtering (Task 5a.2) --------------------------------------------------------------------
 //
 // FilterBar.tsx wraps the exact same FilterToolbar.tsx component ProjectsFilterBar.tsx wraps for

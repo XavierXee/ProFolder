@@ -224,6 +224,20 @@ export function setScoreForProjects(db: Database.Database, ids: string[], score:
   db.prepare(`UPDATE projects SET score = ? WHERE id IN (${placeholders})`).run(score, ...ids);
 }
 
+/** Filters a list of ids down to only those with an existing row in `projects` —
+ * existence-only, deliberately NOT filtered by `is_removed` (a soft-removed project
+ * still has a row and should still count as "known"). Used by batch routes to drop
+ * unknown ids before they can trip a foreign-key constraint (e.g. project_tags) or
+ * inflate an `updated` count. Also naturally dedupes the input. */
+export function filterExistingProjectIds(db: Database.Database, ids: string[]): string[] {
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => "?").join(",");
+  const rows = db.prepare(`SELECT id FROM projects WHERE id IN (${placeholders})`).all(...ids) as {
+    id: string;
+  }[];
+  return rows.map((r) => r.id);
+}
+
 export function setTags(db: Database.Database, id: string, tagNames: string[]): void {
   const unique = [...new Set(tagNames.map((t) => t.trim()).filter(Boolean))];
   const tx = db.transaction(() => {

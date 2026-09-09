@@ -100,6 +100,35 @@ Feature: Projects tab batch edit — selection mechanics and batch score/tag cas
     And the file "bravo-cascade.wav" row should show score 4
     And the file "charlie-cascade.wav" row should show no score
 
+  # Sibling of the score-cascade scenario above, same self-contained rationale: proves the batch
+  # route's per-id `cascadeProjectTagsToFiles` loop (src/api/routes/projects.ts) actually reaches
+  # each selected project's files, and does NOT reach an unselected project's files. The existing
+  # "Batch-adding a tag unions..." scenario above only ever asserts the Projects tab table rows —
+  # it never switches to the Audio Files tab, so it can't tell the difference between the batch
+  # route's own file-cascade working and the (separately-covered) single-project tag PATCH's own
+  # cascade happening to also produce the right-looking table row. "batch-folder-tag-cascade" is a
+  # scenario-unique tag string (grepped across e2e/features and e2e/support/fixtures first — see
+  # this task's own notes) never touched by any other Given step in the suite, since the cascade is
+  # add-only and this tag becoming permanent on Alpha/Bravo's files for the rest of the run must
+  # not collide with any other scenario's search/filter/assertion.
+  Scenario: Batch-adding a tag cascades onto its files, but not an unselected project's files
+    Given project "Batch E2E Projects Alpha" has tags ""
+    And project "Batch E2E Projects Bravo" has tags ""
+    And project "Batch E2E Projects Charlie" has tags ""
+    And I open the app
+    And I switch to the "Project Folders" tab
+    And I search projects for "Batch E2E Projects"
+    When I select project folder "Batch E2E Projects Alpha"
+    And I select project folder "Batch E2E Projects Bravo"
+    And I open the "project folders" batch edit panel
+    And I add the batch tag "batch-folder-tag-cascade" in the "project folders" batch edit panel
+    And I close the "project folders" batch edit panel
+    And I switch to the "Audio Files" tab
+    And I search files for "Batch E2E Projects"
+    Then the file "alpha-cascade.wav" row should have tag "batch-folder-tag-cascade"
+    And the file "bravo-cascade.wav" row should have tag "batch-folder-tag-cascade"
+    And the file "charlie-cascade.wav" row should not have tag "batch-folder-tag-cascade"
+
   Scenario: The header checkbox selects every visible row, and a second click clears the selection
     Given I open the app
     And I switch to the "Project Folders" tab
