@@ -33,18 +33,19 @@ itself has 85 addressable rows.*
 
 | Verdict | Count |
 |---|---|
-| COVERED-UNIT | 28 |
-| COVERED-BOTH | 13 |
+| COVERED-UNIT | 29 |
+| COVERED-BOTH | 16 |
 | COVERED-E2E | 5 |
 | PARTIAL | 18 |
-| WRONG-LAYER (primary) | 2 (+2 more rows carry it as a secondary/dual verdict — 8.3, 10.6b) |
-| NONE | 17 |
+| WRONG-LAYER (primary) | 1 (+2 more rows carry it as a secondary/dual verdict — 8.3, 10.6b) |
+| NONE | 14 |
 | NOT-HEADLESS-VERIFIABLE | 2 |
 | **Total rows** | **85** |
 
-Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 46/85 rows (54%). Rows with a real,
-actionable gap (PARTIAL + WRONG-LAYER + NONE) = 37/85 (44%). The remaining 2 rows
+Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 50/85 rows (59%). Rows with a real,
+actionable gap (PARTIAL + WRONG-LAYER + NONE) = 33/85 (39%). The remaining 2 rows
 (NOT-HEADLESS-VERIFIABLE) are a permanent environment limitation, not an actionable gap.
+(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered — see `docs/TODO.md`'s Task 9 follow-up items 5/6 closure notes.)
 
 ---
 
@@ -68,7 +69,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 37/85 (44%). The remaining 2 row
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
 | 2.1a | Recursive async walk | COVERED-UNIT | `tests/scanner.integration.test.ts:51` |
-| 2.1b | Tolerates one bad file/folder without aborting | NONE | No `walk.test.ts` exists; no EACCES/permission/symlink/broken/tolerate hits |
+| 2.1b | Tolerates one bad file/folder without aborting | COVERED-UNIT | `tests/scanner.integration.test.ts:464` — EACCES on a nested subdirectory records a per-path error while still indexing a sibling file outside it |
 | 2.2 | Extension-based audio recognition | COVERED-UNIT | `tests/audioDetector.test.ts:17,28` |
 | 2.3 | Ignore list (dot-dirs, node_modules, .git, .Trash, .Spotlight-V100, .fseventsd, .TemporaryItems, $RECYCLE.BIN, .DS_Store, AppleDouble) | PARTIAL | `tests/ignoreRules.test.ts:5,10,52`; `$RECYCLE.BIN` never exercised by exact name; several only implicitly covered via the generic dot-prefix branch |
 | 2.4a | Package-extension priority (.logicx) | COVERED-UNIT | `tests/dawDetector.test.ts:70` |
@@ -81,8 +82,8 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 37/85 (44%). The remaining 2 row
 | 2.8 | new/modified/unchanged/removed classification | COVERED-UNIT | `tests/scanner.integration.test.ts:88,98,118,136` |
 | 2.9 | Comparable removal detection for Projects | NONE | Same gap as 1.7b |
 | 2.10a | Aggregate scan stats recorded | COVERED-BOTH | `tests/scanner.integration.test.ts:54-58`, `e2e/steps/scanning.steps.ts:78` |
-| 2.10b | rootPath/duration/timestamps/per-path errors recorded | NONE | No assertions found |
-| 2.10c | "Most recent scan run retrievable" (`GET /api/scan/last`) | NONE | No test hits this route or `scanRunRepository` |
+| 2.10b | rootPath/duration/timestamps/per-path errors recorded | COVERED-BOTH | `tests/scanRunRepository.test.ts:42` (byte-for-byte round-trip incl. a multi-entry errors array), `tests/scanner.integration.test.ts:464` (a real EACCES persisted end-to-end), `e2e/features/scanning-settings/metrics-panel.feature:65` (persisted data reaches the UI after a reload) |
+| 2.10c | "Most recent scan run retrievable" (`GET /api/scan/last`) | COVERED-BOTH | `tests/scanRoutes.test.ts:38-90` (4 tests: 404-when-empty, agrees with POST response, reflects the second of two scans, full field-list/type shape), `e2e/features/scanning-settings/metrics-panel.feature:65` |
 | 2.11 | Scanning strictly read-only | NONE | No regression test proves this; true only by code inspection |
 
 ## §3 Scan Settings
@@ -118,7 +119,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 37/85 (44%). The remaining 2 row
 |---|---|---|---|
 | 6.1 | Columns (checkbox/play+filename/Status/Tags/Project/Score/Location+tooltip/Modified) | PARTIAL | play/Status/Tags/Score COVERED-E2E; Modified/Location as sort targets COVERED-E2E (`sorting.feature:50-77`); Project column display NONE; Location tooltip/truncation NONE |
 | 6.2 | Row click opens panel, excluding play/checkbox | PARTIAL | row-click-opens and play-doesn't-open both COVERED-E2E; checkbox-doesn't-open NONE |
-| 6.3 | Metrics tile (total/Draft/unscored/change counts) | WRONG-LAYER (UI) / COVERED-UNIT (data) | No e2e match for metric\|stats; `tests/audioFileRepository.test.ts:131-158` covers the aggregate only |
+| 6.3 | Metrics tile (total/Draft/unscored/change counts) | COVERED-BOTH | `tests/audioFileRepository.test.ts:131-158` (the total/Draft/unscored aggregate), `e2e/features/scanning-settings/metrics-panel.feature:65` (a real triggered scan's exact `+1 changed` count, persisted via `GET /api/scan/last`, appears correctly in the Metrics panel after a reload — closes the prior UI-layer gap) |
 
 ## §7 Filtering & Sorting
 

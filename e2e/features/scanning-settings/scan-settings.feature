@@ -46,11 +46,17 @@ Feature: Settings panel — name-based folder exclusion toggles
   # with it applied to both files, the same combined `--grep` invocation passed cleanly across
   # repeated runs at both worker counts.
   #
-  # Scenario 3 deliberately depends on scenarios 1 and 2 having already run (it restores BOTH
-  # toggles back to their default `true`, cleaning up after both) rather than restoring its own
-  # state independently — safe only because `@mode:serial` (playwright-bdd's
-  # `test.describe.configure({ mode: "serial" })`) guarantees these three scenarios run in this
-  # file's declared order, one after another, in the same worker.
+  # Each scenario below is fully self-contained: it sets up whatever starting state it needs
+  # itself (never assuming a prior scenario in this file already ran) and restores the baseline
+  # (both toggles back to their default `true`/excluded, and any scan-triggered DB changes
+  # reverted) before it finishes — mirroring exclusion-toggles.feature's own established
+  # self-restoring convention. This is required, not just tidy: under `--repeat-each=N`,
+  # Playwright runs N independent copies of this whole scenario group, and while `@mode:serial`
+  # correctly orders scenarios WITHIN one copy, it does nothing to stop a DIFFERENT copy's
+  # scenario 1 from running in the gap between this copy's own scenario 1 and scenario 3 (the
+  # scan-lock mutex is held per-scenario, not per-copy-of-the-whole-file) — so a scenario that
+  # assumed an earlier scenario's leftover state, rather than establishing its own, could
+  # observe a different copy's state instead and fail or false-pass nondeterministically.
 
   Scenario: Toggling "Exclude Samples folders" off reveals the excluded fixture after a rescan
     Given I open the app
@@ -65,6 +71,16 @@ Feature: Settings panel — name-based folder exclusion toggles
     And I start a scan from the scan settings panel
     Then I should see a scan complete banner
     And I should see file "track.wav" in the table
+    # Cleanup: restore "Exclude Samples folders" back to its default (excluded) state so this
+    # scenario doesn't leave global config mutated for whichever scenario/copy runs next.
+    When I open the settings panel
+    And I toggle "Exclude Samples folders" in the settings panel
+    Then the settings panel should show save state "Saved"
+    When I close the settings panel
+    And I open the production folder scan settings panel
+    And I start a scan from the scan settings panel
+    Then I should see a scan complete banner
+    And I should not see file "track.wav" in the table
 
   Scenario: Toggling "Exclude Backup folders" off reveals the excluded fixture after a rescan
     Given I open the app
@@ -79,15 +95,42 @@ Feature: Settings panel — name-based folder exclusion toggles
     And I start a scan from the scan settings panel
     Then I should see a scan complete banner
     And I should see file "track.wav" in the table
+    # Cleanup: restore "Exclude Backup folders" back to its default (excluded) state so this
+    # scenario doesn't leave global config mutated for whichever scenario/copy runs next.
+    When I open the settings panel
+    And I toggle "Exclude Backup folders" in the settings panel
+    Then the settings panel should show save state "Saved"
+    When I close the settings panel
+    And I open the production folder scan settings panel
+    And I start a scan from the scan settings panel
+    Then I should see a scan complete banner
+    And I should not see file "track.wav" in the table
 
-  # Cleanup + a lightweight proof the setting works in both directions (toggling both fixtures'
-  # exclusions back on removes their now-reappeared files again), restoring the suite-wide default
-  # (both toggles on) so it isn't left mutated for whichever scenario/spec runs next.
-  Scenario: Restoring both exclusion toggles removes both fixtures again after a rescan
+  # Distinct from the two scenarios above: proves toggling BOTH settings off together (a single
+  # save round-trip per checkbox, but one shared rescan) reveals both fixtures at once, not just
+  # each in isolation — then restores both toggles back to their default, confirming the setting
+  # works correctly in both directions together as well.
+  Scenario: Toggling both exclusions off together reveals both fixtures after a single rescan
     Given I open the app
     And I switch to the "Audio Files" tab
     And I search files for "Scanning E2E Settings/Samples"
+    Then I should not see file "track.wav" in the table
+    When I search files for "Scanning E2E Settings/Backup"
+    Then I should not see file "track.wav" in the table
+    When I open the settings panel
+    And I toggle "Exclude Samples folders" in the settings panel
+    Then the settings panel should show save state "Saved"
+    And I toggle "Exclude Backup folders" in the settings panel
+    Then the settings panel should show save state "Saved"
+    When I close the settings panel
+    And I open the production folder scan settings panel
+    And I start a scan from the scan settings panel
+    Then I should see a scan complete banner
+    And I should see file "track.wav" in the table
+    When I search files for "Scanning E2E Settings/Samples"
     Then I should see file "track.wav" in the table
+    # Cleanup: restore both toggles back to their default (excluded) state so this scenario
+    # doesn't leave global config mutated for whichever scenario/copy runs next.
     When I open the settings panel
     And I toggle "Exclude Samples folders" in the settings panel
     Then the settings panel should show save state "Saved"

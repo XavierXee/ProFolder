@@ -51,6 +51,16 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
   let modifiedFiles = 0;
   const walkErrors: ScanError[] = [...errors];
 
+  // If the root itself couldn't be read at all (unmounted drive, bad path — see the
+  // ENOENT walkDirectory records for the root path when its top-level readdir fails),
+  // foldersScanned is 0 and every previously-active file/project would otherwise look
+  // "not seen this scan" and get soft-deleted en masse. That's "root unreachable," not
+  // "everything was legitimately deleted" — skip the removal-marking pass below so a
+  // transient/bad mount doesn't silently wipe the library's active status. A genuine
+  // per-subdirectory error (e.g. EACCES on one nested folder) still lets foldersScanned
+  // count the root and any other reachable folders, so this guard doesn't apply there.
+  const rootUnreachable = foldersScanned === 0 && errors.some((error) => error.path === rootPath);
+
   const nowIso = new Date().toISOString();
 
   const tx = db.transaction(() => {
@@ -140,7 +150,24 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
       existingFingerprints.delete(id);
     }
 
-    const removedFileIds = [...existingFingerprints.keys()];
+    if (rootUnreachable) {
+      return { removedFileIds: [] };
+    }
+
+    // Unlike loadActiveProjectIds() (which only ever returns is_removed = 0 rows,
+    // making removedProjectIds below naturally "active projects not seen this scan"),
+    // loadFingerprints() deliberately includes already-soft-removed rows too — that's
+    // load-bearing for the reactivation path above (fingerprint.isRemoved), which needs
+    // to recognize a reappearing file's id/path as already occupying a row rather than
+    // hitting a UNIQUE constraint on INSERT. That means anything left in
+    // existingFingerprints after the loop above includes both newly-vanished files AND
+    // files that were already removed before this scan even started. Filter those already-
+    // removed rows out here so only genuinely-newly-removed files get (re)marked and
+    // counted — otherwise an already-removed file would be counted as "removed" again,
+    // and have its last_seen_at bumped, on every subsequent scan forever.
+    const removedFileIds = [...existingFingerprints.entries()]
+      .filter(([, fingerprint]) => !fingerprint.isRemoved)
+      .map(([id]) => id);
     markAudioFilesRemoved(db, removedFileIds, nowIso);
 
     const removedProjectIds = [...existingProjectIds].filter((id) => !seenProjectIds.has(id));

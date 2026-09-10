@@ -20,6 +20,7 @@ import {
 } from "../src/database/repositories/projectRepository.js";
 import { setExcludedPaths } from "../src/database/repositories/scanExclusionRepository.js";
 import { setScanSettings } from "../src/config/scanSettings.js";
+import { getLastScanRun } from "../src/database/repositories/scanRunRepository.js";
 
 let tmpRoot: string;
 let db: Database.Database;
@@ -147,6 +148,52 @@ describe("runScan", () => {
       | { is_removed: number }
       | undefined;
     expect(raw?.is_removed).toBe(1);
+  });
+
+  it("does not re-count an already-removed file as removed again on a subsequent no-op scan (regression)", async () => {
+    // 1. Baseline: two files, both new.
+    await runScan({ rootPath: tmpRoot }, db);
+    let stats = await runScan({ rootPath: tmpRoot }, db);
+    expect(stats.newFiles).toBe(0);
+    expect(stats.removedFiles).toBe(0);
+
+    // 2. Delete one file, rescan — exactly one file counted as removed.
+    await fs.rm(path.join(tmpRoot, "Sample Library", "Drums", "kick.wav"));
+    stats = await runScan({ rootPath: tmpRoot }, db);
+    expect(stats.removedFiles).toBe(1);
+
+    // 3. Core regression: rescan again with no filesystem changes since the previous
+    // scan. The already-removed file must NOT be counted as removed a second time.
+    stats = await runScan({ rootPath: tmpRoot }, db);
+    expect(stats.removedFiles).toBe(0);
+
+    // 4. Add a new file (no other changes). newFiles reflects the addition, and the
+    // still-removed kick.wav must still not be double-counted, so the total change
+    // count (newFiles + removedFiles) is exactly 1, not 2.
+    await writeFile("Sample Library/Drums/snare.wav", "snare-audio");
+    stats = await runScan({ rootPath: tmpRoot }, db);
+    expect(stats.newFiles).toBe(1);
+    expect(stats.removedFiles).toBe(0);
+  });
+
+  it("does not advance an already-removed file's last_seen_at on a subsequent no-op scan (regression)", async () => {
+    await runScan({ rootPath: tmpRoot }, db);
+    await fs.rm(path.join(tmpRoot, "Sample Library", "Drums", "kick.wav"));
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const beforeRow = db
+      .prepare("SELECT last_seen_at, is_removed FROM audio_files WHERE filename = ?")
+      .get("kick.wav") as { last_seen_at: string; is_removed: number };
+    expect(beforeRow.is_removed).toBe(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const afterRow = db
+      .prepare("SELECT last_seen_at, is_removed FROM audio_files WHERE filename = ?")
+      .get("kick.wav") as { last_seen_at: string; is_removed: number };
+    expect(afterRow.is_removed).toBe(1);
+    expect(afterRow.last_seen_at).toBe(beforeRow.last_seen_at);
   });
 
   it("reactivates a soft-deleted file that reappears after its folder is un-excluded, without crashing, preserving its prior status/tags/score", async () => {
@@ -363,5 +410,113 @@ describe("runScan", () => {
     const trackAIndex = ids.indexOf(path.join("Ableton Projects", "Track A"));
     const trackBIndex = ids.indexOf(path.join("Ableton Projects", "Track B"));
     expect(trackBIndex).toBeLessThan(trackAIndex);
+  });
+});
+
+describe("scan run persistence", () => {
+  it("persists the returned stats end-to-end, retrievable via getLastScanRun", async () => {
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    const persisted = getLastScanRun(db);
+    expect(persisted).toEqual(stats);
+  });
+
+  it("persists rootPath as the resolved absolute path, not a caller-supplied unnormalized string", async () => {
+    // path.join() itself collapses ".." segments, so a value built with it would already be
+    // clean before runScan ever sees it (and could not catch a regression in the resolve()
+    // call this test is meant to exercise). Concatenate the string manually instead, so a
+    // genuinely-unnormalized value actually survives to reach runScan's rootPath handling.
+    const unnormalized = `${tmpRoot}/Sample Library/..`;
+
+    const stats = await runScan({ rootPath: unnormalized }, db);
+
+    expect(stats.rootPath).toBe(path.resolve(tmpRoot));
+    const persisted = getLastScanRun(db);
+    expect(persisted?.rootPath).toBe(path.resolve(tmpRoot));
+  });
+
+  it("records startedAt/finishedAt as consistent ISO timestamps with durationMs matching their difference", async () => {
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    const startedMs = Date.parse(stats.startedAt);
+    const finishedMs = Date.parse(stats.finishedAt);
+    expect(Number.isNaN(startedMs)).toBe(false);
+    expect(Number.isNaN(finishedMs)).toBe(false);
+    expect(startedMs).toBeLessThanOrEqual(finishedMs);
+    expect(stats.durationMs).toBeGreaterThanOrEqual(0);
+    expect(stats.durationMs).toBe(finishedMs - startedMs);
+
+    const persisted = getLastScanRun(db);
+    expect(persisted?.durationMs).toBe(stats.durationMs);
+  });
+
+  it("returns the most recent scan run from getLastScanRun, not an earlier one", async () => {
+    await runScan({ rootPath: tmpRoot }, db);
+
+    await writeFile("Sample Library/Drums/snare.wav", "snare-audio");
+    const stats2 = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats2.newFiles).toBe(1);
+    const persisted = getLastScanRun(db);
+    expect(persisted).toEqual(stats2);
+  });
+
+  it("records a per-path EACCES error for an unreadable subdirectory while still indexing a sibling file outside it", async () => {
+    const restrictedDir = path.join(tmpRoot, "Restricted");
+    await writeFile("Restricted/hidden.wav", "hidden-audio");
+    await writeFile("Outside/sibling.wav", "sibling-audio");
+    await fs.chmod(restrictedDir, 0o000);
+
+    try {
+      const stats = await runScan({ rootPath: tmpRoot }, db);
+
+      const restrictedError = stats.errors.find((e) => e.path === restrictedDir);
+      expect(restrictedError).toBeDefined();
+      expect(restrictedError?.message).toMatch(/EACCES/);
+
+      const files = findAllActiveFiles(db);
+      expect(files.find((f) => f.filename === "sibling.wav")).toBeDefined();
+      expect(files.find((f) => f.filename === "hidden.wav")).toBeUndefined();
+
+      const persisted = getLastScanRun(db);
+      expect(
+        persisted?.errors.some((e) => e.path === restrictedDir && /EACCES/.test(e.message))
+      ).toBe(true);
+    } finally {
+      // Must happen before the top-level afterEach's fs.rm — recursive rm on a tree
+      // containing a still-chmod-000 directory fails with EACCES itself.
+      await fs.chmod(restrictedDir, 0o755);
+    }
+  });
+
+  // Confirms the root-unreachable guard below is narrowly scoped: a real, walkable
+  // root where a file has genuinely been deleted since the last scan must still mark
+  // it removed. Already covered by "soft-deletes files that disappear from disk
+  // instead of hard-deleting them" in the `runScan` describe block above, which
+  // continues to pass with the guard in place since that scenario has foldersScanned > 0.
+  it("does not wipe active files/projects when the scan root itself is unreachable (regression)", async () => {
+    await runScan({ rootPath: tmpRoot }, db);
+    const filesBefore = findAllActiveFiles(db);
+    const projectsBefore = findAllActiveProjects(db);
+    expect(filesBefore.length).toBeGreaterThan(0);
+    expect(projectsBefore.length).toBeGreaterThan(0);
+
+    const missingRoot = path.join(tmpRoot, "does-not-exist");
+    const stats = await runScan({ rootPath: missingRoot }, db);
+
+    expect(stats.foldersScanned).toBe(0);
+    expect(stats.removedFiles).toBe(0);
+    expect(stats.errors.some((e) => e.path === missingRoot)).toBe(true);
+
+    expect(findAllActiveFiles(db)).toHaveLength(filesBefore.length);
+    expect(findAllActiveProjects(db)).toHaveLength(projectsBefore.length);
+
+    const rawFiles = db.prepare("SELECT is_removed FROM audio_files").all() as { is_removed: number }[];
+    expect(rawFiles.length).toBeGreaterThan(0);
+    expect(rawFiles.every((r) => r.is_removed === 0)).toBe(true);
+
+    const rawProjects = db.prepare("SELECT is_removed FROM projects").all() as { is_removed: number }[];
+    expect(rawProjects.length).toBeGreaterThan(0);
+    expect(rawProjects.every((r) => r.is_removed === 0)).toBe(true);
   });
 });

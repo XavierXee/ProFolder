@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getScratchDir } from "./testEnv.js";
+import { getScratchDir, getSentinelPath } from "./testEnv.js";
 
 /**
  * Runs once before the whole e2e suite starts (see `globalSetup` in playwright.config.ts).
  *
- * Two responsibilities, both needed so scenarios can rely on a populated, deterministic DB
+ * Three responsibilities, all needed so scenarios can rely on a populated, deterministic DB
  * from their very first step rather than each scenario having to trigger (and wait out) its
  * own scan:
  *
@@ -16,6 +16,14 @@ import { getScratchDir } from "./testEnv.js";
  *      tree into the scratch dir.
  *   2. POST directly to the API (not through the Vite dev-server proxy) to trigger a scan of
  *      the scratch music root, so every scenario in the suite starts with a populated DB.
+ *   3. Write a small sentinel file into the scratch dir recording this run's `E2E_RUN_ID`. Every
+ *      worker process computes its own `getScratchDir()`, and under a correct run every worker
+ *      resolves the exact same directory this process just populated — but if that ever silently
+ *      stops being true (e.g. `E2E_RUN_ID` wasn't actually shared with a worker), that worker
+ *      would resolve a DIFFERENT, sentinel-less directory. `Before("@scan-lock")` in
+ *      scanLockHooks.ts checks for this file before trusting the scan-lock mutex, so that failure
+ *      mode throws a clear, named error instead of silently running with a no-op lock — see
+ *      `getSentinelPath()`'s doc comment in `testEnv.ts`.
  *
  * This module is loaded by the `playwright test` process — the same process that evaluated
  * `playwright.config.ts` and therefore already called `getScratchDir()` once — so the call
@@ -27,7 +35,17 @@ export default async function globalSetup(): Promise<void> {
 
   stampSortFixtureTimestamps(scratchDir);
   stampFileSortFixtureTimestamps(scratchDir);
+  writeScratchDirSentinel();
   await triggerScan();
+}
+
+function writeScratchDirSentinel(): void {
+  const sentinel = {
+    runId: process.env.E2E_RUN_ID ?? null,
+    scratchDir: getScratchDir(),
+    createdAt: new Date().toISOString(),
+  };
+  fs.writeFileSync(getSentinelPath(), JSON.stringify(sentinel, null, 2), "utf-8");
 }
 
 // Any folder directly under `music-root` whose name starts with this prefix gets a fixed,

@@ -1,7 +1,25 @@
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { defineConfig, devices } from "@playwright/test";
 import { defineBddConfig } from "playwright-bdd";
 import { getScratchDir } from "./e2e/support/testEnv.js";
+
+// `npm run test:e2e`/`test:e2e:headed` already export a shared `E2E_RUN_ID` before invoking
+// `bddgen && playwright test` (see package.json), so every process they spawn — including this
+// config-loading process and every forked worker — agrees on it. But this config module can also
+// be loaded directly (e.g. a bare `npx playwright test`), in which case `E2E_RUN_ID` is unset. Set
+// it here, once, before `getScratchDir()` (below) or `webServer`/worker processes ever read it, so
+// even a bare invocation gets a single shared id. This must run in THIS module (not deeper inside
+// `testEnv.ts`) because Playwright workers are forked from this main process and inherit its
+// `process.env` at fork time — setting it here, synchronously, at config-load time, is what
+// guarantees every worker sees the same value rather than each computing its own. Without this,
+// `getScratchDir()` falls back to keying its marker on `process.pid`, and since every worker is a
+// distinct process with a distinct pid, each one silently resolves its own separate scratch dir —
+// which `scanLock.ts` derives its cross-process mutex's lock-file path from, so disagreement here
+// makes the mutex a silent no-op (see the doc comment on the `RUN_ID` fallback in `testEnv.ts`).
+if (!process.env.E2E_RUN_ID) {
+  process.env.E2E_RUN_ID = randomUUID();
+}
 
 const testDir = defineBddConfig({
   features: "e2e/features/**/*.feature",
