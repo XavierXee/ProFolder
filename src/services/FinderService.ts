@@ -6,6 +6,9 @@ export interface FinderService {
   revealInFinder(absolutePath: string): Promise<void>;
 }
 
+/** Thrown when the requested path resolves outside the configured music root. */
+export class PathOutsideRootError extends Error {}
+
 /** Reveals a file/folder in Finder via `open -R`. Only works on macOS. */
 export class MacFinderService implements FinderService {
   /** Takes a provider function rather than a fixed path, since the configured music root can change at runtime. */
@@ -13,7 +16,7 @@ export class MacFinderService implements FinderService {
 
   async revealInFinder(absolutePath: string): Promise<void> {
     if (!isWithinRoot(absolutePath, this.getAllowedRoot())) {
-      throw new Error("Refusing to reveal a path outside the configured music root");
+      throw new PathOutsideRootError("Refusing to reveal a path outside the configured music root");
     }
     const resolved = path.resolve(absolutePath);
     await new Promise<void>((resolve, reject) => {

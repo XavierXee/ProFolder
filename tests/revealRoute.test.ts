@@ -50,12 +50,13 @@ describe("POST /api/reveal", () => {
   it("refuses a path outside the configured music root", async () => {
     const res = await request(app).post("/api/reveal").send({ path: "/etc/passwd" });
 
-    // FinderService.revealInFinder throws for out-of-root paths; the route has no
-    // dedicated catch for that, so it falls through to the app's generic JSON error
-    // middleware (500) rather than a 4xx — this asserts the guard actually fires and
-    // execFile ("open -R") is never reached, not any particular status code choice.
-    expect(res.status).toBe(500);
-    expect(res.body.error).toMatch(/outside the configured music root/);
+    // FinderService.revealInFinder throws PathOutsideRootError for out-of-root paths; the
+    // route catches that specifically and collapses it into the same generic 404 shape the
+    // audio-stream route uses, rather than letting it fall through to the app's generic
+    // JSON error middleware (500) with the specific containment-failure reason attached.
+    // This deliberately avoids confirming *why* the reveal failed.
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "File not found" });
     expect(execFileMock).not.toHaveBeenCalled();
   });
 
@@ -63,9 +64,25 @@ describe("POST /api/reveal", () => {
     const evilSibling = `${root}Evil`;
     const res = await request(app).post("/api/reveal").send({ path: evilSibling });
 
-    expect(res.status).toBe(500);
-    expect(res.body.error).toMatch(/outside the configured music root/);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "File not found" });
     expect(execFileMock).not.toHaveBeenCalled();
+  });
+
+  it("still returns a generic 500 for a genuine (non-containment) revealInFinder failure", async () => {
+    execFileMock.mockImplementationOnce((_cmd, _args, callback) => callback(new Error("boom")));
+    const innerDir = path.join(root, "Song");
+    fs.mkdirSync(innerDir, { recursive: true });
+    const innerPath = path.join(innerDir, "track.als");
+    fs.writeFileSync(innerPath, "");
+
+    const res = await request(app).post("/api/reveal").send({ path: innerPath });
+
+    // Confirms the new try/catch only intercepts PathOutsideRootError and rethrows
+    // everything else (e.g. a real `open -R` / execFile failure) unchanged, so it still
+    // reaches the app's generic error middleware as before.
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch(/boom/);
   });
 
   it("succeeds for a path inside the configured music root", async () => {

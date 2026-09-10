@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { FinderService } from "../../services/FinderService.js";
+import { PathOutsideRootError, type FinderService } from "../../services/FinderService.js";
 import { asyncHandler } from "../asyncHandler.js";
 
 export function createRevealRouter(finderService: FinderService): Router {
@@ -13,7 +13,15 @@ export function createRevealRouter(finderService: FinderService): Router {
         res.status(400).json({ error: "path is required" });
         return;
       }
-      await finderService.revealInFinder(targetPath);
+      try {
+        await finderService.revealInFinder(targetPath);
+      } catch (err) {
+        if (err instanceof PathOutsideRootError) {
+          res.status(404).json({ error: "File not found" });
+          return;
+        }
+        throw err;
+      }
       res.json({ ok: true });
     })
   );
