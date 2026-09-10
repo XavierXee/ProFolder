@@ -44,19 +44,19 @@ around it.
 
 | Verdict | Count |
 |---|---|
-| COVERED-UNIT | 31 |
+| COVERED-UNIT | 33 |
 | COVERED-BOTH | 18 |
 | COVERED-E2E | 5 |
 | PARTIAL | 16 |
-| WRONG-LAYER (primary) | 1 (+2 more rows carry it as a secondary/dual verdict — 8.3, 10.6b) |
-| NONE | 12 |
+| WRONG-LAYER (primary) | 1 (+1 more row carries it as a secondary/dual verdict — 10.6b) |
+| NONE | 10 |
 | NOT-HEADLESS-VERIFIABLE | 2 |
 | **Total rows** | **85** |
 
-Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 54/85 rows (64%). Rows with a real,
-actionable gap (PARTIAL + WRONG-LAYER + NONE) = 29/85 (34%). The remaining 2 rows
+Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 56/85 rows (66%). Rows with a real,
+actionable gap (PARTIAL + WRONG-LAYER + NONE) = 27/85 (32%). The remaining 2 rows
 (NOT-HEADLESS-VERIFIABLE) are a permanent environment limitation, not an actionable gap.
-(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH (also corrected 3 stale sub-clause verdicts within §8.1/§8.2/§13.3 that a prior coverage audit had understated); §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8 closure notes.)
+(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9 closure notes.)
 
 ---
 
@@ -150,8 +150,8 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 29/85 (34%). The remaining 2 row
 |---|---|---|---|
 | 8.1 | Slide-in panel, dismiss via close/Escape/backdrop, auto-focus close | PARTIAL | animation NOT-HEADLESS-VERIFIABLE (permanent); close-button COVERED-E2E; Escape-dismiss COVERED-UNIT (`FileDetailPanel.test.tsx:108-118`, `ProjectDetailPanel.test.tsx`) — corrects a stale prior verdict, this was already covered before Task 9 follow-up #8; backdrop-click-dismiss COVERED-UNIT (`FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx`, new); auto-focus COVERED-UNIT (same files, new — asserts the real 50ms `setTimeout` focus effect) |
 | 8.2 | Status/Score/Tags edit mechanics, "Saving…" indicator, optimistic rollback | COVERED-BOTH | status/score-set, tags-add-via-Enter, tags-remove COVERED-E2E (`e2e/features/files-tab/detail-panel-status-tags-score.feature:24-84`); score-click-again-to-clear COVERED-UNIT (`ScoreEditor.test.tsx:26-34`) — corrects a stale prior verdict, already covered; tags-add-via-blur COVERED-UNIT (`TagEditor.test.tsx`, new); "Saving…" indicator COVERED-UNIT (`FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx`, new, ×3 fields each); rollback-on-failure COVERED-UNIT (`FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx`) — corrects a stale prior verdict, already covered |
-| 8.3 | DAW badge/"Detected via"/duplicate-warning block/nested-DAW list/folder tree | NONE (UI) / WRONG-LAYER | no panel-display assertions anywhere; underlying logic well-covered elsewhere (`tests/dawDetector.test.ts`, `tests/duplicateDetector.test.ts`) but wrong layer for this requirement |
-| 8.4 | File size, full path, "Reveal file/project in Finder" | NONE | Only the panel heading text is ever asserted |
+| 8.3 | DAW badge/"Detected via"/duplicate-warning block/nested-DAW list/folder tree | COVERED-UNIT | Corrects a stale prior verdict (Task 9 follow-up #9 found 4 of 5 sub-elements were already covered before that cycle): DAW badge + "Detected via" note (`ProjectDetailPanel.test.tsx` "basic rendering" block), duplicate-warning block (same file, "duplicates banner" block, closed by item 2), nested-DAW project files list (same file, "DAW project files list" block) were all pre-existing; folder tree — genuinely closed by follow-up #9's new "folder content tree" block, proving depth-based default-expand/collapse and the toggle, not just static text |
+| 8.4 | File size, full path, "Reveal file/project in Finder" | COVERED-UNIT | Corrects a stale prior verdict (Task 9 follow-up #9 found file size, relative path, and both reveal actions were already covered before that cycle, via `FileDetailPanel.test.tsx`'s "basic rendering"/`formatBytes`/reveal-action blocks); the full absolute path (`file.path`) was the one genuine gap, closed by follow-up #9's extension to the "basic rendering" test |
 
 ## §9 Batch Operations
 

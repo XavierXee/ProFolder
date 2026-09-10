@@ -68,13 +68,22 @@ describe("formatFull", () => {
 
 describe("FileDetailPanel - basic rendering", () => {
   it("renders the filename, formatted 'Updated' timestamp, size, and location", () => {
-    renderPanel({ file: makeFile({ filename: "beat.wav", size: 2048, modifiedAt: "2026-01-15T10:30:00.000Z", relativePath: "Song/beat.wav" }) });
+    renderPanel({
+      file: makeFile({
+        filename: "beat.wav",
+        size: 2048,
+        modifiedAt: "2026-01-15T10:30:00.000Z",
+        path: "/music/Song/beat.wav",
+        relativePath: "Song/beat.wav",
+      }),
+    });
 
     expect(screen.getByRole("dialog", { name: "File detail: beat.wav" })).toBeInTheDocument();
     expect(screen.getByText("beat.wav")).toBeInTheDocument();
     expect(screen.getByText("Updated Jan 15, 2026, 10:30")).toBeInTheDocument();
     expect(screen.getByText("2.0 KB")).toBeInTheDocument();
     expect(screen.getByText("Song/beat.wav")).toBeInTheDocument();
+    expect(screen.getByText("/music/Song/beat.wav")).toBeInTheDocument();
   });
 
   it("always shows the 'Reveal file in Finder' button and calls onReveal with the file path", async () => {

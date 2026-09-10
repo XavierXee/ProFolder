@@ -515,6 +515,101 @@ describe("ProjectDetailPanel - auto-focus on open", () => {
   });
 });
 
+describe("ProjectDetailPanel - folder content tree", () => {
+  // Tree shape (depths as counted by ReadOnlyFolderTreeNode, where the
+  // subfolderTree's own root is never rendered and its direct children
+  // start at depth 0):
+  //   Samples (folder, depth 0)         -> depth < 1 => auto-expanded
+  //     OneShots (folder, depth 1)      -> depth < 1 is false => collapsed by default
+  //       kick.wav (file, depth 2)      -> only visible once OneShots is expanded
+  //   song.als (file, depth 0)
+  // This genuinely exercises the collapsed-by-default branch because OneShots
+  // sits one level below the auto-expanded depth-0 folder, not at depth 0 itself.
+  const kickWav: FolderNode = {
+    name: "kick.wav",
+    path: "/music/My Song/Samples/OneShots/kick.wav",
+    type: "file",
+    children: [],
+  };
+  const oneShots: FolderNode = {
+    name: "OneShots",
+    path: "/music/My Song/Samples/OneShots",
+    type: "folder",
+    children: [kickWav],
+  };
+  const samples: FolderNode = {
+    name: "Samples",
+    path: "/music/My Song/Samples",
+    type: "folder",
+    children: [oneShots],
+  };
+  const songAls: FolderNode = {
+    name: "song.als",
+    path: "/music/My Song/song.als",
+    type: "file",
+    children: [],
+  };
+  const tree: FolderNode = {
+    name: "root",
+    path: "/music/My Song",
+    type: "folder",
+    children: [samples, songAls],
+  };
+
+  it("renders both depth-0 nodes and the auto-expanded folder's own children", async () => {
+    mockGetProjectDetail.mockReset().mockResolvedValue(makeDetail({ subfolderTree: tree }));
+    renderPanel();
+
+    expect(await screen.findByText("Samples")).toBeInTheDocument();
+    expect(screen.getByText("song.als")).toBeInTheDocument();
+    // Samples starts expanded (depth 0), so its direct child OneShots is
+    // immediately visible without any interaction.
+    expect(screen.getByText("OneShots")).toBeInTheDocument();
+  });
+
+  it("keeps a depth-1 folder's children hidden until its toggle is clicked, then shows them", async () => {
+    mockGetProjectDetail.mockReset().mockResolvedValue(makeDetail({ subfolderTree: tree }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    await screen.findByText("OneShots");
+    expect(screen.queryByText("kick.wav")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Expand OneShots" }));
+
+    expect(screen.getByText("kick.wav")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Collapse OneShots" })).toBeInTheDocument();
+  });
+
+  it("shows 'Collapse <name>' on the already-auto-expanded top-level folder, and toggles its children off/on", async () => {
+    mockGetProjectDetail.mockReset().mockResolvedValue(makeDetail({ subfolderTree: tree }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    const toggle = await screen.findByRole("button", { name: "Collapse Samples" });
+    expect(screen.getByText("OneShots")).toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(screen.queryByText("OneShots")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand Samples" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Expand Samples" }));
+
+    expect(screen.getByText("OneShots")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Collapse Samples" })).toBeInTheDocument();
+  });
+
+  it("renders leaf file nodes with no expand/collapse toggle button", async () => {
+    mockGetProjectDetail.mockReset().mockResolvedValue(makeDetail({ subfolderTree: tree }));
+    renderPanel();
+
+    await screen.findByText("song.als");
+
+    expect(screen.queryByRole("button", { name: /Expand song\.als|Collapse song\.als/ })).not.toBeInTheDocument();
+  });
+});
+
 describe("ProjectDetailPanel - saving indicator", () => {
   it("shows 'Saving…' while a status save is in flight", async () => {
     const onSaveStatus = vi.fn().mockReturnValue(new Promise(() => {}));
