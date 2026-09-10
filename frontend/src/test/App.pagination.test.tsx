@@ -167,14 +167,14 @@ describe("App - pagination clears row selection (Projects tab)", () => {
   });
 });
 
-describe("App - negative control: an unrelated re-render must NOT clear selection", () => {
-  it("keeps the row selection intact after a FileTable column-header sort click (a real re-render/refetch that isn't a page change)", async () => {
-    // FileTable's own sortable column headers call handleSortChange, which goes straight
-    // to the useAudioFiles hook's updateFilters — a different code path from
-    // handleFilesFilterChange/handleFilesPageChange, both of which deliberately clear
-    // selection. This click causes a genuine re-render and refetch (sortBy changes, page
-    // resets to 1) but must NOT clear selection, ruling out "any re-render clears
-    // selection" as a false-positive explanation for the pagination tests above.
+describe("App - pagination clears row selection (Files tab sort)", () => {
+  it("clears both the Batch Edit button state and the checked row checkboxes when a FileTable column-header sort is clicked", async () => {
+    // FileTable's sortable column headers call handleSortChange, which now routes through
+    // handleFilesFilterChange — the same selection-clearing wrapper used by every other
+    // filter/page-change handler — so sort-header clicks clear selection consistently with
+    // the rest of the app rather than being an exception. (Previously handleSortChange called
+    // updateFilters directly, leaving stale/off-screen selection intact after the page reset
+    // to 1 that a sort change causes — see docs/TODO.md Task 9 follow-up item 22.)
     const user = userEvent.setup();
     render(<App />);
     await switchToFilesTab(user);
@@ -193,9 +193,9 @@ describe("App - negative control: an unrelated re-render must NOT clear selectio
     await waitFor(() => expect(screen.getByRole("columnheader", { name: /^Location/ })).toHaveAttribute("aria-sort", "ascending"));
     expect(mockGetFiles.mock.calls.at(-1)?.[0]).toMatchObject({ sortBy: "folder", sortDir: "asc" });
 
-    expect(batchEditButton()).toBeEnabled();
-    expect(cb1).toBeChecked();
-    expect(cb2).toBeChecked();
+    await waitFor(() => expect(batchEditButton()).toBeDisabled());
+    expect(cb1).not.toBeChecked();
+    expect(cb2).not.toBeChecked();
   });
 });
 

@@ -279,7 +279,7 @@ export default function App() {
   }
 
   function handleSortChange(sortBy: NonNullable<FileFilters["sortBy"]>) {
-    updateFilters({
+    handleFilesFilterChange({
       sortBy,
       sortDir: filters.sortBy === sortBy && filters.sortDir === "asc" ? "desc" : "asc",
     });
