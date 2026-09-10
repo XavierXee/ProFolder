@@ -10,6 +10,8 @@ import {
   addTagsToProjects,
   updateStatus,
   upsertProject,
+  markRemoved,
+  loadActiveProjectIds,
 } from "../src/database/repositories/projectRepository.js";
 import type { Project } from "../src/models/Project.js";
 
@@ -203,5 +205,75 @@ describe("projectRepository.addTagsToProjects", () => {
     expect(findById(db, "Project 00")!.tags.sort()).toEqual(["batch", "existing"]);
     expect(findById(db, "Project 01")!.tags).toEqual(["batch"]);
     expect(findById(db, "Project 02")!.tags).toEqual([]);
+  });
+});
+
+describe("projectRepository.markRemoved", () => {
+  it("soft-removes only the listed project, preserving its prior status/tags/score", () => {
+    updateStatus(db, "Project 00", "released");
+    setScore(db, "Project 00", 5);
+    setTags(db, "Project 00", ["favorite", "mix-ready"]);
+    const siblingBefore = findById(db, "Project 01")!;
+
+    const nowIso = new Date().toISOString();
+    markRemoved(db, ["Project 00"], nowIso);
+
+    const removed = findById(db, "Project 00")!;
+    expect(removed.isRemoved).toBe(true);
+    expect(removed.lastSeenAt).toBe(nowIso);
+    // Status/score/tags must be preserved, not cleared, in case the project reappears.
+    expect(removed.status).toBe("released");
+    expect(removed.score).toBe(5);
+    expect(removed.tags.sort()).toEqual(["favorite", "mix-ready"]);
+
+    // Absent from the active listing.
+    const { items, total } = findAllActivePaged(db, { limit: 30, offset: 0 });
+    expect(items.map((p) => p.id)).not.toContain("Project 00");
+    expect(total).toBe(21); // 22 fixtures minus the one removed
+
+    // Absent from the active-ids set used by the scanner to detect removals.
+    expect(loadActiveProjectIds(db).has("Project 00")).toBe(false);
+    expect(loadActiveProjectIds(db).has("Project 01")).toBe(true);
+
+    // Sibling project untouched.
+    const siblingAfter = findById(db, "Project 01")!;
+    expect(siblingAfter.isRemoved).toBe(false);
+    expect(siblingAfter.lastSeenAt).toBe(siblingBefore.lastSeenAt);
+  });
+});
+
+describe("reactivating a soft-removed project (upsertProject)", () => {
+  it("reappearing project is reactivated without throwing, preserving its prior status/tags/score", () => {
+    updateStatus(db, "Project 00", "released");
+    setScore(db, "Project 00", 5);
+    setTags(db, "Project 00", ["favorite", "mix-ready"]);
+
+    markRemoved(db, ["Project 00"], new Date().toISOString());
+    expect(findById(db, "Project 00")!.isRemoved).toBe(true);
+
+    const newLastSeenAt = new Date(Date.now() + 1000).toISOString();
+
+    // Reappearance: the row's id already exists (soft-removed), so the scanner routes
+    // it back through upsertProject's ON CONFLICT branch — this must not throw, and must
+    // leave status/tags/score untouched while refreshing filesystem-derived fields.
+    expect(() =>
+      upsertProject(
+        db,
+        makeProject({
+          id: "Project 00",
+          name: "Project 00",
+          lastSeenAt: newLastSeenAt,
+          contentModifiedAt: "2026-05-01T00:00:00.000Z",
+        })
+      )
+    ).not.toThrow();
+
+    const reactivated = findById(db, "Project 00")!;
+    expect(reactivated.isRemoved).toBe(false);
+    expect(reactivated.status).toBe("released");
+    expect(reactivated.score).toBe(5);
+    expect(reactivated.tags.sort()).toEqual(["favorite", "mix-ready"]);
+    expect(reactivated.lastSeenAt).toBe(newLastSeenAt); // filesystem-derived fields do refresh
+    expect(reactivated.contentModifiedAt).toBe("2026-05-01T00:00:00.000Z");
   });
 });

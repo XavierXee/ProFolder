@@ -33,19 +33,19 @@ itself has 85 addressable rows.*
 
 | Verdict | Count |
 |---|---|
-| COVERED-UNIT | 29 |
+| COVERED-UNIT | 31 |
 | COVERED-BOTH | 16 |
 | COVERED-E2E | 5 |
 | PARTIAL | 18 |
 | WRONG-LAYER (primary) | 1 (+2 more rows carry it as a secondary/dual verdict — 8.3, 10.6b) |
-| NONE | 14 |
+| NONE | 12 |
 | NOT-HEADLESS-VERIFIABLE | 2 |
 | **Total rows** | **85** |
 
-Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 50/85 rows (59%). Rows with a real,
-actionable gap (PARTIAL + WRONG-LAYER + NONE) = 33/85 (39%). The remaining 2 rows
+Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 52/85 rows (61%). Rows with a real,
+actionable gap (PARTIAL + WRONG-LAYER + NONE) = 31/85 (36%). The remaining 2 rows
 (NOT-HEADLESS-VERIFIABLE) are a permanent environment limitation, not an actionable gap.
-(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered — see `docs/TODO.md`'s Task 9 follow-up items 5/6 closure notes.)
+(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7 closure notes.)
 
 ---
 
@@ -62,7 +62,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 33/85 (39%). The remaining 2 row
 | 1.5b | Tags case-insensitive dedup specifically | NONE | No `tagRepository.test.ts` exists; `COLLATE NOCASE` logic at `src/database/repositories/tagRepository.ts:5` never exercised with different-case variants |
 | 1.6 | `contentModifiedAt` = later of folder/marker mtime | COVERED-UNIT | `tests/scanner.integration.test.ts:336` |
 | 1.7a | Audio file soft-delete preserves status/tags/score | COVERED-BOTH | `tests/scanner.integration.test.ts:136`, `e2e/features/scanning-settings/exclusion-toggles.feature` |
-| 1.7b | Project soft-delete (`markRemoved`) | NONE | No `markRemoved` hits in `tests/*.test.ts`; only file-level removal proven |
+| 1.7b | Project soft-delete (`markRemoved`) | COVERED-UNIT | `tests/projectRepository.test.ts` (`markRemoved`/`upsertProject` reactivation, status/tags/score preservation), `tests/scanner.integration.test.ts` (a real scan soft-removes/reactivates a whole project folder) |
 
 ## §2 Scanning & Indexing
 
@@ -80,7 +80,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 33/85 (39%). The remaining 2 row
 | 2.6 | Audio file → nearest-ancestor project association | COVERED-UNIT | `tests/projectDetector.test.ts:8,19` |
 | 2.7 | hasVideo/hasImage ancestor-propagation | COVERED-UNIT | `tests/mediaDetector.test.ts:34`, `tests/scanner.integration.test.ts:266` |
 | 2.8 | new/modified/unchanged/removed classification | COVERED-UNIT | `tests/scanner.integration.test.ts:88,98,118,136` |
-| 2.9 | Comparable removal detection for Projects | NONE | Same gap as 1.7b |
+| 2.9 | Comparable removal detection for Projects | COVERED-UNIT | `tests/scanner.integration.test.ts` — a whole project folder disappearing between scans is marked removed via a real scan (not just the repository function in isolation); regression test proves an already-removed project isn't re-marked/re-touched on a subsequent no-op scan |
 | 2.10a | Aggregate scan stats recorded | COVERED-BOTH | `tests/scanner.integration.test.ts:54-58`, `e2e/steps/scanning.steps.ts:78` |
 | 2.10b | rootPath/duration/timestamps/per-path errors recorded | COVERED-BOTH | `tests/scanRunRepository.test.ts:42` (byte-for-byte round-trip incl. a multi-entry errors array), `tests/scanner.integration.test.ts:464` (a real EACCES persisted end-to-end), `e2e/features/scanning-settings/metrics-panel.feature:65` (persisted data reaches the UI after a reload) |
 | 2.10c | "Most recent scan run retrievable" (`GET /api/scan/last`) | COVERED-BOTH | `tests/scanRoutes.test.ts:38-90` (4 tests: 404-when-empty, agrees with POST response, reflects the second of two scans, full field-list/type shape), `e2e/features/scanning-settings/metrics-panel.feature:65` |

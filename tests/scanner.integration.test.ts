@@ -15,6 +15,7 @@ import {
   findAllActive as findAllActiveProjects,
   findAllActivePaged as findAllActiveProjectsPaged,
   findById as findProjectById,
+  updateStatus as updateProjectStatus,
   setScore as setProjectScore,
   setTags as setProjectTags,
 } from "../src/database/repositories/projectRepository.js";
@@ -226,6 +227,96 @@ describe("runScan", () => {
     expect(reactivated.tags).toEqual(["drums"]);
     expect(reactivated.score).toBe(5);
     expect(scan3.newFiles).toBe(0);
+  });
+
+  it("soft-deletes a whole project folder that disappears from disk instead of hard-deleting it, preserving its status/tags/score", async () => {
+    await runScan({ rootPath: tmpRoot }, db);
+    const trackAId = path.join("Ableton Projects", "Track A");
+    updateProjectStatus(db, trackAId, "done");
+    setProjectScore(db, trackAId, 4);
+    setProjectTags(db, trackAId, ["reviewed"]);
+
+    await fs.rm(path.join(tmpRoot, "Ableton Projects", "Track A"), { recursive: true, force: true });
+
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const activeProjects = findAllActiveProjects(db);
+    expect(activeProjects.find((p) => p.id === trackAId)).toBeUndefined();
+    // The file that lived inside it disappeared along with the folder, and must be
+    // soft-removed too, not left dangling as active.
+    expect(findAllActiveFiles(db).find((f) => f.filename === "Track A - Final.wav")).toBeUndefined();
+
+    const raw = db.prepare("SELECT * FROM projects WHERE id = ?").get(trackAId) as { is_removed: number };
+    expect(raw.is_removed).toBe(1);
+
+    // findById() is deliberately not filtered by is_removed (see its doc comment), so
+    // this is the same kind of raw, unfiltered read as the SQL above — proving status,
+    // score and tags all survive the soft-removal untouched.
+    const removedProject = findProjectById(db, trackAId)!;
+    expect(removedProject.status).toBe("done");
+    expect(removedProject.score).toBe(4);
+    expect(removedProject.tags).toEqual(["reviewed"]);
+  });
+
+  it("does not re-count an already-removed project as removed again, and does not advance its last_seen_at, on a subsequent no-op scan (regression)", async () => {
+    // 1. Baseline scan, then delete the whole project folder and rescan — the project
+    // is marked removed.
+    await runScan({ rootPath: tmpRoot }, db);
+    const trackAId = path.join("Ableton Projects", "Track A");
+    await fs.rm(path.join(tmpRoot, "Ableton Projects", "Track A"), { recursive: true, force: true });
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const beforeRow = db
+      .prepare("SELECT last_seen_at, is_removed FROM projects WHERE id = ?")
+      .get(trackAId) as { last_seen_at: string; is_removed: number };
+    expect(beforeRow.is_removed).toBe(1);
+
+    // 2. Core regression: rescan again with no filesystem changes since the previous
+    // scan. loadActiveProjectIds() only ever returns is_removed = 0 rows, so the
+    // already-removed project can never be marked removed a second time — proven here
+    // by last_seen_at staying frozen at the value the removal scan set, rather than
+    // advancing on every scan forever.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await runScan({ rootPath: tmpRoot }, db);
+
+    const afterRow = db
+      .prepare("SELECT last_seen_at, is_removed FROM projects WHERE id = ?")
+      .get(trackAId) as { last_seen_at: string; is_removed: number };
+    expect(afterRow.is_removed).toBe(1);
+    expect(afterRow.last_seen_at).toBe(beforeRow.last_seen_at);
+  });
+
+  it("reactivates a soft-deleted project whose folder reappears, without crashing, preserving its prior status/tags/score", async () => {
+    // Scan 1: project present, active.
+    await runScan({ rootPath: tmpRoot }, db);
+    const trackAId = path.join("Ableton Projects", "Track A");
+    updateProjectStatus(db, trackAId, "done");
+    setProjectScore(db, trackAId, 4);
+    setProjectTags(db, trackAId, ["reviewed"]);
+
+    // Scan 2: the whole folder disappears — the row is soft-deleted (is_removed = 1),
+    // stays in the table.
+    await fs.rm(path.join(tmpRoot, "Ableton Projects", "Track A"), { recursive: true, force: true });
+    const scan2 = await runScan({ rootPath: tmpRoot }, db);
+    expect(findAllActiveProjects(db).find((p) => p.id === trackAId)).toBeUndefined();
+    const removedRow = db.prepare("SELECT is_removed FROM projects WHERE id = ?").get(trackAId) as {
+      is_removed: number;
+    };
+    expect(removedRow.is_removed).toBe(1);
+    expect(scan2.errors).toEqual([]);
+
+    // Scan 3: the folder (and its DAW marker file) is recreated — the project
+    // reappears. This must not crash, and the reactivated row must keep its own
+    // prior status/tags/score rather than reinitializing as a fresh project.
+    await writeFile("Ableton Projects/Track A/Track A.als", "als-a");
+    const scan3 = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(scan3.errors).toEqual([]);
+    const reactivated = findAllActiveProjects(db).find((p) => p.id === trackAId);
+    expect(reactivated).toBeDefined();
+    expect(reactivated?.status).toBe("done");
+    expect(reactivated?.tags).toEqual(["reviewed"]);
+    expect(reactivated?.score).toBe(4);
   });
 
   it("skips excluded folders entirely and their contents never appear", async () => {
