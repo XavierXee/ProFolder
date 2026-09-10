@@ -214,7 +214,8 @@ do not treat the bullets previously here as current, several were stale by the t
   just an undertested one). Found via mutation-testing during Task 9's audit, then fixed and
   hardened in **Task 9.4**: `GET /:id/audio` now shares the same `fs.realpathSync`-based
   root-containment guard as §13.4's reveal endpoint (`isWithinRoot`, exported from
-  `src/services/FinderService.ts`), fails closed, and is symlink-safe (an initial prefix-only
+  `src/config/musicRoot.ts` — relocated there from `src/services/FinderService.ts` by Task 9
+  follow-up item 13's cohesion cleanup), fails closed, and is symlink-safe (an initial prefix-only
   fix was found bypassable via a symlink inside the root pointing outside it; the escalated fix
   closes that too). See `tests/audioStreamRoute.test.ts` (7 tests) and the reworded §11.5 above.
 

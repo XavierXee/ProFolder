@@ -7,6 +7,29 @@ import { setExcludedPaths } from "../database/repositories/scanExclusionReposito
 
 const MUSIC_ROOT_SETTING_KEY = "musicRoot";
 
+/** True if `absolutePath` resolves to somewhere inside (or exactly at) `root`. Shared
+ * root-containment check used anywhere a filesystem path stored in/derived from the DB
+ * needs to be defended against ever pointing outside the configured music root.
+ *
+ * Uses `fs.realpathSync` (not `path.resolve`) so that a symlink living inside `root` but
+ * pointing at a target outside it is correctly rejected — `path.resolve` only normalizes
+ * `.`/`..` lexically and never dereferences symlinks, which would let a symlinked file
+ * (e.g. one the scanner walked and recorded by its own in-root path) stream/reveal
+ * arbitrary content from outside the configured root. Fails closed: if `realpathSync`
+ * throws (path doesn't exist, permission denied, etc.) the path is treated as NOT
+ * contained rather than propagating the error. */
+export function isWithinRoot(absolutePath: string, root: string): boolean {
+  let resolved: string;
+  let normalizedRoot: string;
+  try {
+    resolved = fs.realpathSync(absolutePath);
+    normalizedRoot = fs.realpathSync(root);
+  } catch {
+    return false;
+  }
+  return resolved === normalizedRoot || resolved.startsWith(normalizedRoot + path.sep);
+}
+
 /** The music root actually in effect: a user-configured override if one was saved, else the .env/CLI default. */
 export function getEffectiveMusicRoot(db: Database.Database): string {
   const override = getSetting(db, MUSIC_ROOT_SETTING_KEY);

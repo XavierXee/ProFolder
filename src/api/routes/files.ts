@@ -17,8 +17,7 @@ import { isValidScore, parseScoreListQueryParam } from "../../models/Score.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { toStringArray } from "../queryParams.js";
 import { parsePositiveInt, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "../pagination.js";
-import { getEffectiveMusicRoot } from "../../config/musicRoot.js";
-import { isWithinRoot } from "../../services/FinderService.js";
+import { getEffectiveMusicRoot, isWithinRoot } from "../../config/musicRoot.js";
 
 const VALID_STATUSES = ALL_TRACK_STATUSES;
 
