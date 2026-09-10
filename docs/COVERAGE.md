@@ -47,18 +47,18 @@ around it.
 | Verdict | Count |
 |---|---|
 | COVERED-UNIT | 39 |
-| COVERED-BOTH | 21 |
+| COVERED-BOTH | 22 |
 | COVERED-E2E | 5 |
-| PARTIAL | 12 |
+| PARTIAL | 11 |
 | WRONG-LAYER (primary) | 1 (+1 more row carries it as a secondary/dual verdict — 10.6b) |
 | NONE | 5 |
 | NOT-HEADLESS-VERIFIABLE | 2 |
 | **Total rows** | **85** |
 
-Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 65/85 rows (76%). Rows with a real,
-actionable gap (PARTIAL + WRONG-LAYER + NONE) = 18/85 (21%). The remaining 2 rows
+Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 66/85 rows (78%). Rows with a real,
+actionable gap (PARTIAL + WRONG-LAYER + NONE) = 17/85 (20%). The remaining 2 rows
 (NOT-HEADLESS-VERIFIABLE) are a permanent environment limitation, not an actionable gap.
-(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT. Updated by item 10's cycle: §5.1-§5.4 and §6.2 moved to COVERED-UNIT/COVERED-BOTH (§5.3's requirement text also reworded per user decision); §6.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE truncation clause. Updated by item 11's cycle: §1.3b, §1.5b, §4.2, §12.3 all moved from NONE to COVERED-UNIT — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9/10/11 closure notes.)
+(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT. Updated by item 10's cycle: §5.1-§5.4 and §6.2 moved to COVERED-UNIT/COVERED-BOTH (§5.3's requirement text also reworded per user decision); §6.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE truncation clause. Updated by item 11's cycle: §1.3b, §1.5b, §4.2, §12.3 all moved from NONE to COVERED-UNIT. Updated by item 12's cycle: §7.5 moved from PARTIAL+REQUIREMENT-SUSPECT to COVERED-BOTH (requirement text reworded per user decision) — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9/10/11/12 closure notes.)
 
 ---
 
@@ -142,7 +142,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 18/85 (21%). The remaining 2 row
 | 7.2 | Files Name/Location/Modified sort; Projects Modified toggle | COVERED-E2E | `sorting.feature` both tabs |
 | 7.3 | Projects "Modified" sorts by `contentModifiedAt` not raw mtime | COVERED-BOTH | `tests/projectRepository.test.ts:143-153`, `sorting.feature:14-23` — spot-checked directly, confirms explicit ascending/descending sort assertion using stamped `contentModifiedAt` fixture values |
 | 7.4 | Filter/search change resets pagination to page 1 | **COVERED-BOTH** (updated — was NONE at time of Task 9.2's audit) | Closed by Task 9-follow-up-4: `tests/hooks/test/{useAudioFiles,useProjects}.test.ts`'s `updateFilters` reset test (pre-existing, from the frontend unit-test initiative's hooks task) + `frontend/src/test/App.pagination.test.tsx`'s real-UI proof that a filter change through the actual search box resets the visible page indicator |
-| 7.5 | "Clear (N)" control appears only when filter active | PARTIAL + REQUIREMENT-SUSPECT | clear-effect COVERED-E2E; count-in-label/conditional-visibility NONE; **suspect**: `FilterToolbar.tsx:200-211` always renders "Clear" with no count, merely `disabled`, not conditionally shown as the requirement implies |
+| 7.5 | "Clear" control (always visible, disabled when inactive) resets all filter/sort state | COVERED-BOTH | clear-effect COVERED-E2E; disabled-when-no-active-filters and enabled-with-active-filters both COVERED-UNIT (`FilterToolbar.test.tsx`'s "Clear button disabled state" block). **Requirement reworded** by Task 9 follow-up item 12 (user decision): the original "Clear (N)" / conditionally-appearing wording didn't match `FilterToolbar.tsx:200-211`'s actual always-visible, no-count, merely-`disabled` button — reworded to match actual behavior rather than changing the code |
 | 7.6 | "N of Total" result count shown | PARTIAL | presence/format COVERED-E2E (`common.steps.ts:47-59`); tracks-filtered-count-correctly not independently proven |
 | 7.7 | Page auto-clamps when filtered results shrink | **COVERED-UNIT** (updated — was NONE at time of Task 9.2's audit) | Closed by Task 9-follow-up-4: `useAudioFiles.test.ts`/`useProjects.test.ts` prove the clamp fires (and refetches at the clamped page) on a refetch/rescan shrink, AND prove via a negative control that a filter-change shrink can never trigger it — `updateFilters`'s own synchronous `page: 1` reset structurally preempts the clamp path. `docs/REQUIREMENTS.md` §7.7 reworded to drop the unreachable "filter change" trigger from its wording |
 

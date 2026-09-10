@@ -92,7 +92,7 @@
 
 7.4. Changing any filter or the search text resets pagination back to page 1.
 
-7.5. A "Clear (N)" control appears whenever any filter/sort is active, resetting search, status, score, tag, and sort state in one action.
+7.5. A "Clear" control (always visible, disabled when no filter/sort is active) resets search, status, score, tag, and sort state in one action.
 
 7.6. The result count for each view ("N of Total") is shown next to the filter bar.
 
