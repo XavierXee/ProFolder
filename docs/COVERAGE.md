@@ -47,18 +47,18 @@ around it.
 | Verdict | Count |
 |---|---|
 | COVERED-UNIT | 39 |
-| COVERED-BOTH | 22 |
+| COVERED-BOTH | 24 |
 | COVERED-E2E | 5 |
-| PARTIAL | 11 |
+| PARTIAL | 9 |
 | WRONG-LAYER (primary) | 1 (+1 more row carries it as a secondary/dual verdict — 10.6b) |
 | NONE | 5 |
 | NOT-HEADLESS-VERIFIABLE | 2 |
 | **Total rows** | **85** |
 
-Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 66/85 rows (78%). Rows with a real,
-actionable gap (PARTIAL + WRONG-LAYER + NONE) = 17/85 (20%). The remaining 2 rows
+Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 68/85 rows (80%). Rows with a real,
+actionable gap (PARTIAL + WRONG-LAYER + NONE) = 15/85 (18%). The remaining 2 rows
 (NOT-HEADLESS-VERIFIABLE) are a permanent environment limitation, not an actionable gap.
-(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT. Updated by item 10's cycle: §5.1-§5.4 and §6.2 moved to COVERED-UNIT/COVERED-BOTH (§5.3's requirement text also reworded per user decision); §6.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE truncation clause. Updated by item 11's cycle: §1.3b, §1.5b, §4.2, §12.3 all moved from NONE to COVERED-UNIT. Updated by item 12's cycle: §7.5 moved from PARTIAL+REQUIREMENT-SUSPECT to COVERED-BOTH (requirement text reworded per user decision) — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9/10/11/12 closure notes.)
+(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT. Updated by item 10's cycle: §5.1-§5.4 and §6.2 moved to COVERED-UNIT/COVERED-BOTH (§5.3's requirement text also reworded per user decision); §6.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE truncation clause. Updated by item 11's cycle: §1.3b, §1.5b, §4.2, §12.3 all moved from NONE to COVERED-UNIT. Updated by item 12's cycle: §7.5 moved from PARTIAL+REQUIREMENT-SUSPECT to COVERED-BOTH (requirement text reworded per user decision). Updated by item 14's cycle: §7.6 and §11.1 moved from PARTIAL to COVERED-BOTH — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9/10/11/12/14 closure notes.)
 
 ---
 
@@ -143,7 +143,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 17/85 (20%). The remaining 2 row
 | 7.3 | Projects "Modified" sorts by `contentModifiedAt` not raw mtime | COVERED-BOTH | `tests/projectRepository.test.ts:143-153`, `sorting.feature:14-23` — spot-checked directly, confirms explicit ascending/descending sort assertion using stamped `contentModifiedAt` fixture values |
 | 7.4 | Filter/search change resets pagination to page 1 | **COVERED-BOTH** (updated — was NONE at time of Task 9.2's audit) | Closed by Task 9-follow-up-4: `tests/hooks/test/{useAudioFiles,useProjects}.test.ts`'s `updateFilters` reset test (pre-existing, from the frontend unit-test initiative's hooks task) + `frontend/src/test/App.pagination.test.tsx`'s real-UI proof that a filter change through the actual search box resets the visible page indicator |
 | 7.5 | "Clear" control (always visible, disabled when inactive) resets all filter/sort state | COVERED-BOTH | clear-effect COVERED-E2E; disabled-when-no-active-filters and enabled-with-active-filters both COVERED-UNIT (`FilterToolbar.test.tsx`'s "Clear button disabled state" block). **Requirement reworded** by Task 9 follow-up item 12 (user decision): the original "Clear (N)" / conditionally-appearing wording didn't match `FilterToolbar.tsx:200-211`'s actual always-visible, no-count, merely-`disabled` button — reworded to match actual behavior rather than changing the code |
-| 7.6 | "N of Total" result count shown | PARTIAL | presence/format COVERED-E2E (`common.steps.ts:47-59`); tracks-filtered-count-correctly not independently proven |
+| 7.6 | "N of Total" result count shown | COVERED-BOTH | presence/format COVERED-E2E (`common.steps.ts:47-59`); tracks-filtered-count-correctly now proven at both layers — hook-level (`useAudioFiles.test.ts`/`useProjects.test.ts`: `total` updates to a genuinely new value, including a zero-total case, across `updateFilters`, not a stale one) and e2e (`files-tab/filtering.feature`/`projects-tab/filtering.feature`: exact post-filter text "1 of 1 files"/"1 of 1 projects" asserted after narrowing the result set) |
 | 7.7 | Page auto-clamps when filtered results shrink | **COVERED-UNIT** (updated — was NONE at time of Task 9.2's audit) | Closed by Task 9-follow-up-4: `useAudioFiles.test.ts`/`useProjects.test.ts` prove the clamp fires (and refetches at the clamped page) on a refetch/rescan shrink, AND prove via a negative control that a filter-change shrink can never trigger it — `updateFilters`'s own synchronous `page: 1` reset structurally preempts the clamp path. `docs/REQUIREMENTS.md` §7.7 reworded to drop the unreachable "filter change" trigger from its wording |
 
 ## §8 Detail Panels
@@ -183,7 +183,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 17/85 (20%). The remaining 2 row
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 11.1 | Play starts/pauses same file; switching files switches playback | PARTIAL | start+switch COVERED-E2E (`audio-player.feature:23-31`); same-file pause-on-second-click NONE |
+| 11.1 | Play starts/pauses same file; switching files switches playback | COVERED-BOTH | start+switch COVERED-E2E (`audio-player.feature:23-31`); same-file pause-on-second-click COVERED-UNIT (new `frontend/src/test/App.audioPlayer.test.tsx` — App-level test, since the toggle decision lives in `App.tsx`'s `handlePlayClick`, unreachable from any single component; a real e2e proof was deliberately rejected since the fixture WAVs' real ~0.5ms duration makes a second real click race `onEnded`, whereas jsdom never fires it unless dispatched, making the App-level test the correct, deterministic layer) |
 | 11.2 | Filename/relative path/play-pause/stop/seek slider/elapsed-total time/close | PARTIAL | filename, stop-resets-time, close-hides-bar COVERED-E2E; relative path text, play/pause icon state, seek slider, elapsed/total time deliberately excluded (feature file's own doc comment) — NONE |
 | 11.3 | Server-side Range streaming; inline playback/format error | **COVERED-UNIT** (updated — was NONE at time of Task 9.2's audit) | Closed and hardened by Task 9.4: `tests/audioStreamRoute.test.ts` (7 tests — legitimate stream, Range support, relative-traversal id, absolute-path id, id+query-string trick, DB-path-outside-root repro, symlink-inside-root-pointing-outside repro) |
 | 11.4 | Bottom padding while player bar visible | NOT-HEADLESS-VERIFIABLE | — |

@@ -342,6 +342,55 @@ describe("useAudioFiles - page clamping", () => {
   });
 });
 
+describe("useAudioFiles - total tracks the filtered response", () => {
+  it("updates total to the new response's value after updateFilters, not the stale prior value", async () => {
+    mockGetFiles.mockResolvedValueOnce(makePaged({ total: 50, totalPages: 5 }));
+
+    const { result } = renderHook(() => useAudioFiles());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.total).toBe(50);
+
+    const file = makeFile({ id: "file-kick", filename: "kick.wav" });
+    mockGetFiles.mockResolvedValueOnce(makePaged({ files: [file], total: 3, totalPages: 1 }));
+
+    act(() => {
+      result.current.updateFilters({ search: "kick" });
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.total).toBe(3);
+    expect(mockGetFiles).toHaveBeenLastCalledWith({
+      search: "kick",
+      page: 1,
+      pageSize: PAGE_SIZE,
+    });
+  });
+
+  it("updates total to 0 after updateFilters when the new response has no matches, not the stale prior value", async () => {
+    mockGetFiles.mockResolvedValueOnce(makePaged({ total: 50, totalPages: 5 }));
+
+    const { result } = renderHook(() => useAudioFiles());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.total).toBe(50);
+
+    mockGetFiles.mockResolvedValueOnce(makePaged({ files: [], total: 0, totalPages: 1 }));
+
+    act(() => {
+      result.current.updateFilters({ search: "nonexistent" });
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.total).toBe(0);
+    expect(mockGetFiles).toHaveBeenLastCalledWith({
+      search: "nonexistent",
+      page: 1,
+      pageSize: PAGE_SIZE,
+    });
+  });
+});
+
 describe("useAudioFiles - updateFilters edge cases", () => {
   it("resets page to 1 even when the patch is empty", async () => {
     const { result } = renderHook(() => useAudioFiles());

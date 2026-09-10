@@ -22,6 +22,7 @@ Feature: Audio Files tab filtering
     When I search files for "Files E2E"
     And I filter files by status "Draft"
     Then I should see only these files in the table: "alpha-take.wav"
+    And I should see the file result count "1 of 1 files"
 
   Scenario: Filtering by an exact score shows only files with that score
     When I search files for "Files E2E"

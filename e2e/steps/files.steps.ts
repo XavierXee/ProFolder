@@ -325,6 +325,14 @@ Then("I should see the files empty-results message", async ({ page }) => {
   await expect(page.getByText("No audio files match your filters")).toBeVisible();
 });
 
+// Proves the "N of Total" result-count text (App.tsx's `resultLabel`, rendered by
+// FilterToolbar.tsx) is not just correctly *formatted* but numerically correct after a filter has
+// actually narrowed the result set — common.steps.ts's smoke check only asserts the format
+// (`/^\d+ of \d+ (files|projects)$/`) before any filter is applied, never the post-filter value.
+Then("I should see the file result count {string}", async ({ page }, text) => {
+  await expect(page.getByText(text, { exact: true })).toBeVisible();
+});
+
 // Extra isolation check for the Location-column sort scenarios: their 3 "Files E2E FolderSort
 // {A,B,C}/file.wav" fixtures all share the filename "file.wav", so `fileRow` (which matches on
 // filename substring) can't disambiguate them the way "I should see only these files in the

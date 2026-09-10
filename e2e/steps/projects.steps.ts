@@ -277,6 +277,12 @@ Then("I should see the projects empty-results message", async ({ page }) => {
   await expect(page.getByText("No folders found yet. Try running a scan.")).toBeVisible();
 });
 
+// ProjectsFilterBar.tsx's `resultLabel`, set in App.tsx to `${projects.length} of ${projectsTotal}
+// projects` — the current page's row count over the filtered total.
+Then("I should see the project result count {string}", async ({ page }, text: string) => {
+  await expect(page.getByText(text, { exact: true })).toBeVisible();
+});
+
 // --- Detail panel: status/tags/score edit-and-persist scenarios (Task 4.5) -------------------
 //
 // ProjectDetailPanel.tsx's `role="dialog"` wrapper is permanently mounted (only the content

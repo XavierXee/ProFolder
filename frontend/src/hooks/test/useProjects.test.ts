@@ -103,6 +103,61 @@ describe("useProjects - updateFilters", () => {
   });
 });
 
+describe("useProjects - updateFilters total-count refresh", () => {
+  it("updates total to the new filtered value (not stale, not reset to zero) after updateFilters", async () => {
+    const manyProjects = Array.from({ length: 5 }, (_, i) =>
+      makeProject({ id: `project-${i}`, name: `Project ${i}` })
+    );
+    mockGetProjects.mockResolvedValueOnce(
+      makePaged({ projects: manyProjects, total: 42, totalPages: 3 })
+    );
+
+    const { result } = renderHook(() => useProjects());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.total).toBe(42);
+
+    const filteredProjects = [makeProject({ id: "project-match", name: "Matched Project" })];
+    mockGetProjects.mockResolvedValueOnce(
+      makePaged({ projects: filteredProjects, total: 2, totalPages: 1 })
+    );
+
+    act(() => {
+      result.current.updateFilters({ search: "matched" });
+    });
+
+    await waitFor(() => expect(result.current.total).toBe(2));
+    expect(result.current.total).not.toBe(0);
+    expect(result.current.projects).toEqual(filteredProjects);
+    expect(mockGetProjects).toHaveBeenLastCalledWith({
+      search: "matched",
+      page: 1,
+      pageSize: PAGE_SIZE,
+    });
+  });
+
+  it("updates total to 0 (not a fallback to the stale prior value) when the new filtered response has no matches", async () => {
+    const manyProjects = Array.from({ length: 5 }, (_, i) =>
+      makeProject({ id: `project-${i}`, name: `Project ${i}` })
+    );
+    mockGetProjects.mockResolvedValueOnce(
+      makePaged({ projects: manyProjects, total: 42, totalPages: 3 })
+    );
+
+    const { result } = renderHook(() => useProjects());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.total).toBe(42);
+
+    mockGetProjects.mockResolvedValueOnce(makePaged({ projects: [], total: 0, totalPages: 1 }));
+
+    act(() => {
+      result.current.updateFilters({ search: "no-matches" });
+    });
+
+    await waitFor(() => expect(result.current.total).toBe(0));
+    expect(result.current.projects).toEqual([]);
+  });
+});
+
 describe("useProjects - setPage", () => {
   it("changes the page without clearing existing filters", async () => {
     const { result } = renderHook(() => useProjects());

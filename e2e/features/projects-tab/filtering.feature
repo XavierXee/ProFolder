@@ -22,6 +22,7 @@ Feature: Projects tab filtering
     When I search projects for "Projects E2E"
     And I filter projects by status "Draft"
     Then I should see only these projects in the table: "Projects E2E Alpha Sessions"
+    And I should see the project result count "1 of 1 projects"
 
   Scenario: Filtering by an exact score shows only projects with that score
     When I search projects for "Projects E2E"
