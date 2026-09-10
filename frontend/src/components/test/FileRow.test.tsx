@@ -70,6 +70,14 @@ describe("FileRow", () => {
     expect(screen.getByText("Album / Song")).toBeInTheDocument();
   });
 
+  it("shows the file's full path as a tooltip on the location text", () => {
+    renderRow({
+      file: makeFile({ relativePath: "Album/Song/track.wav", path: "/music/Album/Song/track.wav" }),
+    });
+
+    expect(screen.getByText("Album / Song")).toHaveAttribute("title", "/music/Album/Song/track.wav");
+  });
+
   it("shows '(root)' as the location for a root-level file", () => {
     renderRow({ file: makeFile({ relativePath: "track.wav" }) });
 
@@ -165,5 +173,18 @@ describe("FileRow", () => {
     await user.click(checkbox);
 
     expect(onToggleCheck).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops the checkbox click from propagating to the row's onClick", async () => {
+    const onToggleCheck = vi.fn();
+    const onClick = vi.fn();
+    const user = userEvent.setup();
+    renderRow({ file: makeFile({ filename: "beat.wav" }), onToggleCheck, onClick });
+
+    const checkbox = screen.getByLabelText("Select beat.wav");
+    await user.click(checkbox);
+
+    expect(onToggleCheck).toHaveBeenCalledTimes(1);
+    expect(onClick).not.toHaveBeenCalled();
   });
 });

@@ -29,14 +29,14 @@ itself has 85 addressable rows.*
 - **NOT-HEADLESS-VERIFIABLE** — a real, permanent limitation of this repo's test environment (no visual/paint-timing assertions possible in a headless runner), not a gap that can be closed by writing more tests. Per explicit user decision this session, these are **not** turned into TODO follow-ups.
 - **REQUIREMENT-SUSPECT** — while auditing, the Tester found the requirement text itself may not match the intended/actual behavior (flagged in addition to a coverage verdict, not instead of one).
 
-**Known blind spot in the original Task 9.1/9.2 audit:** four separate later follow-up cycles
-(TODO items 2, 4, 8, and 9 — duplicate-detection route, pagination, detail-panel interaction
-feedback, and detail-panel read-only display respectively) each independently found the same
-class of staleness: a row's original NONE/PARTIAL verdict had been reached by checking e2e
-coverage only, without cross-checking
+**Known blind spot in the original Task 9.1/9.2 audit:** five separate later follow-up cycles
+(TODO items 2, 4, 8, 9, and 10 — duplicate-detection route, pagination, detail-panel interaction
+feedback, detail-panel read-only display, and table column/row-interaction respectively) each
+independently found the same class of staleness: a row's original NONE/PARTIAL verdict had been
+reached by checking e2e coverage only, without cross-checking
 whether unit-layer (`tests/**`/`frontend/src/**/test/**`) coverage had already closed the same
-clause from an earlier initiative. Rows already re-touched by items 2/4/5/7/8/9's cycles (noted in
-the changelog line below) have been corrected. Any row **not yet re-touched** by one of those
+clause from an earlier initiative. Rows already re-touched by items 2/4/5/7/8/9/10's cycles (noted
+in the changelog line below) have been corrected. Any row **not yet re-touched** by one of those
 cycles may still carry this same blind spot — treat its NONE/PARTIAL verdict as a starting point
 to verify against the current test corpus, not as settled fact, before scoping a follow-up item
 around it.
@@ -45,19 +45,19 @@ around it.
 
 | Verdict | Count |
 |---|---|
-| COVERED-UNIT | 33 |
-| COVERED-BOTH | 18 |
+| COVERED-UNIT | 35 |
+| COVERED-BOTH | 21 |
 | COVERED-E2E | 5 |
-| PARTIAL | 16 |
+| PARTIAL | 12 |
 | WRONG-LAYER (primary) | 1 (+1 more row carries it as a secondary/dual verdict — 10.6b) |
-| NONE | 10 |
+| NONE | 9 |
 | NOT-HEADLESS-VERIFIABLE | 2 |
 | **Total rows** | **85** |
 
-Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 56/85 rows (66%). Rows with a real,
-actionable gap (PARTIAL + WRONG-LAYER + NONE) = 27/85 (32%). The remaining 2 rows
+Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 61/85 rows (72%). Rows with a real,
+actionable gap (PARTIAL + WRONG-LAYER + NONE) = 22/85 (26%). The remaining 2 rows
 (NOT-HEADLESS-VERIFIABLE) are a permanent environment limitation, not an actionable gap.
-(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9 closure notes.)
+(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT. Updated by item 10's cycle: §5.1-§5.4 and §6.2 moved to COVERED-UNIT/COVERED-BOTH (§5.3's requirement text also reworded per user decision); §6.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE truncation clause — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9/10 closure notes.)
 
 ---
 
@@ -120,17 +120,17 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 27/85 (32%). The remaining 2 row
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 5.1 | Columns (checkbox/name/Type/Status/Tags/Score/Audio Files count/Media/Reveal) | PARTIAL | checkbox/name/Status/Tags/Score COVERED-E2E (`e2e/features/projects-tab/filtering.feature:17-59`, `batch-edit.feature:37-45`); Type column text/tooltip NONE; Audio Files count + Media column NONE; Reveal action NONE (see 5.4) |
-| 5.2 | Type column DAW label/tooltip | NONE | — |
-| 5.3 | Row click opens panel; same-row click closes it | PARTIAL | opens COVERED-E2E (`detail-panel-status-tags-score.feature:18-22`); click-again-to-close NONE (only explicit close button ever used) |
-| 5.4 | Reveal in Finder | PARTIAL | server-side guard COVERED-UNIT (`tests/finderService.test.ts:22-40`, `tests/revealRoute.test.ts:50-69`); UI action itself NONE |
+| 5.1 | Columns (checkbox/name/Type/Status/Tags/Score/Audio Files count/Media/Reveal) | COVERED-BOTH | Corrects a stale prior verdict (Task 9 follow-up #10 found the Type/count/Media/Reveal sub-columns were already covered before that cycle): checkbox/name/Status/Tags/Score COVERED-E2E (`e2e/features/projects-tab/filtering.feature:17-59`, `batch-edit.feature:37-45`); Type column text/tooltip COVERED-UNIT (`ProjectsTable.test.tsx`'s `typeLabel`/`typeTooltip` block); Audio Files count COVERED-UNIT (per-project distinct counts asserted); Media column COVERED-UNIT (video/image/neither cases); Reveal action COVERED-UNIT (see 5.4) |
+| 5.2 | Type column DAW label/tooltip | COVERED-UNIT | Corrects a stale prior verdict, already covered before Task 9 follow-up #10: `ProjectsTable.test.tsx`'s `typeLabel`/`typeTooltip` block (3 tests — DAW label+tooltip, missing-`detectedVia` fallback, "Folder" fallback) |
+| 5.3 | Row click opens panel; clicking outside the panel, or its close button, closes it | COVERED-BOTH | opens COVERED-E2E (`detail-panel-status-tags-score.feature:18-22`); dismiss COVERED-UNIT (`ProjectDetailPanel.test.tsx`'s backdrop-click-dismiss and close-button tests). **Requirement reworded** by Task 9 follow-up #10 (user decision): the original "same-row click closes it" wording described a code path (`App.tsx`'s `handleProjectRowClick` toggle) confirmed unreachable via real mouse interaction — `ProjectDetailPanel`'s full-viewport backdrop intercepts a second click before it reaches the row (live-repro confirmed, not landed). Actual dismiss behavior (outside-click/close-button) was already covered pre-cycle. |
+| 5.4 | Reveal in Finder | COVERED-UNIT | Corrects a stale prior verdict (Task 9 follow-up #10 closed the remaining UI-action gap): server-side guard COVERED-UNIT (`tests/finderService.test.ts:22-40`, `tests/revealRoute.test.ts:50-69`); UI action itself COVERED-UNIT (`ProjectsTable.test.tsx`'s "Reveal in Finder" test — calls `onReveal` with path, stops propagation to `onRowClick`) — already covered before this cycle, verdict was stale |
 
 ## §6 Audio Files View
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 6.1 | Columns (checkbox/play+filename/Status/Tags/Project/Score/Location+tooltip/Modified) | PARTIAL | play/Status/Tags/Score COVERED-E2E; Modified/Location as sort targets COVERED-E2E (`sorting.feature:50-77`); Project column display NONE; Location tooltip/truncation NONE |
-| 6.2 | Row click opens panel, excluding play/checkbox | PARTIAL | row-click-opens and play-doesn't-open both COVERED-E2E; checkbox-doesn't-open NONE |
+| 6.1 | Columns (checkbox/play+filename/Status/Tags/Project/Score/Location+tooltip/Modified) | PARTIAL | Corrects a stale prior verdict (Task 9 follow-up #10 found the Project-column and tooltip sub-clauses were already/now covered): play/Status/Tags/Score COVERED-E2E; Modified/Location as sort targets COVERED-E2E (`sorting.feature:50-77`); Project column display COVERED-UNIT (`FileRow.test.tsx`, `projectId` rendered + "—" fallback, already covered pre-cycle); Location tooltip COVERED-UNIT (`FileRow.test.tsx`, new — `title={file.path}` asserted on the location element); truncation itself stays NOT-HEADLESS-VERIFIABLE (permanent, a CSS/visual claim), the only reason this row isn't fully covered |
+| 6.2 | Row click opens panel, excluding play/checkbox | COVERED-BOTH | Corrects a stale prior verdict (Task 9 follow-up #10 closed the remaining gap): row-click-opens and play-doesn't-open both COVERED-E2E; checkbox-doesn't-open now COVERED-UNIT (`FileRow.test.tsx`, new — checkbox click does not fire the row's `onClick`) |
 | 6.3 | Metrics tile (total/Draft/unscored/change counts) | COVERED-BOTH | `tests/audioFileRepository.test.ts:131-158` (the total/Draft/unscored aggregate), `e2e/features/scanning-settings/metrics-panel.feature:65` (a real triggered scan's exact `+1 changed` count, persisted via `GET /api/scan/last`, appears correctly in the Metrics panel after a reload — closes the prior UI-layer gap) |
 
 ## §7 Filtering & Sorting

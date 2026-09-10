@@ -177,6 +177,28 @@ describe("ProjectsTable - row rendering/selection", () => {
 
     expect(container.querySelector("tbody tr")).toHaveAttribute("aria-selected", "true");
   });
+
+  it("calls onToggleSelect with the project's id when its row checkbox is clicked", async () => {
+    const onToggleSelect = vi.fn();
+    const user = userEvent.setup();
+    renderTable({ projects: [makeProject({ id: "p1", name: "Song One" })], onToggleSelect });
+
+    await user.click(screen.getByLabelText("Select Song One"));
+
+    expect(onToggleSelect).toHaveBeenCalledWith("p1");
+  });
+
+  it("stops the row checkbox click from propagating to onRowClick", async () => {
+    const onToggleSelect = vi.fn();
+    const onRowClick = vi.fn();
+    const user = userEvent.setup();
+    renderTable({ projects: [makeProject({ id: "p1", name: "Song One" })], onToggleSelect, onRowClick });
+
+    await user.click(screen.getByLabelText("Select Song One"));
+
+    expect(onToggleSelect).toHaveBeenCalledTimes(1);
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
 });
 
 describe("ProjectsTable - select-all checkbox", () => {

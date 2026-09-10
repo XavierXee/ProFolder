@@ -70,7 +70,7 @@
 
 5.2. The Type column shows the detected DAW's display name (e.g. "Ableton", "Logic Pro") or "Folder" for a plain container; hovering shows the detection method (e.g. "Ableton — detected via .als file").
 
-5.3. Clicking a row opens a detail panel (see §8) showing the project's contents, duplicates, DAW marker files, and editable status/tags/score; clicking the same row again closes it.
+5.3. Clicking a row opens a detail panel (see §8) showing the project's contents, duplicates, DAW marker files, and editable status/tags/score; clicking outside the panel, or its close button, closes it.
 
 5.4. "Reveal in Finder" opens the project's folder in macOS Finder without navigating away from the table (its click is isolated from row-selection).
 
