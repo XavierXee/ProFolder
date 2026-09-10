@@ -29,6 +29,17 @@ itself has 85 addressable rows.*
 - **NOT-HEADLESS-VERIFIABLE** — a real, permanent limitation of this repo's test environment (no visual/paint-timing assertions possible in a headless runner), not a gap that can be closed by writing more tests. Per explicit user decision this session, these are **not** turned into TODO follow-ups.
 - **REQUIREMENT-SUSPECT** — while auditing, the Tester found the requirement text itself may not match the intended/actual behavior (flagged in addition to a coverage verdict, not instead of one).
 
+**Known blind spot in the original Task 9.1/9.2 audit:** three separate later follow-up cycles
+(TODO items 2, 4, and 8 — duplicate-detection route, pagination, and detail-panel interaction
+feedback respectively) each independently found the same class of staleness: a row's original
+NONE/PARTIAL verdict had been reached by checking e2e coverage only, without cross-checking
+whether unit-layer (`tests/**`/`frontend/src/**/test/**`) coverage had already closed the same
+clause from an earlier initiative. Rows already re-touched by items 2/4/5/7/8's cycles (noted in
+the changelog line below) have been corrected. Any row **not yet re-touched** by one of those
+cycles may still carry this same blind spot — treat its NONE/PARTIAL verdict as a starting point
+to verify against the current test corpus, not as settled fact, before scoping a follow-up item
+around it.
+
 ## Summary counts (85 rows)
 
 | Verdict | Count |
