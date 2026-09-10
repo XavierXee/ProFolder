@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import FileDetailPanel, { formatBytes, formatFull } from "../FileDetailPanel.js";
 import type { AudioFile } from "../../types.js";
@@ -219,6 +219,76 @@ describe("FileDetailPanel - score optimistic update", () => {
 
     await waitFor(() => expect(threeDot).toHaveAttribute("aria-checked", "true"));
     expect(fiveDot).toHaveAttribute("aria-checked", "false");
+  });
+});
+
+describe("FileDetailPanel - backdrop click to dismiss", () => {
+  it("calls onClose when the backdrop is clicked", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    const { container } = renderPanel({ onClose });
+
+    const backdrop = container.querySelector('[aria-hidden="true"]');
+    expect(backdrop).not.toBeNull();
+    await user.click(backdrop as Element);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("FileDetailPanel - auto-focus on open", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("focuses the close button 50ms after opening", () => {
+    renderPanel();
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(screen.getByRole("button", { name: "Close panel" })).toHaveFocus();
+  });
+});
+
+describe("FileDetailPanel - Saving… indicator", () => {
+  it("shows a 'Saving…' indicator while a status save is in flight", async () => {
+    const onSaveStatus = vi.fn().mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderPanel({ file: makeFile({ status: "draft" }), onSaveStatus });
+
+    expect(screen.queryByText("Saving…")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+  });
+
+  it("shows a 'Saving…' indicator while a score save is in flight", async () => {
+    const onSaveScore = vi.fn().mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderPanel({ file: makeFile({ score: 3 }), onSaveScore });
+
+    expect(screen.queryByText("Saving…")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "5 of 5" }));
+
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+  });
+
+  it("shows a 'Saving…' indicator while a tags save is in flight", async () => {
+    const onSaveTags = vi.fn().mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup({ delay: null });
+    renderPanel({ file: makeFile({ tags: ["rock"] }), onSaveTags });
+
+    expect(screen.queryByText("Saving…")).not.toBeInTheDocument();
+    const input = screen.getByRole("combobox");
+    await user.type(input, "jazz{Enter}");
+
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
   });
 });
 

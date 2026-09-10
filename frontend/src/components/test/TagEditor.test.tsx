@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TagEditor, computeAddTag } from "../TagEditor.js";
 
@@ -63,6 +63,18 @@ describe("TagEditor", () => {
 
     await user.type(input, "  jazz  ");
     await user.keyboard("{Enter}");
+
+    expect(screen.getByText("jazz")).toBeInTheDocument();
+    expect(input).toHaveValue("");
+  });
+
+  it("adds a new tag, trimmed, and clears the input on blur", async () => {
+    const user = userEvent.setup();
+    render(<Harness initialTags={[]} />);
+    const input = screen.getByRole("combobox");
+
+    await user.type(input, "  jazz  ");
+    fireEvent.blur(input);
 
     expect(screen.getByText("jazz")).toBeInTheDocument();
     expect(input).toHaveValue("");

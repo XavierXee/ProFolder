@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ProjectDetailPanel from "../ProjectDetailPanel.js";
 import type { Project } from "../../types.js";
@@ -479,5 +479,72 @@ describe("ProjectDetailPanel - re-sync on project id change", () => {
     expect(screen.getByText("ambient")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "1 of 5" })).toHaveAttribute("aria-checked", "true");
     await waitFor(() => expect(mockGetProjectDetail).toHaveBeenCalledWith("p2"));
+  });
+});
+
+describe("ProjectDetailPanel - backdrop click dismiss", () => {
+  it("calls onClose exactly once when the backdrop is clicked", () => {
+    const onClose = vi.fn();
+    const { container } = renderPanel({ onClose });
+
+    const backdrop = container.querySelector('[aria-hidden="true"]');
+    expect(backdrop).not.toBeNull();
+    fireEvent.click(backdrop as Element);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ProjectDetailPanel - auto-focus on open", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("moves focus to the close button 50ms after opening", () => {
+    renderPanel();
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(screen.getByRole("button", { name: "Close panel" })).toHaveFocus();
+  });
+});
+
+describe("ProjectDetailPanel - saving indicator", () => {
+  it("shows 'Saving…' while a status save is in flight", async () => {
+    const onSaveStatus = vi.fn().mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderPanel({ project: makeProject({ status: "draft" }), onSaveStatus });
+
+    await user.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(await screen.findByText("Saving…")).toBeInTheDocument();
+  });
+
+  it("shows 'Saving…' while a score save is in flight", async () => {
+    const onSaveScore = vi.fn().mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderPanel({ project: makeProject({ score: 3 }), onSaveScore });
+
+    await user.click(screen.getByRole("radio", { name: "5 of 5" }));
+
+    expect(await screen.findByText("Saving…")).toBeInTheDocument();
+  });
+
+  it("shows 'Saving…' while a tags save is in flight", async () => {
+    const onSaveTags = vi.fn().mockReturnValue(new Promise(() => {}));
+    // delay: null avoids userEvent's real inter-keystroke delay racing the
+    // component's real 50ms auto-focus setTimeout.
+    const user = userEvent.setup({ delay: null });
+    renderPanel({ project: makeProject({ tags: ["rock"] }), onSaveTags });
+
+    await user.type(screen.getByRole("combobox"), "jazz{Enter}");
+
+    expect(await screen.findByText("Saving…")).toBeInTheDocument();
   });
 });

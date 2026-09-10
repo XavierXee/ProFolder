@@ -34,18 +34,18 @@ itself has 85 addressable rows.*
 | Verdict | Count |
 |---|---|
 | COVERED-UNIT | 31 |
-| COVERED-BOTH | 16 |
+| COVERED-BOTH | 18 |
 | COVERED-E2E | 5 |
-| PARTIAL | 18 |
+| PARTIAL | 16 |
 | WRONG-LAYER (primary) | 1 (+2 more rows carry it as a secondary/dual verdict — 8.3, 10.6b) |
 | NONE | 12 |
 | NOT-HEADLESS-VERIFIABLE | 2 |
 | **Total rows** | **85** |
 
-Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 52/85 rows (61%). Rows with a real,
-actionable gap (PARTIAL + WRONG-LAYER + NONE) = 31/85 (36%). The remaining 2 rows
+Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 54/85 rows (64%). Rows with a real,
+actionable gap (PARTIAL + WRONG-LAYER + NONE) = 29/85 (34%). The remaining 2 rows
 (NOT-HEADLESS-VERIFIABLE) are a permanent environment limitation, not an actionable gap.
-(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7 closure notes.)
+(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH (also corrected 3 stale sub-clause verdicts within §8.1/§8.2/§13.3 that a prior coverage audit had understated); §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8 closure notes.)
 
 ---
 
@@ -137,8 +137,8 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 31/85 (36%). The remaining 2 row
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 8.1 | Slide-in panel, dismiss via close/Escape/backdrop, auto-focus close | PARTIAL | animation NOT-HEADLESS-VERIFIABLE; close-button COVERED-E2E; Escape-dismiss NONE (Escape only used for filter dropdowns); backdrop-click-dismiss NONE; auto-focus NONE |
-| 8.2 | Status/Score/Tags edit mechanics, "Saving…" indicator, optimistic rollback | PARTIAL | status/score-set, tags-add-via-Enter, tags-remove COVERED-E2E (spot-checked directly, `e2e/features/files-tab/detail-panel-status-tags-score.feature:24-84`); score-click-again-to-clear NONE; tags-add-via-blur NONE; "Saving…"/rollback-on-failure NONE |
+| 8.1 | Slide-in panel, dismiss via close/Escape/backdrop, auto-focus close | PARTIAL | animation NOT-HEADLESS-VERIFIABLE (permanent); close-button COVERED-E2E; Escape-dismiss COVERED-UNIT (`FileDetailPanel.test.tsx:108-118`, `ProjectDetailPanel.test.tsx`) — corrects a stale prior verdict, this was already covered before Task 9 follow-up #8; backdrop-click-dismiss COVERED-UNIT (`FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx`, new); auto-focus COVERED-UNIT (same files, new — asserts the real 50ms `setTimeout` focus effect) |
+| 8.2 | Status/Score/Tags edit mechanics, "Saving…" indicator, optimistic rollback | COVERED-BOTH | status/score-set, tags-add-via-Enter, tags-remove COVERED-E2E (`e2e/features/files-tab/detail-panel-status-tags-score.feature:24-84`); score-click-again-to-clear COVERED-UNIT (`ScoreEditor.test.tsx:26-34`) — corrects a stale prior verdict, already covered; tags-add-via-blur COVERED-UNIT (`TagEditor.test.tsx`, new); "Saving…" indicator COVERED-UNIT (`FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx`, new, ×3 fields each); rollback-on-failure COVERED-UNIT (`FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx`) — corrects a stale prior verdict, already covered |
 | 8.3 | DAW badge/"Detected via"/duplicate-warning block/nested-DAW list/folder tree | NONE (UI) / WRONG-LAYER | no panel-display assertions anywhere; underlying logic well-covered elsewhere (`tests/dawDetector.test.ts`, `tests/duplicateDetector.test.ts`) but wrong layer for this requirement |
 | 8.4 | File size, full path, "Reveal file/project in Finder" | NONE | Only the panel heading text is ever asserted |
 
@@ -194,7 +194,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 31/85 (36%). The remaining 2 row
 |---|---|---|---|
 | 13.1 | Music root override: text field/native picker, validated, persisted | PARTIAL | text-field validate/save/cancel COVERED-E2E (`root-path-control.feature:66-97`); must-exist/must-be-dir/persistence COVERED-UNIT (`tests/musicRoot.test.ts:43-52,36-41`); native "Browse…" picker NONE, effectively NOT-HEADLESS-VERIFIABLE (opens a real native dialog Playwright can't see) |
 | 13.2 | Per-folder include/exclude panel + trigger scan from it | COVERED-E2E | `exclusion-toggles.feature:46-115` |
-| 13.3 | Settings panel toggles with "Saving…"/"Saved"/"Failed" feedback | PARTIAL | toggle mechanics + "Saved" COVERED-E2E; "Saving…"/"Failed" states NONE |
+| 13.3 | Settings panel toggles with "Saving…"/"Saved"/"Failed" feedback | COVERED-BOTH | toggle mechanics + "Saved" COVERED-E2E; "Saving…"/"Failed" states COVERED-UNIT (`SettingsPanel.test.tsx:144-178`) — corrects a stale prior verdict, this was already covered before Task 9 follow-up #8 confirmed it |
 | 13.4 | Reveal-in-Finder refused server-side for outside-root paths | COVERED-UNIT | `tests/revealRoute.test.ts:50-69`, `tests/finderService.test.ts:22-40`; no e2e from the actual UI button |
 
 ## §14 Theming
