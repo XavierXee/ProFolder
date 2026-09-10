@@ -144,4 +144,34 @@ describe("batch route registration order and validation", () => {
       expect(res.status).toBe(400);
     });
   });
+
+  describe("/api/files/:id/status", () => {
+    beforeEach(() => {
+      insertAudioFile(db, makeFile({ id: "file-a.wav" }));
+    });
+
+    it("returns 400 for an invalid status value", async () => {
+      const res = await request(app).patch("/api/files/file-a.wav/status").send({ status: "bogus" });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({
+        error: "status must be one of unknown, draft, needs_mixing, done, released",
+      });
+    });
+  });
+
+  describe("/api/projects/:id/status", () => {
+    beforeEach(() => {
+      upsertProject(db, makeProject({ id: "project-a" }));
+    });
+
+    it("returns 400 for an invalid status value", async () => {
+      const res = await request(app).patch("/api/projects/project-a/status").send({ status: "bogus" });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({
+        error: "status must be one of unknown, draft, needs_mixing, done, released",
+      });
+    });
+  });
 });

@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "../src/database/db.js";
 import {
@@ -16,6 +17,7 @@ import {
   cascadeProjectTagsToFiles,
   applyProjectMetadataToNewFile,
 } from "../src/database/repositories/linkSync.js";
+import { createServer } from "../src/api/server.js";
 
 let db: Database.Database;
 
@@ -204,4 +206,79 @@ describe("applyProjectMetadataToNewFile", () => {
     setFileTags(db, `${projectId}/seed.wav`, tags);
     syncProjectFromFiles(db, projectId);
   }
+});
+
+// Regression coverage for docs/TODO.md's Task 9 follow-up item 11's §12.3 gap: proves the two
+// link-sync directions (file->project via syncProjectFromFiles, project->file via
+// cascadeProjectScoreToFiles/cascadeProjectTagsToFiles) genuinely don't cross-call/cascade into
+// each other. Exercised through the real HTTP routes (not linkSync.ts directly), since the
+// property under test lives in which linkSync.ts function each route handler chooses to call
+// (src/api/routes/files.ts / projects.ts), not in linkSync.ts's functions themselves.
+describe("file<->project link-sync directions don't cascade into each other (via HTTP routes)", () => {
+  let app: ReturnType<typeof createServer>;
+
+  beforeEach(() => {
+    app = createServer(db);
+  });
+
+  it("PATCH /api/files/:id/score recomputes the project's score but does not touch a sibling file's own score", async () => {
+    insertAudioFile(db, makeFile({ id: "Track A/kick.wav", projectId: "Track A" }));
+    insertAudioFile(db, makeFile({ id: "Track A/snare.wav", projectId: "Track A" }));
+    setFileScore(db, "Track A/kick.wav", 2);
+    setFileScore(db, "Track A/snare.wav", 3);
+    syncProjectFromFiles(db, "Track A");
+
+    const res = await request(app)
+      .patch(`/api/files/${encodeURIComponent("Track A/kick.wav")}/score`)
+      .send({ score: 5 });
+
+    expect(res.status).toBe(200);
+    expect(findFileById(db, "Track A/kick.wav")!.score).toBe(5);
+    // The sibling's own score must be untouched by any hidden recompute-back cascade.
+    expect(findFileById(db, "Track A/snare.wav")!.score).toBe(3);
+    // The project recomputes to the max of its files.
+    expect(findProjectById(db, "Track A")!.score).toBe(5);
+  });
+
+  it("PATCH /api/files/:id/tags recomputes the project's tags but does not disturb a sibling file's own distinct tag", async () => {
+    insertAudioFile(db, makeFile({ id: "Track A/kick.wav", projectId: "Track A" }));
+    insertAudioFile(db, makeFile({ id: "Track A/snare.wav", projectId: "Track A" }));
+    setFileTags(db, "Track A/snare.wav", ["crisp"]);
+    syncProjectFromFiles(db, "Track A");
+
+    const res = await request(app)
+      .patch(`/api/files/${encodeURIComponent("Track A/kick.wav")}/tags`)
+      .send({ tags: ["loud"] });
+
+    expect(res.status).toBe(200);
+    expect(findFileById(db, "Track A/kick.wav")!.tags).toEqual(["loud"]);
+    // The sibling's own pre-existing tag must not be disturbed/replaced/duplicated.
+    expect(findFileById(db, "Track A/snare.wav")!.tags).toEqual(["crisp"]);
+    expect(findProjectById(db, "Track A")!.tags.sort()).toEqual(["crisp", "loud"]);
+  });
+
+  it("PATCH /api/projects/:id/score cascades to every file and the project's own value doesn't drift from a hidden recompute-back", async () => {
+    insertAudioFile(db, makeFile({ id: "Track A/kick.wav", projectId: "Track A" }));
+    insertAudioFile(db, makeFile({ id: "Track A/snare.wav", projectId: "Track A" }));
+    setFileScore(db, "Track A/kick.wav", 1);
+    setFileScore(db, "Track A/snare.wav", 2);
+    syncProjectFromFiles(db, "Track A");
+
+    const res = await request(app)
+      .patch(`/api/projects/${encodeURIComponent("Track A")}/score`)
+      .send({ score: 4 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.score).toBe(4);
+    expect(findFileById(db, "Track A/kick.wav")!.score).toBe(4);
+    expect(findFileById(db, "Track A/snare.wav")!.score).toBe(4);
+    // If cascadeProjectScoreToFiles secretly called back into syncProjectFromFiles, the
+    // project's score would still read back as 4 here (max of two files both at 4), so this
+    // assertion alone wouldn't catch a cascade-back loop by itself — the GET below, combined
+    // with the fact both files match what was explicitly set (not silently recomputed from a
+    // different intermediate state), is what the "no drift" claim rests on.
+    const getRes = await request(app).get(`/api/projects/${encodeURIComponent("Track A")}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.score).toBe(4);
+  });
 });

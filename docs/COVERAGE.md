@@ -29,14 +29,15 @@ itself has 85 addressable rows.*
 - **NOT-HEADLESS-VERIFIABLE** — a real, permanent limitation of this repo's test environment (no visual/paint-timing assertions possible in a headless runner), not a gap that can be closed by writing more tests. Per explicit user decision this session, these are **not** turned into TODO follow-ups.
 - **REQUIREMENT-SUSPECT** — while auditing, the Tester found the requirement text itself may not match the intended/actual behavior (flagged in addition to a coverage verdict, not instead of one).
 
-**Known blind spot in the original Task 9.1/9.2 audit:** five separate later follow-up cycles
-(TODO items 2, 4, 8, 9, and 10 — duplicate-detection route, pagination, detail-panel interaction
-feedback, detail-panel read-only display, and table column/row-interaction respectively) each
-independently found the same class of staleness: a row's original NONE/PARTIAL verdict had been
+**Known blind spot in the original Task 9.1/9.2 audit:** six separate later follow-up cycles
+(TODO items 2, 4, 8, 9, 10, and 11 — duplicate-detection route, pagination, detail-panel
+interaction feedback, detail-panel read-only display, table column/row-interaction, and small
+backend validation/logic gaps respectively) each independently found the same class of
+staleness: a row's original NONE/PARTIAL verdict had been
 reached by checking e2e coverage only, without cross-checking
 whether unit-layer (`tests/**`/`frontend/src/**/test/**`) coverage had already closed the same
-clause from an earlier initiative. Rows already re-touched by items 2/4/5/7/8/9/10's cycles (noted
-in the changelog line below) have been corrected. Any row **not yet re-touched** by one of those
+clause from an earlier initiative. Rows already re-touched by items 2/4/5/7/8/9/10/11's cycles
+(noted in the changelog line below) have been corrected. Any row **not yet re-touched** by one of those
 cycles may still carry this same blind spot — treat its NONE/PARTIAL verdict as a starting point
 to verify against the current test corpus, not as settled fact, before scoping a follow-up item
 around it.
@@ -45,19 +46,19 @@ around it.
 
 | Verdict | Count |
 |---|---|
-| COVERED-UNIT | 35 |
+| COVERED-UNIT | 39 |
 | COVERED-BOTH | 21 |
 | COVERED-E2E | 5 |
 | PARTIAL | 12 |
 | WRONG-LAYER (primary) | 1 (+1 more row carries it as a secondary/dual verdict — 10.6b) |
-| NONE | 9 |
+| NONE | 5 |
 | NOT-HEADLESS-VERIFIABLE | 2 |
 | **Total rows** | **85** |
 
-Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 61/85 rows (72%). Rows with a real,
-actionable gap (PARTIAL + WRONG-LAYER + NONE) = 22/85 (26%). The remaining 2 rows
+Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 65/85 rows (76%). Rows with a real,
+actionable gap (PARTIAL + WRONG-LAYER + NONE) = 18/85 (21%). The remaining 2 rows
 (NOT-HEADLESS-VERIFIABLE) are a permanent environment limitation, not an actionable gap.
-(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT. Updated by item 10's cycle: §5.1-§5.4 and §6.2 moved to COVERED-UNIT/COVERED-BOTH (§5.3's requirement text also reworded per user decision); §6.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE truncation clause — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9/10 closure notes.)
+(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT. Updated by item 10's cycle: §5.1-§5.4 and §6.2 moved to COVERED-UNIT/COVERED-BOTH (§5.3's requirement text also reworded per user decision); §6.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE truncation clause. Updated by item 11's cycle: §1.3b, §1.5b, §4.2, §12.3 all moved from NONE to COVERED-UNIT — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9/10/11 closure notes.)
 
 ---
 
@@ -68,10 +69,10 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 22/85 (26%). The remaining 2 row
 | 1.1 | Project field set | COVERED-UNIT | `tests/scanner.integration.test.ts:51`, `:208` |
 | 1.2 | AudioFile field set | COVERED-UNIT | `tests/audioFileRepository.test.ts:52`, `tests/scanner.integration.test.ts:51` |
 | 1.3a | Status settable/persisted (both entities) | COVERED-BOTH | `e2e/features/projects-tab/detail-panel-status-tags-score.feature:24`, `e2e/features/files-tab/detail-panel-status-tags-score.feature:25` |
-| 1.3b | Runtime enforcement that status is only the 5 valid values | NONE | No `VALID_STATUSES`/"status must be" assertions in `tests/*.test.ts`; guard exists at `src/api/routes/files.ts:170`, untested |
+| 1.3b | Runtime enforcement that status is only the 5 valid values | COVERED-UNIT | `tests/batchRoutes.test.ts` — new tests assert `PATCH /api/files/:id/status` and `PATCH /api/projects/:id/status` both return 400 with the exact error message for an invalid value, proving both routes' separately-defined guards |
 | 1.4 | Score null or 1-5 int, both entities | COVERED-UNIT | `tests/score.test.ts:5,10`, `tests/batchRoutes.test.ts:94` |
 | 1.5a | Tags trimmed/deduped/many-to-many | COVERED-UNIT | `tests/projectRepository.test.ts:178,162` |
-| 1.5b | Tags case-insensitive dedup specifically | NONE | No `tagRepository.test.ts` exists; `COLLATE NOCASE` logic at `src/database/repositories/tagRepository.ts:5` never exercised with different-case variants |
+| 1.5b | Tags case-insensitive dedup specifically | COVERED-UNIT | New `tests/tagRepository.test.ts` — `findOrCreateTag` returns the same id across casings, a direct `SELECT COUNT(*) FROM tags` proves exactly one row (not just one array entry), and `addTagsToFiles` with both casings in one call confirms the dedup survives the attachment layer |
 | 1.6 | `contentModifiedAt` = later of folder/marker mtime | COVERED-UNIT | `tests/scanner.integration.test.ts:336` |
 | 1.7a | Audio file soft-delete preserves status/tags/score | COVERED-BOTH | `tests/scanner.integration.test.ts:136`, `e2e/features/scanning-settings/exclusion-toggles.feature` |
 | 1.7b | Project soft-delete (`markRemoved`) | COVERED-UNIT | `tests/projectRepository.test.ts` (`markRemoved`/`upsertProject` reactivation, status/tags/score preservation), `tests/scanner.integration.test.ts` (a real scan soft-removes/reactivates a whole project folder) |
@@ -112,7 +113,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 22/85 (26%). The remaining 2 row
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
 | 4.1 | Excluded folder + contents not descended into | COVERED-BOTH | `tests/scanner.integration.test.ts:184`, `e2e/features/scanning-settings/exclusion-toggles.feature` |
-| 4.2 | Excluding parent auto-un-excludes/greys descendants | NONE | Logic exists (`ScanFolderPanel.tsx`'s `isDescendantOrSelf`) but never tested at any layer |
+| 4.2 | Excluding parent auto-un-excludes/greys descendants | COVERED-UNIT | Corrects a stale prior verdict — already covered by an earlier initiative (Task 7): `ScanFolderPanel.test.tsx`'s "descendant pruning" block proves multi-level-deep auto-un-exclusion, and the "direct rendering" block proves a descendant checkbox is `disabled` when its parent is excluded (the DOM-testable half of "greyed"); visual dimming itself stays NOT-HEADLESS-VERIFIABLE |
 | 4.3 | Relative-path exclusions persist, applied next scan | COVERED-BOTH | `tests/scanExclusionRepository.test.ts:22,27`, `e2e/features/scanning-settings/exclusion-toggles.feature` |
 | 4.4 | Changing music root clears saved exclusions | COVERED-UNIT | `tests/musicRoot.test.ts:54`; explicitly out-of-scope for e2e per `root-path-control.feature`'s own header comment |
 
@@ -197,7 +198,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 22/85 (26%). The remaining 2 row
 | 12.1c | Recompute scoped to that project's files only | COVERED-UNIT | `tests/linkSync.test.ts:111` |
 | 12.2a | Project edit → cascade score overwrites files | COVERED-BOTH | `tests/linkSync.test.ts:124`, `e2e/features/projects-tab/detail-panel-status-tags-score.feature:86` |
 | 12.2b | Project edit → cascade tags union (not replace) | COVERED-BOTH | `tests/linkSync.test.ts:154`, same e2e scenario |
-| 12.3 | Two directions independent/one-way, no ping-pong | NONE | Structural claim (verified by code read — `linkSync.ts`'s two exports don't call each other) but no regression test |
+| 12.3 | Two directions independent/one-way, no ping-pong | COVERED-UNIT | `tests/linkSync.test.ts` — new HTTP-route-level tests prove a sibling file's score/tags are untouched by patching another file (file→project direction doesn't cascade back), and a project's own score doesn't drift after a project→file cascade; the property lives in route wiring (which `linkSync.ts` function each handler calls), so these go through real routes rather than calling `linkSync.ts` directly |
 | 12.4 | New file mid-scan inherits project's existing score/tags | COVERED-UNIT | `tests/scanner.integration.test.ts:118`, `tests/linkSync.test.ts:173,184`; no e2e coverage |
 
 ## §13 Settings & Configuration
