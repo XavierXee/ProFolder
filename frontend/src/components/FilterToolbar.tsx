@@ -30,11 +30,15 @@ export type FilterToolbarPatch = {
   sortDir?: "asc" | "desc";
 };
 
-const STATUS_OPTIONS = ALL_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }));
+/** Exported for reuse by CreateCustomTabModal, which needs the same Status options
+ * (and reserved trigger-label width) for its own Status filter picker. */
+export const STATUS_OPTIONS = ALL_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }));
 /** Widest realistic "Status" trigger label: every status selected at once. */
-const STATUS_RESERVE_LABEL = `Status (${ALL_STATUSES.length})`;
+export const STATUS_RESERVE_LABEL = `Status (${ALL_STATUSES.length})`;
 
-const SCORE_OPTIONS: { value: ScoreOption; label: React.ReactNode }[] = [
+/** Exported for reuse by CreateCustomTabModal, which needs the same Score options
+ * (five-dot rendering included) for its own Score filter picker. */
+export const SCORE_OPTIONS: { value: ScoreOption; label: React.ReactNode }[] = [
   ...[1, 2, 3, 4, 5].map((n) => ({
     value: n as ScoreOption,
     label: (
@@ -47,10 +51,11 @@ const SCORE_OPTIONS: { value: ScoreOption; label: React.ReactNode }[] = [
   { value: "unscored", label: "Unscored" },
 ];
 /** Widest realistic "Score" trigger label: every score bucket (1-5 + Unscored) selected. */
-const SCORE_RESERVE_LABEL = `Score (${SCORE_OPTIONS.length})`;
+export const SCORE_RESERVE_LABEL = `Score (${SCORE_OPTIONS.length})`;
 /** Tag counts are unbounded (any number of distinct tags could exist/be selected); a
- * pragmatic 2-digit reservation covers the realistic case without over-reserving space. */
-const TAGS_RESERVE_LABEL = "Tags (99)";
+ * pragmatic 2-digit reservation covers the realistic case without over-reserving space.
+ * Exported for reuse by CreateCustomTabModal's own Tags filter picker. */
+export const TAGS_RESERVE_LABEL = "Tags (99)";
 /** Batch Edit selection is capped by the fixed page size (PAGE_SIZE rows/page, no
  * page-size selector exists), so `(${PAGE_SIZE})` is the true realistic maximum, not a guess. */
 const BATCH_EDIT_RESERVE_LABEL = `Batch Edit (${PAGE_SIZE})`;
