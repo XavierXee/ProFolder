@@ -187,6 +187,27 @@ describe("CreateCustomTabModal - Escape to close", () => {
   });
 });
 
+describe("CreateCustomTabModal - Escape scoping with a nested dropdown open", () => {
+  it("closes only the open MultiSelectDropdown on Escape, leaving the modal and its form state intact", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup({ delay: null });
+    renderModal({ onClose });
+
+    await user.type(screen.getByLabelText("Name"), "My Draft Tab");
+    await user.click(screen.getByRole("button", { name: "Status" }));
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    // The dropdown closed...
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    // ...but the modal itself stayed open, with the typed name untouched.
+    expect(screen.getByRole("dialog", { name: "Create custom tab" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toHaveValue("My Draft Tab");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
 describe("CreateCustomTabModal - backdrop click to dismiss", () => {
   it("calls onClose when the backdrop is clicked", async () => {
     const onClose = vi.fn();

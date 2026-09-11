@@ -27,15 +27,23 @@ export function MultiSelectDropdown<T extends string | number>({
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape" && open) {
+        e.stopImmediatePropagation();
+        setOpen(false);
+      }
     }
     document.addEventListener("mousedown", onPointerDown);
-    window.addEventListener("keydown", onKey);
+    // Registered on the capture phase so this fires before any ancestor's bubble-phase
+    // Escape listener (e.g. a modal that closes itself on Escape) — otherwise, since both
+    // listeners live on `window`, stopPropagation()/stopImmediatePropagation() would only
+    // reliably pre-empt the ancestor's listener if this one happened to run first, which
+    // depends on unpredictable effect-mount ordering.
+    window.addEventListener("keydown", onKey, true);
     return () => {
       document.removeEventListener("mousedown", onPointerDown);
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
     };
-  }, []);
+  }, [open]);
 
   function toggle(value: T) {
     onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
