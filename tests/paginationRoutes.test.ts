@@ -2,8 +2,8 @@ import Database from "better-sqlite3";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "../src/database/db.js";
-import { insertAudioFile, setTags as setFileTags, type AudioFileUpsertInput } from "../src/database/repositories/audioFileRepository.js";
-import { upsertProject, setTags as setProjectTags } from "../src/database/repositories/projectRepository.js";
+import { insertAudioFile, setScore as setFileScore, setTags as setFileTags, type AudioFileUpsertInput } from "../src/database/repositories/audioFileRepository.js";
+import { upsertProject, setTags as setProjectTags, setScore as setProjectScore } from "../src/database/repositories/projectRepository.js";
 import type { Project } from "../src/models/Project.js";
 import { createServer } from "../src/api/server.js";
 import { parsePositiveInt, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "../src/api/pagination.js";
@@ -215,5 +215,41 @@ describe("pagination HTTP route layer", () => {
       expect(res.body.page).toBe(1);
       expect(res.body.pageSize).toBe(DEFAULT_PAGE_SIZE);
     });
+  });
+
+  it("/api/files: sortBy=score&sortDir=desc round-trips through query-param parsing to the repository call", async () => {
+    seedFiles(db, 3);
+    setFileScore(db, "file-000.wav", 1);
+    setFileScore(db, "file-001.wav", 5);
+    setFileScore(db, "file-002.wav", 3);
+
+    const res = await request(app)
+      .get("/api/files")
+      .query({ sortBy: "score", sortDir: "desc" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.files.map((f: { id: string }) => f.id)).toEqual([
+      "file-001.wav",
+      "file-002.wav",
+      "file-000.wav",
+    ]);
+  });
+
+  it("/api/projects: sortBy=score&sortDir=desc round-trips through query-param parsing to the repository call", async () => {
+    seedProjects(db, 3);
+    setProjectScore(db, "Project 000", 1);
+    setProjectScore(db, "Project 001", 5);
+    setProjectScore(db, "Project 002", 3);
+
+    const res = await request(app)
+      .get("/api/projects")
+      .query({ sortBy: "score", sortDir: "desc" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.projects.map((p: { id: string }) => p.id)).toEqual([
+      "Project 001",
+      "Project 002",
+      "Project 000",
+    ]);
   });
 });

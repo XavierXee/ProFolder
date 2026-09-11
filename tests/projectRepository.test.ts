@@ -154,6 +154,32 @@ describe("projectRepository.findAllActivePaged", () => {
     expect(desc.items.map((p) => p.id)).toEqual(["SortTest Newest", "SortTest Middle", "SortTest Oldest"]);
   });
 
+  it("sorts by score when sortBy is 'score', with unscored projects first ascending / last descending", () => {
+    upsertProject(db, makeProject({ id: "SortScore Unscored" }));
+    upsertProject(db, makeProject({ id: "SortScore Low" }));
+    setScore(db, "SortScore Low", 1);
+    upsertProject(db, makeProject({ id: "SortScore Mid" }));
+    setScore(db, "SortScore Mid", 3);
+    upsertProject(db, makeProject({ id: "SortScore High" }));
+    setScore(db, "SortScore High", 5);
+
+    const asc = findAllActivePaged(db, { search: "SortScore", sortBy: "score", sortDir: "asc", limit: 10, offset: 0 });
+    expect(asc.items.map((p) => p.id)).toEqual([
+      "SortScore Unscored",
+      "SortScore Low",
+      "SortScore Mid",
+      "SortScore High",
+    ]);
+
+    const desc = findAllActivePaged(db, { search: "SortScore", sortBy: "score", sortDir: "desc", limit: 10, offset: 0 });
+    expect(desc.items.map((p) => p.id)).toEqual([
+      "SortScore High",
+      "SortScore Mid",
+      "SortScore Low",
+      "SortScore Unscored",
+    ]);
+  });
+
   it("defaults to sorting by name when sortBy is omitted", () => {
     const { items } = findAllActivePaged(db, { limit: 3, offset: 0 });
     expect(items.map((p) => p.name)).toEqual(["Project 00", "Project 01", "Project 02"]);

@@ -12,7 +12,7 @@ export type ProjectFilters = {
   scores?: (number | null)[];
   /** OR'd together (has any of these tags); omit/empty means no tag filter. */
   tags?: string[];
-  sortBy?: "name" | "modifiedAt";
+  sortBy?: "name" | "modifiedAt" | "score";
   sortDir?: "asc" | "desc";
   limit?: number;
   offset?: number;
@@ -166,6 +166,7 @@ function buildProjectWhereClause(filters: ProjectFilters): { where: string; para
 
 function sortColumnFor(sortBy: ProjectFilters["sortBy"]): string {
   if (sortBy === "modifiedAt") return "content_modified_at";
+  if (sortBy === "score") return "score";
   return "name";
 }
 

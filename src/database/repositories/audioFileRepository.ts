@@ -32,7 +32,7 @@ export type AudioFileFilters = {
   /** OR'd together (has any of these tags); omit/empty means no tag filter. */
   tags?: string[];
   projectId?: string;
-  sortBy?: "name" | "modifiedAt" | "folder";
+  sortBy?: "name" | "modifiedAt" | "folder" | "score";
   sortDir?: "asc" | "desc";
   limit?: number;
   offset?: number;
@@ -206,6 +206,7 @@ function tagsForFiles(db: Database.Database, audioFileIds: string[]): Map<string
 function sortColumnFor(sortBy: AudioFileFilters["sortBy"]): string {
   if (sortBy === "modifiedAt") return "modified_at";
   if (sortBy === "folder") return "containing_folder";
+  if (sortBy === "score") return "score";
   return "filename";
 }
 

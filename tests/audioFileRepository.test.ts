@@ -126,6 +126,47 @@ describe("findAllActivePaged", () => {
 
     expect(total).toBe(24); // all 25 fixtures minus file-00.wav
   });
+
+  it("sorts by score when sortBy is 'score'", () => {
+    // Isolate a small, tagged subset so the resulting order is fully deterministic
+    // (the other 21 fixture files stay unscored/untagged and would otherwise tie).
+    setTags(db, "file-00.wav", ["score-test"]);
+    setTags(db, "file-01.wav", ["score-test"]);
+    setTags(db, "file-02.wav", ["score-test"]);
+    setTags(db, "file-03.wav", ["score-test"]);
+    setScore(db, "file-00.wav", 3);
+    setScore(db, "file-01.wav", 5);
+    setScore(db, "file-02.wav", 1);
+    // file-03.wav stays unscored (null)
+
+    const asc = findAllActivePaged(db, {
+      tags: ["score-test"],
+      sortBy: "score",
+      sortDir: "asc",
+      limit: 10,
+      offset: 0,
+    });
+    expect(asc.items.map((f) => f.id)).toEqual([
+      "file-03.wav", // null sorts first ascending
+      "file-02.wav", // 1
+      "file-00.wav", // 3
+      "file-01.wav", // 5
+    ]);
+
+    const desc = findAllActivePaged(db, {
+      tags: ["score-test"],
+      sortBy: "score",
+      sortDir: "desc",
+      limit: 10,
+      offset: 0,
+    });
+    expect(desc.items.map((f) => f.id)).toEqual([
+      "file-01.wav", // 5
+      "file-00.wav", // 3
+      "file-02.wav", // 1
+      "file-03.wav", // null sorts last descending
+    ]);
+  });
 });
 
 describe("getLibraryStats", () => {

@@ -57,7 +57,7 @@ export function createProjectsRouter(db: Database.Database): Router {
         statuses: statuses.length > 0 ? statuses : undefined,
         scores: parseScoreListQueryParam(toStringArray(score)),
         tags: tags.length > 0 ? tags : undefined,
-        sortBy: sortBy as "name" | "modifiedAt" | undefined,
+        sortBy: sortBy as "name" | "modifiedAt" | "score" | undefined,
         sortDir: sortDir as "asc" | "desc" | undefined,
         limit: pageSizeNum,
         offset: (pageNum - 1) * pageSizeNum,
