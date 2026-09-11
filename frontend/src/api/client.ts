@@ -19,7 +19,7 @@ export type FileFilters = {
   scores?: (number | "unscored")[];
   /** OR'd together (has any of these tags). */
   tags?: string[];
-  sortBy?: "name" | "modifiedAt" | "folder";
+  sortBy?: "name" | "modifiedAt" | "folder" | "score";
   sortDir?: "asc" | "desc";
   page?: number;
   pageSize?: number;
@@ -132,7 +132,7 @@ export type ProjectFilters = {
   scores?: (number | "unscored")[];
   /** OR'd together (has any of these tags). */
   tags?: string[];
-  sortBy?: "name" | "modifiedAt";
+  sortBy?: "name" | "modifiedAt" | "score";
   sortDir?: "asc" | "desc";
   page?: number;
   pageSize?: number;
