@@ -202,7 +202,19 @@ export default function FilterToolbar({
         </button>
 
         <div className="ml-auto flex items-center gap-2">
-          <span className={`text-xs font-mono whitespace-nowrap ${isDark ? "text-slate-600" : "text-slate-400"}`}>{resultLabel}</span>
+          <span className={`inline-grid text-xs font-mono whitespace-nowrap ${isDark ? "text-slate-600" : "text-slate-400"}`}>
+            {/* Reserve width for the worst-case digit count (up to 3 digits per number, e.g.
+             * "999 of 999 files") by substituting every digit run in the current label with
+             * "999" — this naturally matches whichever noun ("files"/"projects") the caller
+             * passed, since only the digits are replaced. When resultLabel is the loading-state
+             * "—" (no digit runs to match), the reserve collapses to "—" too, so the max width
+             * isn't reserved during that brief state; acceptable since it's transient and never
+             * regresses below the current (no-reservation) behavior. */}
+            <span className="invisible whitespace-nowrap [grid-area:1/1]" aria-hidden="true">
+              {resultLabel.replace(/\d+/g, "999")}
+            </span>
+            <span className="whitespace-nowrap [grid-area:1/1]">{resultLabel}</span>
+          </span>
 
           <button
             onClick={onOpenBatchPanel}

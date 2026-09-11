@@ -434,8 +434,10 @@ export default function App() {
             onClick={() => setShowCreateTabModal(true)}
             aria-label="Create custom tab"
             title="Create custom tab"
-            className={`flex items-center justify-center w-6 h-6 mr-1 rounded text-xs font-mono font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-              isDark ? "text-slate-500 hover:text-slate-200 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"
+            className={`flex items-center justify-center w-6 h-6 mr-1 rounded text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              isDark
+                ? "border-white/10 text-slate-500 hover:text-slate-200 hover:bg-white/8 hover:border-white/20"
+                : "border-black/10 text-slate-400 hover:text-slate-700 hover:bg-black/5 hover:border-black/20"
             }`}
           >
             +

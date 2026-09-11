@@ -54,7 +54,14 @@ Then("the {string} tab should be the active tab", async ({ page }, tabLabel: str
 // non-zero (rather than just matching `\d+`, which a "0 of 0" empty DB would also satisfy) to
 // prove `globalSetup.ts`'s seed scan actually populated the DB before this scenario ran.
 Then("the {string} tab should finish loading without a backend error", async ({ page }, tabLabel: string) => {
-  const resultCount = page.getByText(/^\d+ of \d+ (files|projects)$/);
+  // FilterToolbar.tsx reserves this label's width with an `aria-hidden="true"` sibling span
+  // whose text is the same pattern with every digit run substituted to "999" (e.g.
+  // "999 of 999 files") — a plain `page.getByText(...)` would resolve both spans and hit a
+  // strict-mode violation. `getByRole`'s accessible-name computation excludes aria-hidden
+  // text automatically (the convention used elsewhere in this suite, e.g. batchEdit.steps.ts/
+  // projects.steps.ts's Sort button), but this label isn't inside a role-bearing element, so
+  // exclude the aria-hidden span directly instead.
+  const resultCount = page.locator('span:not([aria-hidden="true"])', { hasText: /^\d+ of \d+ (files|projects)$/ });
   await expect(resultCount).toBeVisible();
   const text = await resultCount.innerText();
   const total = Number(text.match(/^\d+ of (\d+) /)?.[1]);

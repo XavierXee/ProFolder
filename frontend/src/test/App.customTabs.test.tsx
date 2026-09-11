@@ -146,6 +146,11 @@ describe("App - custom tabs wiring", () => {
     const projectsTabButton = screen.getByRole("button", { name: "Project Folders" });
     expect(plusButton.compareDocumentPosition(projectsTabButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
+    // The "+" button must carry a `border` class (matching this app's other bordered buttons,
+    // e.g. Settings) — a legitimate DOM-level assertion (class presence), not a claim about
+    // visual appearance, which jsdom can't verify.
+    expect(plusButton.className.split(/\s+/)).toContain("border");
+
     // "+" button opens the create-tab modal.
     await user.click(plusButton);
     const dialog = screen.getByRole("dialog", { name: "Create custom tab" });

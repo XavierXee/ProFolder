@@ -11,6 +11,7 @@ function Harness({
   onOpenBatchPanel = () => {},
   onChangeSpy,
   locked,
+  resultLabel = "10 files",
 }: {
   initialFilters?: FilterToolbarFilters;
   allTags?: string[];
@@ -18,6 +19,7 @@ function Harness({
   onOpenBatchPanel?: () => void;
   onChangeSpy?: (patch: FilterToolbarPatch) => void;
   locked?: boolean;
+  resultLabel?: string;
 }) {
   const [filters, setFilters] = useState<FilterToolbarFilters>(initialFilters);
 
@@ -32,7 +34,7 @@ function Harness({
       onChange={handleChange}
       allTags={allTags}
       isDark={true}
-      resultLabel="10 files"
+      resultLabel={resultLabel}
       searchPlaceholder="Search files or paths…"
       searchAriaLabel="Search by filename or path"
       selectedCount={selectedCount}
@@ -271,6 +273,34 @@ describe("FilterToolbar - result label and status/score/tag dropdowns", () => {
     render(<Harness allTags={["indie", "lofi"]} initialFilters={{ tags: ["indie"] }} />);
 
     expect(screen.getByRole("button", { name: "Tags (1)" })).toBeInTheDocument();
+  });
+});
+
+describe("FilterToolbar - result label reserve-width span", () => {
+  it("renders an invisible reserve span with every digit run substituted with '999', alongside the real visible label", () => {
+    render(<Harness resultLabel="5 of 5 files" />);
+
+    expect(screen.getByText("5 of 5 files")).toBeInTheDocument();
+    const reserve = screen.getByText("999 of 999 files");
+    expect(reserve).toHaveAttribute("aria-hidden", "true");
+    expect(reserve.className).toContain("invisible");
+  });
+
+  it("derives the reserve label's noun from whichever resultLabel the caller passed (e.g. 'projects')", () => {
+    render(<Harness resultLabel="42 of 128 projects" />);
+
+    expect(screen.getByText("42 of 128 projects")).toBeInTheDocument();
+    expect(screen.getByText("999 of 999 projects")).toBeInTheDocument();
+  });
+
+  it("does not widen the reserve for the '—' loading-state label, since it contains no digit runs to substitute", () => {
+    render(<Harness resultLabel="—" />);
+
+    const matches = screen.getAllByText("—");
+    expect(matches).toHaveLength(2);
+    const reserve = matches.find((el) => el.getAttribute("aria-hidden") === "true");
+    expect(reserve).toBeDefined();
+    expect(reserve).toHaveTextContent("—");
   });
 });
 

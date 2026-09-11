@@ -125,7 +125,18 @@ tabs row. A confirmation popup should show up before applying deletion
 - add all necessary test (unit test and playwright) to make sure the feature is properly covered
 - update REQUIREMENTS.md with the changes made
 
-## 3. New feature: Move files and folder to different directories (custom tabs only)
+## 3. UI Improvements
+
+I want you to do a few small UI improvements, no need to spawn all the agents for that, only developer should be enough. 
+ - #1  the + button to add a new tab, I want it to have border to make it stand out a   
+bit more, keep the corner raduis similar to the other buttons on the UI to keep it consistent. 
+ - #2 I really want the elements in the filter bar to have consistent sizes when navigating from tab to tab of  
+modifying the filter. To achieve that, from left to right, clear filter button must have fixed size (already implemented), Batch Edit button
+must have fixed size too (already implemented), n of n files/projects must have fixed size (accommodate for 3 digits per number),
+Sort, Tags, Score and Status already have fixed size. Only the general search bar should adjust size to fill the remaining space
+within the filter bar
+
+## 4. New feature: Move files and folder to different directories (custom tabs only)
 
 - For created custom tabs (according to the new feature in previous paragraph), add an option to copy all files or folders
   (depending on the tab type) to a specific folder
@@ -136,7 +147,7 @@ will be copied to
 - add all necessary test (unit test and playwright) to make sure the feature is properly covered
 - update REQUIREMENTS.md with the changes made
 
-## 4. Make this app a desktop app
+## 5. Make this app a desktop app
 
 - Make the architect run an audit to bundle this app into a desktop app
 - Assess the complexity, come up with a good approach to do it (including assessing framework to achieve it, Electron maybe?)
@@ -144,13 +155,13 @@ will be copied to
 - What about the data base? it would be nice to have the same database when running the app in web mode (localhost) than running in desktop mode
 - Architect creates a report on all these questions, come up with a plan that could be passed to the rest of the /dev-loop afterwards
 
-## 5. Code quality and accessibility audit
+## 6. Code quality and accessibility audit
 
 - Perform an complete audit of the code, the goal is to identify if everything as been implemented with respect to good coding practice and maintainability
 - Choose which agent is best to perform this task (probably reviewer with its findings being fed to the developer in next loop)
 - additionally make sure the UI implement complete accessibility guidelines  
 
-## 6. Improve the REQUIREMENTS.md document and create README.md documentation
+## 7. Improve the REQUIREMENTS.md document and create README.md documentation
 
 - I want this document to be a complete source of truth of want is implemented
 - Remove all reference to this document being retro-engineering
@@ -160,9 +171,9 @@ will be copied to
 - Keep each feature explanation short and concise
 - This README.md will be 
 
-## 7. Extra theming and splash-screen
+## 8. Extra theming and splash-screen
 
-## 8. I now want to share this repository, making it open source, public and usable by others
+## 9. I now want to share this repository, making it open source, public and usable by others
 
 - Perform audit on the whole codebase for any cyber-security risk
 - Potential risk includes but not limited to credential stealing, API keys left in the codebase, dependency vulnerabilities
