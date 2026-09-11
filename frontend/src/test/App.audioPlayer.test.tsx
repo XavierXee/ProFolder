@@ -5,11 +5,11 @@ import App from "../App.js";
 import type { AudioFile } from "../types.js";
 import type { LibraryStats, PagedFiles, PagedProjects } from "../api/client.js";
 
-// App.tsx's mount effect fetches getConfig/getLastScan/getStats/getAllTags in addition to
-// the paged getFiles/getProjects the two hooks fetch — every one of these is wrapped in
-// `.catch(() => {})`, so an unmocked/rejected call is silently swallowed and produces a
-// confusingly incomplete/empty render rather than a clear test failure. All six must be
-// mocked with resolved values.
+// App.tsx's mount effect fetches getConfig/getLastScan/getStats/getAllTags/getCustomTabs in
+// addition to the paged getFiles/getProjects the two hooks fetch — every one of these is
+// wrapped in `.catch(() => {})`, so an unmocked/rejected call is silently swallowed and
+// produces a confusingly incomplete/empty render rather than a clear test failure. All seven
+// must be mocked with resolved values.
 // AudioPlayerBar (mounted once a file starts playing) additionally calls getFileAudioUrl to
 // build the <audio> element's src — must be mocked too or it throws mid-render.
 vi.mock("../api/client.js", () => ({
@@ -19,6 +19,7 @@ vi.mock("../api/client.js", () => ({
   getLastScan: vi.fn(),
   getStats: vi.fn(),
   getAllTags: vi.fn(),
+  getCustomTabs: vi.fn(),
   getFileAudioUrl: vi.fn((id: string) => `/api/files/${id}/audio`),
 }));
 
@@ -30,6 +31,7 @@ const mockGetConfig = vi.mocked(api.getConfig);
 const mockGetLastScan = vi.mocked(api.getLastScan);
 const mockGetStats = vi.mocked(api.getStats);
 const mockGetAllTags = vi.mocked(api.getAllTags);
+const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -79,6 +81,7 @@ beforeEach(() => {
   mockGetLastScan.mockReset().mockResolvedValue(undefined);
   mockGetStats.mockReset().mockResolvedValue(STATS);
   mockGetAllTags.mockReset().mockResolvedValue([]);
+  mockGetCustomTabs.mockReset().mockResolvedValue([]);
 });
 
 async function switchToFilesTab(user: ReturnType<typeof userEvent.setup>) {

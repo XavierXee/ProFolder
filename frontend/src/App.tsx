@@ -14,11 +14,15 @@ import ProjectsFilterBar from "./components/ProjectsFilterBar.js";
 import BatchEditPanel from "./components/BatchEditPanel.js";
 import AudioPlayerBar from "./components/AudioPlayerBar.js";
 import RootPathControl from "./components/RootPathControl.js";
+import CreateCustomTabModal from "./components/CreateCustomTabModal.js";
+import DeleteTabConfirmDialog from "./components/DeleteTabConfirmDialog.js";
+import CustomFilesTabPanel from "./components/CustomFilesTabPanel.js";
+import CustomProjectsTabPanel from "./components/CustomProjectsTabPanel.js";
 import * as api from "./api/client.js";
 import type { FileFilters, LibraryStats, ScanStats } from "./api/client.js";
-import type { AudioFile, TrackStatus } from "./types.js";
+import type { AudioFile, CustomTab, TrackStatus } from "./types.js";
 
-type Tab = "projects" | "files";
+type Tab = "projects" | "files" | number;
 
 const THEME_STORAGE_KEY = "musicLibraryManager.isDark";
 
@@ -74,9 +78,13 @@ export default function App() {
   const [showProjectsBatchPanel, setShowProjectsBatchPanel] = useState(false);
   const [playingFile, setPlayingFile] = useState<AudioFile | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
+  const [showCreateTabModal, setShowCreateTabModal] = useState(false);
+  const [deletingTab, setDeletingTab] = useState<CustomTab | null>(null);
 
   const selectedFile = files.find((f) => f.id === selectedId) ?? null;
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
+  const activeCustomTab = typeof activeTab === "number" ? customTabs.find((t) => t.id === activeTab) ?? null : null;
 
   function refreshStats() {
     api.getStats().then(setStats).catch(() => {});
@@ -94,6 +102,7 @@ export default function App() {
       .catch(() => {});
     refreshStats();
     refreshTags();
+    api.getCustomTabs().then(setCustomTabs).catch(() => {});
   }, []);
 
   useLayoutEffect(() => {
@@ -278,6 +287,25 @@ export default function App() {
     setActiveTab(tab);
   }
 
+  function handleCustomTabCreated(tab: CustomTab) {
+    setCustomTabs((prev) => [...prev, tab]);
+    handleTabChange(tab.id);
+  }
+
+  async function handleDeleteTabConfirm() {
+    if (!deletingTab) return;
+    const id = deletingTab.id;
+    try {
+      await api.deleteCustomTab(id);
+      setCustomTabs((prev) => prev.filter((t) => t.id !== id));
+      if (activeTab === id) handleTabChange("projects");
+    } catch (err) {
+      setBanner(err instanceof Error ? err.message : "Failed to delete tab");
+    } finally {
+      setDeletingTab(null);
+    }
+  }
+
   function handleSortChange(sortBy: NonNullable<FileFilters["sortBy"]>) {
     handleFilesFilterChange({
       sortBy,
@@ -402,6 +430,17 @@ export default function App() {
 
       <div className="flex flex-col flex-1 min-h-0">
         <div className={`flex items-center gap-1 px-6 border-b ${sectionBorder}`}>
+          <button
+            onClick={() => setShowCreateTabModal(true)}
+            aria-label="Create custom tab"
+            title="Create custom tab"
+            className={`flex items-center justify-center w-6 h-6 mr-1 rounded text-xs font-mono font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              isDark ? "text-slate-500 hover:text-slate-200 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"
+            }`}
+          >
+            +
+          </button>
+
           {(
             [
               ["projects", "Project Folders"],
@@ -422,6 +461,34 @@ export default function App() {
             >
               {label}
             </button>
+          ))}
+
+          {customTabs.map((tab) => (
+            <div key={tab.id} className="flex items-center">
+              <button
+                onClick={() => handleTabChange(tab.id)}
+                aria-current={activeTab === tab.id}
+                className={`px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  activeTab === tab.id
+                    ? "border-blue-500 text-blue-400"
+                    : isDark
+                      ? "border-transparent text-slate-500 hover:text-slate-300"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {tab.name}
+              </button>
+              <button
+                onClick={() => setDeletingTab(tab)}
+                aria-label={`Delete tab ${tab.name}`}
+                title={`Delete tab ${tab.name}`}
+                className={`flex items-center justify-center w-4 h-4 -ml-1 rounded text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  isDark ? "text-slate-600 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"
+                }`}
+              >
+                ×
+              </button>
+            </div>
           ))}
         </div>
 
@@ -463,7 +530,7 @@ export default function App() {
               playerActive={playingFile !== null}
             />
           </>
-        ) : (
+        ) : activeTab === "files" ? (
           <>
             <FilterBar
               filters={filters}
@@ -506,6 +573,37 @@ export default function App() {
 
             <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} isDark={isDark} onPageChange={handleFilesPageChange} />
           </>
+        ) : (
+          activeCustomTab &&
+          (activeCustomTab.type === "files" ? (
+            <CustomFilesTabPanel
+              key={`custom-${activeCustomTab.id}`}
+              tab={activeCustomTab}
+              allTags={allTags}
+              isDark={isDark}
+              refreshStats={refreshStats}
+              refreshTags={refreshTags}
+              refetchProjects={refetchProjects}
+              scanCompletionSignal={lastScanChanges}
+              playingFileId={playingFile?.id ?? null}
+              isPlaying={isPlaying}
+              onPlayClick={handlePlayClick}
+              setBanner={setBanner}
+            />
+          ) : (
+            <CustomProjectsTabPanel
+              key={`custom-${activeCustomTab.id}`}
+              tab={activeCustomTab}
+              allTags={allTags}
+              isDark={isDark}
+              refreshStats={refreshStats}
+              refreshTags={refreshTags}
+              refetchFiles={refetch}
+              scanCompletionSignal={lastScanChanges}
+              playerActive={playingFile !== null}
+              setBanner={setBanner}
+            />
+          ))
         )}
       </div>
 
@@ -569,6 +667,22 @@ export default function App() {
         onClose={() => setShowProjectsBatchPanel(false)}
         onApplyScore={handleBatchProjectScore}
         onApplyTag={handleBatchProjectTag}
+      />
+
+      <CreateCustomTabModal
+        open={showCreateTabModal}
+        isDark={isDark}
+        allTags={allTags}
+        onClose={() => setShowCreateTabModal(false)}
+        onCreated={handleCustomTabCreated}
+      />
+
+      <DeleteTabConfirmDialog
+        open={deletingTab !== null}
+        isDark={isDark}
+        tabName={deletingTab?.name ?? ""}
+        onConfirm={handleDeleteTabConfirm}
+        onCancel={() => setDeletingTab(null)}
       />
 
       <footer className={`border-t px-6 py-2 flex items-center justify-between ${isDark ? "border-white/5" : "border-black/5"}`}>

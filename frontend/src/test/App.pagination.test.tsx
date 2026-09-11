@@ -5,11 +5,11 @@ import App from "../App.js";
 import type { AudioFile, Project } from "../types.js";
 import type { LibraryStats, PagedFiles, PagedProjects } from "../api/client.js";
 
-// App.tsx's mount effect fetches getConfig/getLastScan/getStats/getAllTags in addition to
-// the paged getFiles/getProjects the two hooks fetch — every one of these is wrapped in
-// `.catch(() => {})`, so an unmocked/rejected call is silently swallowed and produces a
-// confusingly incomplete/empty render rather than a clear test failure. All six must be
-// mocked with resolved values.
+// App.tsx's mount effect fetches getConfig/getLastScan/getStats/getAllTags/getCustomTabs in
+// addition to the paged getFiles/getProjects the two hooks fetch — every one of these is
+// wrapped in `.catch(() => {})`, so an unmocked/rejected call is silently swallowed and
+// produces a confusingly incomplete/empty render rather than a clear test failure. All seven
+// must be mocked with resolved values.
 vi.mock("../api/client.js", () => ({
   getFiles: vi.fn(),
   getProjects: vi.fn(),
@@ -17,6 +17,7 @@ vi.mock("../api/client.js", () => ({
   getLastScan: vi.fn(),
   getStats: vi.fn(),
   getAllTags: vi.fn(),
+  getCustomTabs: vi.fn(),
 }));
 
 import * as api from "../api/client.js";
@@ -27,6 +28,7 @@ const mockGetConfig = vi.mocked(api.getConfig);
 const mockGetLastScan = vi.mocked(api.getLastScan);
 const mockGetStats = vi.mocked(api.getStats);
 const mockGetAllTags = vi.mocked(api.getAllTags);
+const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -103,6 +105,7 @@ beforeEach(() => {
   mockGetLastScan.mockReset().mockResolvedValue(undefined);
   mockGetStats.mockReset().mockResolvedValue(STATS);
   mockGetAllTags.mockReset().mockResolvedValue([]);
+  mockGetCustomTabs.mockReset().mockResolvedValue([]);
 });
 
 function batchEditButton() {
