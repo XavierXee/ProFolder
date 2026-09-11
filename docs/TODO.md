@@ -112,7 +112,7 @@ Per user decision: unexported/module-private functions needed for direct testing
 
 **Standing convention** (see `e2e/steps/common.steps.ts` and the project notes): scenarios share one running app/DB instance for the whole suite run (not reset per-scenario), so fixture names/tags must be scenario-unique and step definitions must filter down to a scenario's own fixture before asserting — never assert raw global counts.
 
-## 2. New feature: Add custom tabs
+## 2. New feature: Add custom tabs [x]
 
 - User can create custom tabs. A custom tab will be defined by a name and a set of filters/status/score
 - Custom tab will be kept in database an consistent from session to session
@@ -125,7 +125,7 @@ tabs row. A confirmation popup should show up before applying deletion
 - add all necessary test (unit test and playwright) to make sure the feature is properly covered
 - update REQUIREMENTS.md with the changes made
 
-## 3. UI Improvements
+## 3. UI Improvements [x]
 
 I want you to do a few small UI improvements, no need to spawn all the agents for that, only developer should be enough. 
  - #1  the + button to add a new tab, I want it to have border to make it stand out a   
