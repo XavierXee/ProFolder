@@ -391,6 +391,72 @@ describe("useAudioFiles - total tracks the filtered response", () => {
   });
 });
 
+describe("useAudioFiles - initialFilters seeding", () => {
+  it("with no argument, produces identical initial state and first fetch call as before", async () => {
+    const { result } = renderHook(() => useAudioFiles());
+
+    expect(result.current.page).toBe(1);
+    expect(result.current.pageSize).toBe(PAGE_SIZE);
+    expect(result.current.loading).toBe(true);
+    expect(result.current.files).toEqual([]);
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(mockGetFiles).toHaveBeenCalledWith({ page: 1, pageSize: PAGE_SIZE });
+  });
+
+  it("with an explicit empty object, produces identical initial state and first fetch call as before", async () => {
+    const { result } = renderHook(() => useAudioFiles({}));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(mockGetFiles).toHaveBeenCalledWith({ page: 1, pageSize: PAGE_SIZE });
+  });
+
+  it("seeds the initial filters and first fetch call with the provided locked values", async () => {
+    const { result } = renderHook(() =>
+      useAudioFiles({ statuses: ["draft"], tags: ["kick"] })
+    );
+
+    expect(result.current.filters).toEqual({
+      statuses: ["draft"],
+      tags: ["kick"],
+      page: 1,
+      pageSize: PAGE_SIZE,
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(mockGetFiles).toHaveBeenCalledWith({
+      statuses: ["draft"],
+      tags: ["kick"],
+      page: 1,
+      pageSize: PAGE_SIZE,
+    });
+  });
+
+  it("keeps seeded locked values across a subsequent updateFilters call that doesn't touch them", async () => {
+    const { result } = renderHook(() =>
+      useAudioFiles({ statuses: ["draft"], tags: ["kick"] })
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.updateFilters({ search: "x" });
+    });
+
+    await waitFor(() => expect(result.current.filters.search).toBe("x"));
+
+    expect(mockGetFiles).toHaveBeenLastCalledWith({
+      statuses: ["draft"],
+      tags: ["kick"],
+      search: "x",
+      page: 1,
+      pageSize: PAGE_SIZE,
+    });
+  });
+});
+
 describe("useAudioFiles - updateFilters edge cases", () => {
   it("resets page to 1 even when the patch is empty", async () => {
     const { result } = renderHook(() => useAudioFiles());

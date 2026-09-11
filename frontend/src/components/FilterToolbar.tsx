@@ -65,6 +65,7 @@ export default function FilterToolbar({
   searchAriaLabel,
   selectedCount,
   onOpenBatchPanel,
+  locked = false,
 }: {
   filters: FilterToolbarFilters;
   onChange: (patch: FilterToolbarPatch) => void;
@@ -76,6 +77,10 @@ export default function FilterToolbar({
   /** Number of currently-selected rows; drives the Batch Edit button's label and disabled state. */
   selectedCount: number;
   onOpenBatchPanel: () => void;
+  /** When true, hides the Status/Score/Tags pickers (a locked custom tab's baseline filter is
+   * fixed) while keeping search and sort live. Defaults to false so existing callers (the
+   * default Files/Projects tabs, via `FilterBar`/`ProjectsFilterBar`) are unaffected. */
+  locked?: boolean;
 }) {
   const [searchInput, setSearchInput] = useState(filters.search ?? "");
 
@@ -106,11 +111,17 @@ export default function FilterToolbar({
   const scores = filters.scores ?? [];
   const tags = filters.tags ?? [];
 
-  const activeFilterCount = statuses.length + scores.length + tags.length + (filters.search ? 1 : 0) + (filters.sortBy ? 1 : 0);
+  const activeFilterCount = locked
+    ? (filters.search ? 1 : 0) + (filters.sortBy ? 1 : 0)
+    : statuses.length + scores.length + tags.length + (filters.search ? 1 : 0) + (filters.sortBy ? 1 : 0);
 
   function clearAll() {
     setSearchInput("");
-    onChange({ search: undefined, statuses: undefined, scores: undefined, tags: undefined, sortBy: undefined, sortDir: undefined });
+    if (locked) {
+      onChange({ search: undefined, sortBy: undefined, sortDir: undefined });
+    } else {
+      onChange({ search: undefined, statuses: undefined, scores: undefined, tags: undefined, sortBy: undefined, sortDir: undefined });
+    }
   }
 
   const tagOptions = allTags.map((t) => ({ value: t, label: t }));
@@ -132,30 +143,34 @@ export default function FilterToolbar({
           />
         </div>
 
-        <MultiSelectDropdown
-          label="Status"
-          options={STATUS_OPTIONS}
-          selected={statuses}
-          onChange={(next) => onChange({ statuses: next })}
-          isDark={isDark}
-          reserveLabel={STATUS_RESERVE_LABEL}
-        />
-        <MultiSelectDropdown
-          label="Score"
-          options={SCORE_OPTIONS}
-          selected={scores}
-          onChange={(next) => onChange({ scores: next })}
-          isDark={isDark}
-          reserveLabel={SCORE_RESERVE_LABEL}
-        />
-        <MultiSelectDropdown
-          label="Tags"
-          options={tagOptions}
-          selected={tags}
-          onChange={(next) => onChange({ tags: next })}
-          isDark={isDark}
-          reserveLabel={TAGS_RESERVE_LABEL}
-        />
+        {!locked && (
+          <>
+            <MultiSelectDropdown
+              label="Status"
+              options={STATUS_OPTIONS}
+              selected={statuses}
+              onChange={(next) => onChange({ statuses: next })}
+              isDark={isDark}
+              reserveLabel={STATUS_RESERVE_LABEL}
+            />
+            <MultiSelectDropdown
+              label="Score"
+              options={SCORE_OPTIONS}
+              selected={scores}
+              onChange={(next) => onChange({ scores: next })}
+              isDark={isDark}
+              reserveLabel={SCORE_RESERVE_LABEL}
+            />
+            <MultiSelectDropdown
+              label="Tags"
+              options={tagOptions}
+              selected={tags}
+              onChange={(next) => onChange({ tags: next })}
+              isDark={isDark}
+              reserveLabel={TAGS_RESERVE_LABEL}
+            />
+          </>
+        )}
 
         <button
           onClick={() =>

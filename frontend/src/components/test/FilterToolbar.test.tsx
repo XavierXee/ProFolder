@@ -10,12 +10,14 @@ function Harness({
   selectedCount = 0,
   onOpenBatchPanel = () => {},
   onChangeSpy,
+  locked,
 }: {
   initialFilters?: FilterToolbarFilters;
   allTags?: string[];
   selectedCount?: number;
   onOpenBatchPanel?: () => void;
   onChangeSpy?: (patch: FilterToolbarPatch) => void;
+  locked?: boolean;
 }) {
   const [filters, setFilters] = useState<FilterToolbarFilters>(initialFilters);
 
@@ -35,6 +37,7 @@ function Harness({
       searchAriaLabel="Search by filename or path"
       selectedCount={selectedCount}
       onOpenBatchPanel={onOpenBatchPanel}
+      locked={locked}
     />
   );
 }
@@ -268,5 +271,83 @@ describe("FilterToolbar - result label and status/score/tag dropdowns", () => {
     render(<Harness allTags={["indie", "lofi"]} initialFilters={{ tags: ["indie"] }} />);
 
     expect(screen.getByRole("button", { name: "Tags (1)" })).toBeInTheDocument();
+  });
+});
+
+describe("FilterToolbar - locked mode", () => {
+  it("does not render the Status, Score, or Tags dropdown triggers when locked", () => {
+    render(<Harness locked allTags={["indie", "lofi"]} initialFilters={{ statuses: ["draft"], scores: [5], tags: ["indie"] }} />);
+
+    expect(screen.queryByRole("button", { name: "Status" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Score" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Tags/ })).not.toBeInTheDocument();
+  });
+
+  it("still renders a functional search input when locked", () => {
+    vi.useFakeTimers();
+    const onChangeSpy = vi.fn();
+    render(<Harness locked onChangeSpy={onChangeSpy} />);
+
+    expect(getSearchInput()).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.change(getSearchInput(), { target: { value: "rock" } });
+    });
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(onChangeSpy).toHaveBeenCalledWith({ search: "rock" });
+    vi.useRealTimers();
+  });
+
+  it("still renders a functional Sort button when locked", async () => {
+    const onChangeSpy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness locked onChangeSpy={onChangeSpy} />);
+
+    const sortButton = screen.getByRole("button", { name: /Sort: Modified/ });
+    expect(sortButton).toBeInTheDocument();
+
+    await user.click(sortButton);
+
+    expect(onChangeSpy).toHaveBeenCalledWith({ sortBy: "modifiedAt", sortDir: "asc" });
+  });
+
+  it("does not count non-empty statuses/scores/tags toward activeFilterCount when locked, so Clear stays disabled", () => {
+    render(<Harness locked initialFilters={{ statuses: ["draft"], scores: [5, "unscored"], tags: ["indie"] }} />);
+
+    expect(screen.getByRole("button", { name: "Clear all filters" })).toBeDisabled();
+  });
+
+  it("enables Clear when locked and search/sortBy are active, even with the locked baseline filters set", () => {
+    render(
+      <Harness
+        locked
+        initialFilters={{ statuses: ["draft"], scores: [5], tags: ["indie"], search: "rock", sortBy: "modifiedAt", sortDir: "asc" }}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Clear all filters" })).toBeEnabled();
+  });
+
+  it("clicking Clear when locked emits a patch with only search/sortBy/sortDir keys, omitting statuses/scores/tags entirely", async () => {
+    const onChangeSpy = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        locked
+        initialFilters={{ statuses: ["draft"], scores: [5], tags: ["indie"], search: "rock", sortBy: "modifiedAt", sortDir: "asc" }}
+        onChangeSpy={onChangeSpy}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Clear all filters" }));
+
+    expect(onChangeSpy).toHaveBeenCalledWith({ search: undefined, sortBy: undefined, sortDir: undefined });
+    const patch = onChangeSpy.mock.calls[0][0];
+    expect(patch).not.toHaveProperty("statuses");
+    expect(patch).not.toHaveProperty("scores");
+    expect(patch).not.toHaveProperty("tags");
   });
 });

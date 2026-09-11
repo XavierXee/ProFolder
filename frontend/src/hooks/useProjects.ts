@@ -5,11 +5,12 @@ import { PAGE_SIZE } from "../constants.js";
 
 const DEFAULT_PAGE_SIZE = PAGE_SIZE;
 
-export function useProjects() {
+export function useProjects(initialFilters: Partial<Omit<ProjectFilters, "page" | "pageSize">> = {}) {
   const [projects, setProjects] = useState<(Project & { audioFileCount: number })[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFiltersState] = useState<ProjectFilters>({
+    ...initialFilters,
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
   });
