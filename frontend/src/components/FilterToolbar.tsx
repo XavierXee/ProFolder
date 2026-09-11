@@ -59,6 +59,14 @@ export const TAGS_RESERVE_LABEL = "Tags (99)";
 /** Batch Edit selection is capped by the fixed page size (PAGE_SIZE rows/page, no
  * page-size selector exists), so `(${PAGE_SIZE})` is the true realistic maximum, not a guess. */
 const BATCH_EDIT_RESERVE_LABEL = `Batch Edit (${PAGE_SIZE})`;
+/** Result-count label reserve. This component is shared by all 4 filter bars (default/custom
+ * Files and Projects tabs), whose `resultLabel` prop always ends in either "files" or "projects"
+ * (the only two nouns ever used app-wide, see `${count} of ${total} files/projects`). The
+ * reserve must be a single fixed width across every tab, not derived per-render from whichever
+ * noun happens to be current, otherwise the box visibly resizes when navigating between a Files
+ * tab and a Projects tab. "projects" is the longer of the two nouns, so it's used unconditionally
+ * as the universal reserve, even though this over-reserves slightly on Files tabs. */
+const RESULT_COUNT_RESERVE_LABEL = "999 of 999 projects";
 
 export default function FilterToolbar({
   filters,
@@ -203,15 +211,11 @@ export default function FilterToolbar({
 
         <div className="ml-auto flex items-center gap-2">
           <span className={`inline-grid text-xs font-mono whitespace-nowrap ${isDark ? "text-slate-600" : "text-slate-400"}`}>
-            {/* Reserve width for the worst-case digit count (up to 3 digits per number, e.g.
-             * "999 of 999 files") by substituting every digit run in the current label with
-             * "999" — this naturally matches whichever noun ("files"/"projects") the caller
-             * passed, since only the digits are replaced. When resultLabel is the loading-state
-             * "—" (no digit runs to match), the reserve collapses to "—" too, so the max width
-             * isn't reserved during that brief state; acceptable since it's transient and never
-             * regresses below the current (no-reservation) behavior. */}
+            {/* Reserve a single fixed width (RESULT_COUNT_RESERVE_LABEL) across every filter bar,
+             * regardless of which noun ("files"/"projects") or digit counts the current
+             * resultLabel has, so the box never resizes when navigating between tabs. */}
             <span className="invisible whitespace-nowrap [grid-area:1/1]" aria-hidden="true">
-              {resultLabel.replace(/\d+/g, "999")}
+              {RESULT_COUNT_RESERVE_LABEL}
             </span>
             <span className="whitespace-nowrap [grid-area:1/1]">{resultLabel}</span>
           </span>

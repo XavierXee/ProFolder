@@ -277,30 +277,43 @@ describe("FilterToolbar - result label and status/score/tag dropdowns", () => {
 });
 
 describe("FilterToolbar - result label reserve-width span", () => {
-  it("renders an invisible reserve span with every digit run substituted with '999', alongside the real visible label", () => {
+  it("renders an invisible reserve span fixed to '999 of 999 projects', alongside the real visible label", () => {
     render(<Harness resultLabel="5 of 5 files" />);
 
     expect(screen.getByText("5 of 5 files")).toBeInTheDocument();
-    const reserve = screen.getByText("999 of 999 files");
+    const reserve = screen.getByText("999 of 999 projects");
     expect(reserve).toHaveAttribute("aria-hidden", "true");
     expect(reserve.className).toContain("invisible");
   });
 
-  it("derives the reserve label's noun from whichever resultLabel the caller passed (e.g. 'projects')", () => {
+  it("keeps the reserve label fixed at '999 of 999 projects' regardless of the resultLabel's digit counts", () => {
     render(<Harness resultLabel="42 of 128 projects" />);
 
     expect(screen.getByText("42 of 128 projects")).toBeInTheDocument();
     expect(screen.getByText("999 of 999 projects")).toBeInTheDocument();
   });
 
-  it("does not widen the reserve for the '—' loading-state label, since it contains no digit runs to substitute", () => {
+  it("keeps the reserve label fixed at '999 of 999 projects' for the '—' loading-state label too", () => {
     render(<Harness resultLabel="—" />);
 
-    const matches = screen.getAllByText("—");
-    expect(matches).toHaveLength(2);
-    const reserve = matches.find((el) => el.getAttribute("aria-hidden") === "true");
-    expect(reserve).toBeDefined();
-    expect(reserve).toHaveTextContent("—");
+    expect(screen.getByText("—")).toBeInTheDocument();
+    const reserve = screen.getByText("999 of 999 projects");
+    expect(reserve).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("uses the identical reserve text ('999 of 999 projects') whether resultLabel says 'files' or 'projects', so the box never resizes across tabs", () => {
+    const { unmount } = render(<Harness resultLabel="5 of 5 files" />);
+    const filesReserve = screen.getByText("999 of 999 projects");
+    expect(filesReserve).toHaveAttribute("aria-hidden", "true");
+    const filesReserveText = filesReserve.textContent;
+    unmount();
+
+    render(<Harness resultLabel="5 of 5 projects" />);
+    const projectsReserve = screen.getByText("999 of 999 projects");
+    expect(projectsReserve).toHaveAttribute("aria-hidden", "true");
+
+    expect(projectsReserve.textContent).toBe(filesReserveText);
+    expect(filesReserveText).toBe("999 of 999 projects");
   });
 });
 
