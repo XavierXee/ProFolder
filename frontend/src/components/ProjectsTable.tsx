@@ -1,11 +1,61 @@
+import type { ReactNode } from "react";
 import type { Project } from "../types.js";
 import { DAW_LABELS } from "../types.js";
 import StatusBadge from "./StatusBadge.js";
 import ScoreBadge from "./ScoreBadge.js";
 import { RowCheckbox } from "./RowCheckbox.js";
 import { Pagination } from "./Pagination.js";
+import type { ProjectFilters } from "../api/client.js";
 
 type ProjectRow = Project & { audioFileCount: number };
+
+type SortKey = NonNullable<ProjectFilters["sortBy"]>;
+
+export function sortIndicator(filters: ProjectFilters, key: SortKey): string {
+  if (filters.sortBy !== key) return "";
+  return filters.sortDir === "desc" ? " ↓" : " ↑";
+}
+
+function SortTh({
+  sortKey,
+  filters,
+  onSortChange,
+  isDark,
+  children,
+  className = "text-left",
+}: {
+  sortKey: SortKey;
+  filters: ProjectFilters;
+  onSortChange: (key: SortKey) => void;
+  isDark: boolean;
+  children: ReactNode;
+  className?: string;
+}) {
+  const active = filters.sortBy === sortKey;
+  return (
+    <th scope="col" aria-sort={active ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"} className={`px-4 py-3 ${className}`}>
+      <button
+        onClick={() => onSortChange(sortKey)}
+        className={`flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider focus:outline-none focus-visible:underline transition-colors ${
+          isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"
+        }`}
+      >
+        {children}
+        {sortIndicator(filters, sortKey)}
+      </button>
+    </th>
+  );
+}
+
+function formatTime(iso: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso));
+}
 
 export function ProjectsTable({
   projects,
@@ -17,11 +67,13 @@ export function ProjectsTable({
   isDark,
   selectedId,
   selectedIds,
+  filters,
   onPageChange,
   onReveal,
   onRowClick,
   onToggleSelect,
   onToggleSelectAll,
+  onSortChange,
   playerActive = false,
 }: {
   projects: ProjectRow[];
@@ -33,11 +85,13 @@ export function ProjectsTable({
   isDark: boolean;
   selectedId?: string | null;
   selectedIds: Set<string>;
+  filters: ProjectFilters;
   onPageChange: (page: number) => void;
   onReveal: (path: string) => void;
   onRowClick: (id: string) => void;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: () => void;
+  onSortChange: (sortBy: SortKey) => void;
   /** Whether the persistent (fixed-to-viewport) audio player bar is currently showing,
    * so the last rows don't end up permanently hidden behind it. */
   playerActive?: boolean;
@@ -57,9 +111,9 @@ export function ProjectsTable({
               <th scope="col" className={`${staticTh} w-8`}>
                 <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible project folders" />
               </th>
-              <th scope="col" className={leftTh}>
+              <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark}>
                 Project Folder
-              </th>
+              </SortTh>
               <th scope="col" className={staticTh}>
                 Type
               </th>
@@ -69,28 +123,31 @@ export function ProjectsTable({
               <th scope="col" className={leftTh}>
                 Tags
               </th>
-              <th scope="col" className={staticTh}>
+              <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center">
                 Score
-              </th>
+              </SortTh>
               <th scope="col" className={staticTh}>
                 Audio Files
               </th>
               <th scope="col" className={staticTh}>
                 Media
               </th>
+              <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center">
+                Modified
+              </SortTh>
               <th scope="col" className={staticTh}></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className={`px-6 py-10 text-center text-sm ${meta}`}>
+                <td colSpan={10} className={`px-6 py-10 text-center text-sm ${meta}`}>
                   Loading project folders…
                 </td>
               </tr>
             ) : projects.length === 0 ? (
               <tr>
-                <td colSpan={9} className={`px-6 py-10 text-center text-sm ${meta}`}>
+                <td colSpan={10} className={`px-6 py-10 text-center text-sm ${meta}`}>
                   {total === 0 ? "No folders found yet. Try running a scan." : "No folders match your filters."}
                 </td>
               </tr>
@@ -198,6 +255,13 @@ export function ProjectsTable({
                           <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>—</span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      {project.contentModifiedAt === null ? (
+                        <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>—</span>
+                      ) : (
+                        <span className={`text-xs font-mono ${isDark ? "text-slate-500" : "text-slate-400"}`}>{formatTime(project.contentModifiedAt)}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <button

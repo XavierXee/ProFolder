@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ProjectsTable } from "../ProjectsTable.js";
+import { ProjectsTable, sortIndicator } from "../ProjectsTable.js";
 import type { Project } from "../../types.js";
+import type { ProjectFilters } from "../../api/client.js";
 
 type ProjectRow = Project & { audioFileCount: number };
 
@@ -36,11 +37,13 @@ function renderTable(overrides: Partial<Parameters<typeof ProjectsTable>[0]> = {
     isDark: true,
     selectedId: null,
     selectedIds: new Set<string>(),
+    filters: {} as ProjectFilters,
     onPageChange: () => {},
     onReveal: () => {},
     onRowClick: () => {},
     onToggleSelect: () => {},
     onToggleSelectAll: () => {},
+    onSortChange: () => {},
     ...overrides,
   };
   return render(<ProjectsTable {...props} />);
@@ -80,6 +83,12 @@ describe("ProjectsTable - empty states", () => {
     expect(screen.getByText("No folders found yet. Try running a scan.")).toBeInTheDocument();
   });
 
+  it("spans the empty-state message across all 10 columns", () => {
+    renderTable({ projects: [], total: 0 });
+
+    expect(screen.getByText("No folders found yet. Try running a scan.").closest("td")).toHaveAttribute("colSpan", "10");
+  });
+
   it("shows the 'no folders match your filters' message when total is nonzero but the current page is empty", () => {
     renderTable({ projects: [], total: 5 });
 
@@ -92,6 +101,12 @@ describe("ProjectsTable - loading state", () => {
     renderTable({ loading: true, projects: [makeProject()] });
 
     expect(screen.getByText("Loading project folders…")).toBeInTheDocument();
+  });
+
+  it("spans the loading message across all 10 columns", () => {
+    renderTable({ loading: true, projects: [makeProject()] });
+
+    expect(screen.getByText("Loading project folders…").closest("td")).toHaveAttribute("colSpan", "10");
   });
 });
 
@@ -117,6 +132,152 @@ describe("ProjectsTable - media column", () => {
     expect(screen.queryByLabelText("Contains image files")).not.toBeInTheDocument();
     // Media is the 8th column (index 7); tags (index 4) also renders "—" when empty.
     expect(container.querySelectorAll("td")[7].textContent).toBe("—");
+  });
+});
+
+describe("ProjectsTable - Modified column", () => {
+  it("renders a formatted date for a project with a real contentModifiedAt", () => {
+    const { container } = renderTable({
+      projects: [makeProject({ contentModifiedAt: "2026-01-15T10:30:00.000Z" })],
+    });
+
+    // Modified is the 9th column (index 8).
+    expect(container.querySelectorAll("td")[8].textContent).toBe("Jan 15, 10:30");
+  });
+
+  it("renders the em-dash placeholder for a project with a null contentModifiedAt", () => {
+    const { container } = renderTable({
+      projects: [makeProject({ contentModifiedAt: null })],
+    });
+
+    expect(container.querySelectorAll("td")[8].textContent).toBe("—");
+  });
+});
+
+describe("sortIndicator", () => {
+  const baseFilters: ProjectFilters = {};
+
+  it("returns an up arrow when this key is the active sort, ascending", () => {
+    expect(sortIndicator({ ...baseFilters, sortBy: "name", sortDir: "asc" }, "name")).toBe(" ↑");
+  });
+
+  it("returns a down arrow when this key is the active sort, descending", () => {
+    expect(sortIndicator({ ...baseFilters, sortBy: "name", sortDir: "desc" }, "name")).toBe(" ↓");
+  });
+
+  it("defaults to an up arrow when sortDir is unset for the active key", () => {
+    expect(sortIndicator({ ...baseFilters, sortBy: "name" }, "name")).toBe(" ↑");
+  });
+
+  it("returns an empty string when this key is not the active sort", () => {
+    expect(sortIndicator({ ...baseFilters, sortBy: "modifiedAt", sortDir: "desc" }, "name")).toBe("");
+  });
+
+  it("returns an empty string when no sort is active at all", () => {
+    expect(sortIndicator(baseFilters, "name")).toBe("");
+  });
+});
+
+describe("ProjectsTable - sortable headers", () => {
+  function getHeader(name: RegExp) {
+    return screen.getByRole("columnheader", { name });
+  }
+
+  it("marks the active ascending Name column with aria-sort='ascending' and shows the up arrow", () => {
+    renderTable({ filters: { sortBy: "name", sortDir: "asc" } });
+
+    const header = getHeader(/Project Folder/);
+    expect(header).toHaveAttribute("aria-sort", "ascending");
+    expect(within(header).getByRole("button")).toHaveTextContent("Project Folder ↑");
+  });
+
+  it("marks the active descending Name column with aria-sort='descending' and shows the down arrow", () => {
+    renderTable({ filters: { sortBy: "name", sortDir: "desc" } });
+
+    const header = getHeader(/Project Folder/);
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    expect(within(header).getByRole("button")).toHaveTextContent("Project Folder ↓");
+  });
+
+  it("marks the active ascending Score column with aria-sort='ascending' and shows the up arrow", () => {
+    renderTable({ filters: { sortBy: "score", sortDir: "asc" } });
+
+    const header = getHeader(/Score/);
+    expect(header).toHaveAttribute("aria-sort", "ascending");
+    expect(within(header).getByRole("button")).toHaveTextContent("Score ↑");
+  });
+
+  it("marks the active descending Score column with aria-sort='descending' and shows the down arrow", () => {
+    renderTable({ filters: { sortBy: "score", sortDir: "desc" } });
+
+    const header = getHeader(/Score/);
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    expect(within(header).getByRole("button")).toHaveTextContent("Score ↓");
+  });
+
+  it("marks the Score column with aria-sort='none' and no arrow when it is not the active sort", () => {
+    renderTable({ filters: { sortBy: "name", sortDir: "asc" } });
+
+    const header = getHeader(/^Score$/);
+    expect(header).toHaveAttribute("aria-sort", "none");
+    expect(within(header).getByRole("button")).toHaveTextContent("Score");
+    expect(within(header).getByRole("button")).not.toHaveTextContent(/[↑↓]/);
+  });
+
+  it("marks the active ascending Modified column with aria-sort='ascending' and shows the up arrow", () => {
+    renderTable({ filters: { sortBy: "modifiedAt", sortDir: "asc" } });
+
+    const header = getHeader(/Modified/);
+    expect(header).toHaveAttribute("aria-sort", "ascending");
+    expect(within(header).getByRole("button")).toHaveTextContent("Modified ↑");
+  });
+
+  it("marks the active descending Modified column with aria-sort='descending' and shows the down arrow", () => {
+    renderTable({ filters: { sortBy: "modifiedAt", sortDir: "desc" } });
+
+    const header = getHeader(/Modified/);
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    expect(within(header).getByRole("button")).toHaveTextContent("Modified ↓");
+  });
+
+  it("marks the Modified column with aria-sort='none' and no arrow when it is not the active sort", () => {
+    renderTable({ filters: { sortBy: "name", sortDir: "asc" } });
+
+    const header = getHeader(/^Modified$/);
+    expect(header).toHaveAttribute("aria-sort", "none");
+    expect(within(header).getByRole("button")).toHaveTextContent("Modified");
+    expect(within(header).getByRole("button")).not.toHaveTextContent(/[↑↓]/);
+  });
+
+  it("centers the Score header to match its centered column data", () => {
+    renderTable({ filters: { sortBy: "name", sortDir: "asc" } });
+
+    const header = getHeader(/^Score$/);
+    expect(header).toHaveClass("text-center");
+    expect(header).not.toHaveClass("text-left");
+  });
+
+  it("centers the Modified header to match its centered column data", () => {
+    renderTable({ filters: { sortBy: "name", sortDir: "asc" } });
+
+    const header = getHeader(/^Modified$/);
+    expect(header).toHaveClass("text-center");
+    expect(header).not.toHaveClass("text-left");
+  });
+
+  it("calls onSortChange with the clicked column's sort key", async () => {
+    const onSortChange = vi.fn();
+    const user = userEvent.setup();
+    renderTable({ onSortChange });
+
+    await user.click(within(getHeader(/Project Folder/)).getByRole("button"));
+    expect(onSortChange).toHaveBeenLastCalledWith("name");
+
+    await user.click(within(getHeader(/^Score$/)).getByRole("button"));
+    expect(onSortChange).toHaveBeenLastCalledWith("score");
+
+    await user.click(within(getHeader(/^Modified$/)).getByRole("button"));
+    expect(onSortChange).toHaveBeenLastCalledWith("modifiedAt");
   });
 });
 

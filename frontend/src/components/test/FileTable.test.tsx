@@ -101,6 +101,31 @@ describe("FileTable - sortable headers", () => {
     expect(within(header).getByRole("button")).not.toHaveTextContent(/[↑↓]/);
   });
 
+  it("marks the active ascending Score column with aria-sort='ascending' and shows the up arrow", () => {
+    renderTable({ filters: { sortBy: "score", sortDir: "asc" } });
+
+    const header = getHeader(/Score/);
+    expect(header).toHaveAttribute("aria-sort", "ascending");
+    expect(within(header).getByRole("button")).toHaveTextContent("Score ↑");
+  });
+
+  it("marks the active descending Score column with aria-sort='descending' and shows the down arrow", () => {
+    renderTable({ filters: { sortBy: "score", sortDir: "desc" } });
+
+    const header = getHeader(/Score/);
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    expect(within(header).getByRole("button")).toHaveTextContent("Score ↓");
+  });
+
+  it("marks the Score column with aria-sort='none' and no arrow when it is not the active sort", () => {
+    renderTable({ filters: { sortBy: "name", sortDir: "asc" } });
+
+    const header = getHeader(/^Score$/);
+    expect(header).toHaveAttribute("aria-sort", "none");
+    expect(within(header).getByRole("button")).toHaveTextContent("Score");
+    expect(within(header).getByRole("button")).not.toHaveTextContent(/[↑↓]/);
+  });
+
   it("calls onSortChange with the clicked column's sort key", async () => {
     const onSortChange = vi.fn();
     const user = userEvent.setup();
@@ -108,6 +133,9 @@ describe("FileTable - sortable headers", () => {
 
     await user.click(within(getHeader(/Track \/ File/)).getByRole("button"));
     expect(onSortChange).toHaveBeenLastCalledWith("name");
+
+    await user.click(within(getHeader(/^Score$/)).getByRole("button"));
+    expect(onSortChange).toHaveBeenLastCalledWith("score");
 
     await user.click(within(getHeader(/^Location$/)).getByRole("button"));
     expect(onSortChange).toHaveBeenLastCalledWith("folder");

@@ -111,9 +111,9 @@ export function FileTable({
           <th scope="col" className={staticTh}>
             Project
           </th>
-          <th scope="col" className={staticTh}>
+          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark}>
             Score
-          </th>
+          </SortTh>
           <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} isDark={isDark}>
             Location
           </SortTh>

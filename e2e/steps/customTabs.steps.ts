@@ -289,7 +289,15 @@ When("I ensure the file score is {int}", async ({ page, request }, value: number
 // --- Locked filter absence + live search/sort (FilterToolbar.tsx's `locked` prop) --------------
 
 Then("I should not see a {string} filter control", async ({ page }, triggerLabel: string) => {
-  await expect(page.getByRole("button", { name: triggerLabel, exact: true })).toHaveCount(0);
+  // FileTable/ProjectsTable's sortable column headers can render a same-named button (e.g. the
+  // "Score" sort header) alongside FilterToolbar's own Status/Score/Tags picker triggers, so an
+  // unscoped name match would collide. Scope to the picker specifically: it's the only "filter
+  // control" that opens a listbox (MultiSelectDropdown), identified by aria-haspopup="listbox"
+  // (sort-header buttons carry no such attribute).
+  const pickerButton = page
+    .getByRole("button", { name: triggerLabel, exact: true })
+    .and(page.locator('[aria-haspopup="listbox"]'));
+  await expect(pickerButton).toHaveCount(0);
 });
 
 // FilterToolbar.tsx's own "Sort: Modified" toggle button — still rendered (only the Status/Score/

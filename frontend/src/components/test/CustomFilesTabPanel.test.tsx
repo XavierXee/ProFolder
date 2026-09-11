@@ -116,7 +116,12 @@ describe("CustomFilesTabPanel - locked pickers are hidden, search/sort stay live
     await waitFor(() => expect(mockGetFiles).toHaveBeenCalledTimes(1));
 
     expect(screen.queryByRole("button", { name: "Status" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Score" })).not.toBeInTheDocument();
+    // FileTable's Score column header is now also a sortable button named "Score" (see
+    // FileTable.tsx's SortTh), so an unscoped name query would match both it and the
+    // FilterToolbar's Score picker. The picker is a MultiSelectDropdown trigger, uniquely
+    // identified by aria-haspopup="listbox" (the sort header has no such attribute).
+    const scoreButtons = screen.queryAllByRole("button", { name: "Score" });
+    expect(scoreButtons.find((b) => b.getAttribute("aria-haspopup") === "listbox")).toBeUndefined();
     expect(screen.queryByRole("button", { name: "Tags" })).not.toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search by filename or path" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Sort: Modified/ })).toBeInTheDocument();
