@@ -1,4 +1,12 @@
-import type { AudioFile, DawType, Project, ProjectDuplicateMatch, TrackStatus } from "../types.js";
+import type {
+  AudioFile,
+  CustomTab,
+  CustomTabType,
+  DawType,
+  Project,
+  ProjectDuplicateMatch,
+  TrackStatus,
+} from "../types.js";
 import { PAGE_SIZE } from "../constants.js";
 
 const API_BASE = "/api";
@@ -274,4 +282,23 @@ export function getExclusions(): Promise<{ excludedPaths: string[] }> {
 
 export function setExclusions(excludedPaths: string[]): Promise<{ excludedPaths: string[] }> {
   return request(`/scan/exclusions`, { method: "PUT", body: JSON.stringify({ excludedPaths }) });
+}
+
+export async function getCustomTabs(): Promise<CustomTab[]> {
+  const result = await request<{ tabs: CustomTab[] }>(`/custom-tabs`);
+  return result.tabs;
+}
+
+export function createCustomTab(input: {
+  name: string;
+  type: CustomTabType;
+  statuses?: TrackStatus[];
+  scores?: (number | "unscored")[];
+  tags?: string[];
+}): Promise<CustomTab> {
+  return request<CustomTab>(`/custom-tabs`, { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function deleteCustomTab(id: number): Promise<void> {
+  await request(`/custom-tabs/${id}`, { method: "DELETE" });
 }
