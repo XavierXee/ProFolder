@@ -12,6 +12,7 @@ import { createStatsRouter } from "./routes/stats.js";
 import { createFoldersRouter } from "./routes/folders.js";
 import { createConfigRouter } from "./routes/config.js";
 import { createTagsRouter } from "./routes/tags.js";
+import { createCustomTabsRouter } from "./routes/customTabs.js";
 
 export function createServer(db: ReturnType<typeof openDb>) {
   const finderService = new MacFinderService(() => getEffectiveMusicRoot(db));
@@ -28,6 +29,7 @@ export function createServer(db: ReturnType<typeof openDb>) {
   app.use("/api/stats", createStatsRouter(db));
   app.use("/api/folders", createFoldersRouter(db));
   app.use("/api/tags", createTagsRouter(db));
+  app.use("/api/custom-tabs", createCustomTabsRouter(db));
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error(err);
