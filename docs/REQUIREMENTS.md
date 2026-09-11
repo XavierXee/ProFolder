@@ -170,13 +170,30 @@
 
 14.2. All interactive components (badges, panels, tables, inputs) have distinct dark/light color treatments rather than relying on a single palette.
 
+## 15. Custom Tabs
+
+15.1. In addition to the default "Project Folders" and "Audio Files" tabs, the user can create any number of **custom tabs**, each a named, saved view over either Projects or Audio Files (never both) filtered to a fixed Status/Score/Tags subset. A leftmost "+" button in the tab bar opens a creation modal offering: a name, a type choice (Project Folders or Audio Files), and optional Status/Score/Tags filter pickers (the same multi-select controls as the default tabs' filter bars, including the "Unscored" score option).
+
+15.2. A custom tab's Status/Score/Tags membership is **locked at creation time** — it is the tab's permanent filter criteria and cannot be edited afterward; there is no edit UI, only create and delete.
+
+15.3. Within a custom tab, free-text search and sort order remain live and interactive on top of the tab's locked subset, exactly as in the default tabs — but neither is part of the tab's saved definition: the Status/Score/Tags pickers themselves are hidden while a custom tab is active, since that criteria is fixed.
+
+15.4. A custom tab's search text and sort order reset to their defaults every time the user navigates away from that tab and back — not only on app cold start. Each custom tab's table/panel is only rendered while it is the active tab, so switching away unmounts it and switching back remounts a fresh instance with no memory of the prior search or sort state.
+
+15.5. Custom tabs support the same row interactions as their underlying type's default tab: opening the detail panel, editing Status/Score/Tags from it (with the same project↔file linking behavior as §12), batch edit, pagination, and "Reveal in Finder".
+
+15.6. Playback is global, not per-tab: there is a single audio player bar shared across the whole app, so starting playback from within a custom Audio Files tab, then switching to another tab (default or custom), leaves the same file playing uninterrupted.
+
+15.7. Each custom tab is shown in the tab bar with its name and its own "×" delete button; clicking "×" opens a confirmation dialog, and deleting is permanent (no undo, no soft-delete). Deleting the tab that is currently active falls back to the default "Project Folders" tab.
+
 ---
 
 ## Appendix A — Key Files (for a Developer/Tester, not part of the requirements themselves)
 
-- Data model: `src/models/{Project,AudioFile,Tag,Score,ProjectDuplicate}.ts`, `src/database/migrations/001–009_*.sql`
+- Data model: `src/models/{Project,AudioFile,Tag,Score,ProjectDuplicate,CustomTab}.ts`, `src/database/migrations/001–010_*.sql`
 - Scanning: `src/scanner/{walk,ignoreRules,dawDetector,dawTypes,mediaDetector,duplicateDetector,projectDetector,audioDetector,folderTree,scanner}.ts`
-- API: `src/api/routes/{files,projects,config,scan,folders,reveal,stats,tags}.ts`, `src/api/server.ts`
+- API: `src/api/routes/{files,projects,config,scan,folders,reveal,stats,tags,customTabs}.ts`, `src/api/server.ts`
+- Custom tabs: `src/database/repositories/customTabRepository.ts`, `frontend/src/components/{CreateCustomTabModal,DeleteTabConfirmDialog,CustomFilesTabPanel,CustomProjectsTabPanel}.tsx`
 - Linking logic: `src/database/repositories/linkSync.ts`
 - Config: `src/config/{musicRoot,scanSettings,config}.ts`
 - Frontend: `frontend/src/App.tsx`, `frontend/src/components/*`, `frontend/src/hooks/{useAudioFiles,useProjects}.ts`, `frontend/src/api/client.ts`
@@ -195,8 +212,10 @@
 
 *Superseded by a full clause-by-clause audit (Task 9 of `docs/TODO.md` item 1) — see
 `docs/COVERAGE.md` for the complete §1–§14 verdict table (85 rows, ~113 individual clauses,
-with citations). This section is now just a short pointer plus the genuinely-still-open items;
-do not treat the bullets previously here as current, several were stale by the time Task 9 ran.*
+with citations). §15 Custom Tabs was added in a later cycle and is covered separately by its own
+§15 verdict table in that same file — it is not included in the §1–§14 figures above. This
+section is now just a short pointer plus the genuinely-still-open items; do not treat the bullets
+previously here as current, several were stale by the time Task 9 ran.*
 
 **Previously listed here as open, now confirmed closed:**
 - §2.4's DAW-classification priority-collision case (package ext > project-file ext > marker

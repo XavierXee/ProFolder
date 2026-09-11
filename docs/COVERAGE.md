@@ -1,4 +1,4 @@
-# Test Coverage Audit — `docs/REQUIREMENTS.md` §1–§14 vs. `e2e/features/**` + `tests/**`
+# Test Coverage Audit — `docs/REQUIREMENTS.md` §1–§15 vs. `e2e/features/**` + `tests/**`
 
 *Task 9 of `docs/TODO.md` item 1. Produced by cross-referencing every requirement clause in
 `docs/REQUIREMENTS.md` against the current test corpus. Methodology: split across two Tester
@@ -6,7 +6,9 @@ passes — Task 9.1 covered the backend/data-layer sections (§1, §2, §3, §4,
 covered the frontend/UI sections (§5, §6, §7, §8, §9, §11, §13, §14) — then consolidated here
 (Task 9.3). A separate, already-fully-gated Task 9.4 (Developer/Tester/Reviewer/Auditor cycle)
 closed one real gap this audit surfaced along the way (§11.3/§11.5, see below); its result is
-folded into this document rather than re-run.*
+folded into this document rather than re-run. §15 (Custom Tabs) was added by a later, separate
+dev-loop cycle after Task 9 concluded — it is not part of the Task 9 audit's methodology,
+baseline counts, or "113 individual clauses" figure below; see its own section for citations.*
 
 *Backend test baseline at time of writing: **21 test files, 181 tests, all passing**
 (`npx vitest run`), `tsc --noEmit` clean.*
@@ -216,6 +218,28 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 15/85 (18%). The remaining 2 row
 |---|---|---|---|
 | 14.1 | Dark/light toggle, header button, localStorage persistence, no-flash | PARTIAL | toggle+persist+reload-both-directions COVERED-E2E (`theme-toggle.feature:3-19`); no-flash-before-paint claim NOT-HEADLESS-VERIFIABLE / functionally NONE (no paint-timing test attempted) |
 | 14.2 | All interactive components have distinct dark/light color treatments | NOT-HEADLESS-VERIFIABLE | — |
+
+## §15 Custom Tabs
+
+*Added after the original Task 9 audit (§1–§14) — §15 didn't exist yet at that time, so it carries
+no Task-9-era staleness risk. Coverage below reflects the feature's own dev-loop cycle
+(repository/route/component/e2e tasks, plus the later Escape-key-scoping fix), not a
+retrospective audit.*
+
+| # | Clause | Verdict | Citation |
+|---|---|---|---|
+| 15.1 | Custom tab creation: name, type choice, optional Status/Score/Tags pickers | COVERED-BOTH | `tests/customTabsRoute.test.ts` (`POST /api/custom-tabs` validation/persistence, incl. invalid-entry filtering and default-empty-arrays); `CreateCustomTabModal.test.tsx` (name validation, exact submit payload, default type, success/error paths); `e2e/features/custom-tabs/create-and-delete.feature` (create-with-filter and create-with-no-filter scenarios for both types) |
+| 15.2 | Status/Score/Tags locked at creation, no edit UI | COVERED-UNIT | No `PATCH`/edit route or UI exists for a custom tab's own filter fields (`src/api/routes/customTabs.ts` only exposes GET/POST/DELETE) — confirmed by absence; `CustomFilesTabPanel.test.tsx`/`CustomProjectsTabPanel.test.tsx`'s "locked filters seed the initial fetch" blocks prove the tab's statuses/scores/tags are read once into the initial fetch and never re-derived from any editable control |
+| 15.3 | Search/sort live on top of locked subset; Status/Score/Tags pickers hidden while locked | COVERED-BOTH | pickers-hidden COVERED-UNIT (`CustomFilesTabPanel.test.tsx`/`CustomProjectsTabPanel.test.tsx` "locked pickers are hidden" blocks; `FilterToolbar.tsx`'s own `locked` prop, asserted directly in neither file's dedicated test but exercised here); live-search/live-sort COVERED-BOTH (same two files' "live search"/"live sort" blocks asserting the locked params + new term/sort both reach the API call; `e2e/features/custom-tabs/locked-filtering.feature` "Locked filter controls are hidden but search and sort remain live" and "Typing a search term further narrows the already-locked result set") |
+| 15.4 | Search/sort reset to defaults on tab switch-away-and-back (remount, not just cold start) | COVERED-E2E | `e2e/features/custom-tabs/locked-filtering.feature`'s "Switching away from a custom tab and back resets live search and sort" scenario — sets a search term and sort, switches to Project Folders and back, asserts both reset. Not separately unit-tested (the remount mechanics live in `App.tsx`'s conditional-render + `key={custom-${id}}`, which is App-level wiring, not either panel's own logic) |
+| 15.5 | Same row interactions as the default tabs: detail panel, status/score/tags edit incl. §12 linking, batch edit, pagination, reveal | COVERED-BOTH | detail panel open/edit + linking COVERED-UNIT (`CustomFilesTabPanel.test.tsx`/`CustomProjectsTabPanel.test.tsx`'s "editing status/tags/score inside the panel" blocks, explicitly asserting which cross-type refresh props fire per field, mirroring §12's file↔project directions); batch edit COVERED-UNIT (same files' "batch edit" blocks); reveal COVERED-UNIT (same files' "reveal" blocks, success + failure-banner); pagination/selection-reset-on-filter-or-page-change COVERED-UNIT (same files' "selection resets on filter/page change" blocks); real-UI walkthrough COVERED-E2E (`e2e/features/custom-tabs/locked-filtering.feature`'s cascade scenario opens a file detail panel inside a custom Files tab, edits its score, and confirms the parent project's score updated on the Project Folders tab) |
+| 15.6 | Playback is global/app-level, not per-tab | COVERED-UNIT | `CustomFilesTabPanel.test.tsx`'s "playback pass-through (App-level/global, not local state)" block — `playingFileId`/`isPlaying`/`onPlayClick` are asserted as pure pass-through props with no local play/pause state in the panel; `CustomProjectsTabPanel` has no player wiring at all (Projects rows aren't playable), consistent with playback living once in `App.tsx`. No e2e scenario plays audio while switching between a custom tab and a default tab specifically, but the unit-level pass-through proof plus `App.tsx`'s single `<AudioPlayerBar>` mount (unconditional, outside the tab-switch conditional) make this low-risk |
+| 15.7 | "×" delete button + confirmation dialog; deleting the active tab falls back to Project Folders | COVERED-BOTH | dialog mechanics COVERED-UNIT (`DeleteTabConfirmDialog.test.tsx` — renders tabName, Confirm/Cancel call the right callback, Escape/backdrop dismiss, theming); delete-and-fallback COVERED-BOTH (`frontend/src/test/App.customTabs.test.tsx`'s single wiring test drives the full create→switch→delete→confirm→fallback-to-Project-Folders path through real `App.tsx` state; `e2e/features/custom-tabs/create-and-delete.feature`'s "Cancelling the delete confirmation leaves the tab in place" and "Confirming the delete removes the tab and falls back to Project Folders when it was active" scenarios) |
+
+Repository-layer round-trip (JSON-array field encode/decode, creation-order listing, delete
+idempotence/non-existent-id) is additionally COVERED-UNIT via `tests/customTabRepository.test.ts`
+and doesn't map to a single requirement clause above since it's implementation plumbing underneath
+15.1/15.2's persistence, not a distinct user-facing behavior.
 
 ---
 
