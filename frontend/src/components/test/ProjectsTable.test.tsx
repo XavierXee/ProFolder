@@ -265,6 +265,14 @@ describe("ProjectsTable - sortable headers", () => {
     expect(header).not.toHaveClass("text-left");
   });
 
+  it("gives each sort-header button a distinguishing 'Sort by <label>' aria-label", () => {
+    renderTable({ filters: {} });
+
+    expect(within(getHeader(/Project Folder/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Project Folder");
+    expect(within(getHeader(/^Score$/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Score");
+    expect(within(getHeader(/^Modified$/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Modified");
+  });
+
   it("calls onSortChange with the clicked column's sort key", async () => {
     const onSortChange = vi.fn();
     const user = userEvent.setup();

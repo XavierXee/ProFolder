@@ -126,6 +126,15 @@ describe("FileTable - sortable headers", () => {
     expect(within(header).getByRole("button")).not.toHaveTextContent(/[↑↓]/);
   });
 
+  it("gives each sort-header button a distinguishing 'Sort by <label>' aria-label", () => {
+    renderTable({ filters: {} });
+
+    expect(within(getHeader(/Track \/ File/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Track / File");
+    expect(within(getHeader(/^Score$/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Score");
+    expect(within(getHeader(/^Location$/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Location");
+    expect(within(getHeader(/^Modified$/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Modified");
+  });
+
   it("calls onSortChange with the clicked column's sort key", async () => {
     const onSortChange = vi.fn();
     const user = userEvent.setup();

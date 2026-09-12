@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import type { Project } from "../types.js";
 import { DAW_LABELS } from "../types.js";
 import StatusBadge from "./StatusBadge.js";
@@ -21,14 +20,14 @@ function SortTh({
   filters,
   onSortChange,
   isDark,
-  children,
+  label,
   className = "text-left",
 }: {
   sortKey: SortKey;
   filters: ProjectFilters;
   onSortChange: (key: SortKey) => void;
   isDark: boolean;
-  children: ReactNode;
+  label: string;
   className?: string;
 }) {
   const active = filters.sortBy === sortKey;
@@ -36,11 +35,12 @@ function SortTh({
     <th scope="col" aria-sort={active ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"} className={`px-4 py-3 ${className}`}>
       <button
         onClick={() => onSortChange(sortKey)}
+        aria-label={`Sort by ${label}`}
         className={`flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider focus:outline-none focus-visible:underline transition-colors ${
           isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"
         }`}
       >
-        {children}
+        {label}
         {sortIndicator(filters, sortKey)}
       </button>
     </th>
@@ -111,9 +111,7 @@ export function ProjectsTable({
               <th scope="col" className={`${staticTh} w-8`}>
                 <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible project folders" />
               </th>
-              <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark}>
-                Project Folder
-              </SortTh>
+              <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Project Folder" />
               <th scope="col" className={staticTh}>
                 Type
               </th>
@@ -123,18 +121,14 @@ export function ProjectsTable({
               <th scope="col" className={leftTh}>
                 Tags
               </th>
-              <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center">
-                Score
-              </SortTh>
+              <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center" label="Score" />
               <th scope="col" className={staticTh}>
                 Audio Files
               </th>
               <th scope="col" className={staticTh}>
                 Media
               </th>
-              <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center">
-                Modified
-              </SortTh>
+              <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center" label="Modified" />
               <th scope="col" className={staticTh}></th>
             </tr>
           </thead>

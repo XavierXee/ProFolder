@@ -189,12 +189,50 @@ describe("App - pagination clears row selection (Files tab sort)", () => {
 
     expect(batchEditButton()).toBeEnabled();
 
-    await user.click(screen.getByRole("button", { name: "Location" }));
+    await user.click(screen.getByRole("button", { name: "Sort by Location" }));
 
     // Proves this really was a genuine re-render/refetch (sortBy changed, page reset to 1,
     // a fresh getFiles call fired) rather than a no-op click.
     await waitFor(() => expect(screen.getByRole("columnheader", { name: /^Location/ })).toHaveAttribute("aria-sort", "ascending"));
     expect(mockGetFiles.mock.calls.at(-1)?.[0]).toMatchObject({ sortBy: "folder", sortDir: "asc" });
+
+    await waitFor(() => expect(batchEditButton()).toBeDisabled());
+    expect(cb1).not.toBeChecked();
+    expect(cb2).not.toBeChecked();
+  });
+});
+
+describe("App - pagination clears row selection (Projects tab sort)", () => {
+  it("clears both the Batch Edit button state and the checked row checkboxes when a ProjectsTable column-header sort is clicked", async () => {
+    // ProjectsTable's sortable column headers call App's handleProjectSortChange, which routes
+    // through handleProjectsFilterChange — the same selection-clearing wrapper used by every
+    // other Projects filter/page-change handler — so sort-header clicks clear selection
+    // consistently with the rest of the app. This is also the wiring this task's fix restores:
+    // before it, `filters`/`onSortChange` weren't passed to ProjectsTable at all and the
+    // Projects tab (the default landing tab) crashed on render.
+    const user = userEvent.setup();
+    render(<App />);
+    // "Project Folders" is the default active tab, but click it explicitly so this test
+    // doesn't silently depend on that default.
+    await user.click(screen.getByRole("button", { name: "Project Folders" }));
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "Select Alpha Sessions" })).toBeInTheDocument());
+
+    const cb1 = screen.getByRole("checkbox", { name: "Select Alpha Sessions" });
+    const cb2 = screen.getByRole("checkbox", { name: "Select Beta Sessions" });
+    await user.click(cb1);
+    await user.click(cb2);
+
+    expect(batchEditButton()).toBeEnabled();
+
+    // ProjectsTable's sort-header buttons now have an explicit "Sort by <label>" aria-label
+    // (distinguishing them from FilterToolbar's same-named picker buttons, e.g. "Score"), so
+    // this query is unambiguous regardless of which column is used.
+    await user.click(screen.getByRole("button", { name: "Sort by Modified" }));
+
+    // Proves this really was a genuine re-render/refetch (sortBy changed, page reset to 1,
+    // a fresh getProjects call fired) rather than a no-op click.
+    await waitFor(() => expect(screen.getByRole("columnheader", { name: /^Modified/ })).toHaveAttribute("aria-sort", "ascending"));
+    expect(mockGetProjects.mock.calls.at(-1)?.[0]).toMatchObject({ sortBy: "modifiedAt", sortDir: "asc" });
 
     await waitFor(() => expect(batchEditButton()).toBeDisabled());
     expect(cb1).not.toBeChecked();

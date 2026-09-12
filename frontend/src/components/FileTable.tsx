@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import type { ReactNode } from "react";
 import type { AudioFile } from "../types.js";
 import { FileRow } from "./FileRow.js";
 import LoadingRows from "./LoadingRows.js";
@@ -19,14 +18,14 @@ function SortTh({
   filters,
   onSortChange,
   isDark,
-  children,
+  label,
   className = "",
 }: {
   sortKey: SortKey;
   filters: FileFilters;
   onSortChange: (key: SortKey) => void;
   isDark: boolean;
-  children: ReactNode;
+  label: string;
   className?: string;
 }) {
   const active = filters.sortBy === sortKey;
@@ -34,11 +33,12 @@ function SortTh({
     <th scope="col" aria-sort={active ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"} className={`px-4 py-3 text-left ${className}`}>
       <button
         onClick={() => onSortChange(sortKey)}
+        aria-label={`Sort by ${label}`}
         className={`flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider focus:outline-none focus-visible:underline transition-colors ${
           isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"
         }`}
       >
-        {children}
+        {label}
         {sortIndicator(filters, sortKey)}
       </button>
     </th>
@@ -99,9 +99,7 @@ export function FileTable({
           <th scope="col" className={`${staticTh} w-8`}>
             <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible files" />
           </th>
-          <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark}>
-            Track / File
-          </SortTh>
+          <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Track / File" />
           <th scope="col" className={`${staticTh} w-32`}>
             Status
           </th>
@@ -111,15 +109,9 @@ export function FileTable({
           <th scope="col" className={staticTh}>
             Project
           </th>
-          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark}>
-            Score
-          </SortTh>
-          <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} isDark={isDark}>
-            Location
-          </SortTh>
-          <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark}>
-            Modified
-          </SortTh>
+          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Score" />
+          <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Location" />
+          <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Modified" />
         </tr>
       </thead>
       <tbody>

@@ -153,7 +153,12 @@ describe("CustomProjectsTabPanel - locked pickers are hidden, search/sort stay l
     await waitFor(() => expect(mockGetProjects).toHaveBeenCalledTimes(1));
 
     expect(screen.queryByRole("button", { name: "Status" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Score" })).not.toBeInTheDocument();
+    // ProjectsTable's Score column header is now also a sortable button named "Score" (see
+    // ProjectsTable.tsx's SortTh), so an unscoped name query would match both it and the
+    // FilterToolbar's Score picker. The picker is a MultiSelectDropdown trigger, uniquely
+    // identified by aria-haspopup="listbox" (the sort header has no such attribute).
+    const scoreButtons = screen.queryAllByRole("button", { name: "Score" });
+    expect(scoreButtons.find((b) => b.getAttribute("aria-haspopup") === "listbox")).toBeUndefined();
     expect(screen.queryByRole("button", { name: "Tags" })).not.toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search project folders" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Sort: Modified/ })).toBeInTheDocument();
@@ -194,6 +199,28 @@ describe("CustomProjectsTabPanel - live sort", () => {
       expect(mockGetProjects).toHaveBeenLastCalledWith({
         ...LOCKED_PARAMS,
         sortBy: "modifiedAt",
+        sortDir: "asc",
+        page: 1,
+        pageSize: PAGE_SIZE,
+      })
+    );
+  });
+});
+
+describe("CustomProjectsTabPanel - live sort via ProjectsTable column headers", () => {
+  it("clicking the Score column header reaches getProjects with the locked params AND the new sort", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await waitFor(() => expect(mockGetProjects).toHaveBeenCalledTimes(1));
+
+    // ProjectsTable's sort-header buttons have an explicit "Sort by <label>" aria-label,
+    // distinguishing them from FilterToolbar's same-named "Score" picker button.
+    await user.click(screen.getByRole("button", { name: "Sort by Score" }));
+
+    await waitFor(() =>
+      expect(mockGetProjects).toHaveBeenLastCalledWith({
+        ...LOCKED_PARAMS,
+        sortBy: "score",
         sortDir: "asc",
         page: 1,
         pageSize: PAGE_SIZE,

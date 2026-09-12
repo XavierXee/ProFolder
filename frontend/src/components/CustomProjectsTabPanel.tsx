@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
+import type { ProjectFilters } from "../api/client.js";
 import { useProjects } from "../hooks/useProjects.js";
 import type { CustomTab, TrackStatus } from "../types.js";
 import FilterToolbar from "./FilterToolbar.js";
 import { ProjectsTable } from "./ProjectsTable.js";
 import ProjectDetailPanel from "./ProjectDetailPanel.js";
 import BatchEditPanel from "./BatchEditPanel.js";
+
+type SortKey = NonNullable<ProjectFilters["sortBy"]>;
 
 type Props = {
   tab: CustomTab;
@@ -82,6 +85,13 @@ export default function CustomProjectsTabPanel({
   function handlePageChange(nextPage: number) {
     setPage(nextPage);
     setSelectedProjectIds(new Set());
+  }
+
+  function handleSortChange(sortBy: SortKey) {
+    handleFilterChange({
+      sortBy,
+      sortDir: filters.sortBy === sortBy && filters.sortDir === "asc" ? "desc" : "asc",
+    });
   }
 
   function toggleProjectSelect(id: string) {
@@ -177,11 +187,13 @@ export default function CustomProjectsTabPanel({
         isDark={isDark}
         selectedId={selectedProjectId}
         selectedIds={selectedProjectIds}
+        filters={filters}
         onPageChange={handlePageChange}
         onReveal={handleReveal}
         onRowClick={handleProjectRowClick}
         onToggleSelect={toggleProjectSelect}
         onToggleSelectAll={toggleAllProjectSelect}
+        onSortChange={handleSortChange}
         playerActive={playerActive}
       />
 

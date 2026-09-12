@@ -19,7 +19,7 @@ import DeleteTabConfirmDialog from "./components/DeleteTabConfirmDialog.js";
 import CustomFilesTabPanel from "./components/CustomFilesTabPanel.js";
 import CustomProjectsTabPanel from "./components/CustomProjectsTabPanel.js";
 import * as api from "./api/client.js";
-import type { FileFilters, LibraryStats, ScanStats } from "./api/client.js";
+import type { FileFilters, LibraryStats, ProjectFilters, ScanStats } from "./api/client.js";
 import type { AudioFile, CustomTab, TrackStatus } from "./types.js";
 
 type Tab = "projects" | "files" | number;
@@ -313,6 +313,13 @@ export default function App() {
     });
   }
 
+  function handleProjectSortChange(sortBy: NonNullable<ProjectFilters["sortBy"]>) {
+    handleProjectsFilterChange({
+      sortBy,
+      sortDir: projectFilters.sortBy === sortBy && projectFilters.sortDir === "asc" ? "desc" : "asc",
+    });
+  }
+
   const sectionBorder = isDark ? "border-white/8" : "border-black/8";
 
   return (
@@ -524,11 +531,13 @@ export default function App() {
               isDark={isDark}
               selectedId={selectedProjectId}
               selectedIds={selectedProjectIds}
+              filters={projectFilters}
               onPageChange={handleProjectsPageChange}
               onReveal={handleReveal}
               onRowClick={handleProjectRowClick}
               onToggleSelect={toggleProjectSelect}
               onToggleSelectAll={toggleAllProjectSelect}
+              onSortChange={handleProjectSortChange}
               playerActive={playingFile !== null}
             />
           </>
