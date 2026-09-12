@@ -161,7 +161,7 @@ describe("CustomProjectsTabPanel - locked pickers are hidden, search/sort stay l
     expect(scoreButtons.find((b) => b.getAttribute("aria-haspopup") === "listbox")).toBeUndefined();
     expect(screen.queryByRole("button", { name: "Tags" })).not.toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search project folders" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Sort: Modified/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sort by Modified" })).toBeInTheDocument();
   });
 });
 
@@ -193,7 +193,7 @@ describe("CustomProjectsTabPanel - live sort", () => {
     renderPanel();
     await waitFor(() => expect(mockGetProjects).toHaveBeenCalledTimes(1));
 
-    await user.click(screen.getByRole("button", { name: /Sort: Modified/ }));
+    await user.click(screen.getByRole("button", { name: "Sort by Modified" }));
 
     await waitFor(() =>
       expect(mockGetProjects).toHaveBeenLastCalledWith({

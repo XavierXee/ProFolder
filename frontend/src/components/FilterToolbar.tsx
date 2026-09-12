@@ -18,9 +18,9 @@ export type FilterToolbarFilters = {
   sortDir?: "asc" | "desc";
 };
 
-/** Patch shape emitted by the toolbar. The only `sortBy` value this component ever sets
- * is "modifiedAt", which both `FileFilters` and `ProjectFilters` accept, so callers'
- * narrower `onChange` handlers remain assignable here. */
+/** Patch shape emitted by the toolbar. This component never sets a `sortBy` value itself
+ * (column-header sorting on the tables is the only way to set one) — it only ever clears
+ * one via `clearAll()`, emitting `sortBy: undefined`. */
 export type FilterToolbarPatch = {
   search?: string;
   statuses?: TrackStatus[];
@@ -113,9 +113,6 @@ export default function FilterToolbar({
     ? "bg-white/5 border-white/10 text-slate-300 placeholder-slate-600"
     : "bg-white border-slate-300 text-slate-800 placeholder-slate-400";
   const clearCls = isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800";
-  const sortUnselected = isDark
-    ? "border-white/10 text-slate-500 hover:border-white/20 hover:text-slate-300"
-    : "border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-800";
   const batchEditCls = isDark
     ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20"
     : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20";
@@ -184,30 +181,6 @@ export default function FilterToolbar({
             />
           </>
         )}
-
-        <button
-          onClick={() =>
-            onChange({
-              sortBy: "modifiedAt",
-              sortDir: filters.sortBy === "modifiedAt" && filters.sortDir === "asc" ? "desc" : "asc",
-            })
-          }
-          aria-pressed={filters.sortBy === "modifiedAt"}
-          className={`px-2.5 py-1 rounded text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-            filters.sortBy === "modifiedAt"
-              ? isDark
-                ? "border-blue-500/40 text-blue-400 bg-blue-500/10 ring-1 ring-blue-500/30"
-                : "border-blue-400/60 text-blue-700 bg-blue-50 ring-1 ring-blue-300"
-              : sortUnselected
-          }`}
-        >
-          <span className="whitespace-nowrap">
-            Sort: Modified{" "}
-            <span className={filters.sortBy === "modifiedAt" ? "opacity-100" : "opacity-0"} aria-hidden="true">
-              {filters.sortDir === "desc" ? "↓" : "↑"}
-            </span>
-          </span>
-        </button>
 
         <div className="ml-auto flex items-center gap-2">
           <span className={`inline-grid text-xs font-mono whitespace-nowrap ${isDark ? "text-slate-600" : "text-slate-400"}`}>

@@ -124,7 +124,7 @@ describe("CustomFilesTabPanel - locked pickers are hidden, search/sort stay live
     expect(scoreButtons.find((b) => b.getAttribute("aria-haspopup") === "listbox")).toBeUndefined();
     expect(screen.queryByRole("button", { name: "Tags" })).not.toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search by filename or path" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Sort: Modified/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sort by Modified" })).toBeInTheDocument();
   });
 });
 
@@ -156,7 +156,7 @@ describe("CustomFilesTabPanel - live sort", () => {
     renderPanel();
     await waitFor(() => expect(mockGetFiles).toHaveBeenCalledTimes(1));
 
-    await user.click(screen.getByRole("button", { name: /Sort: Modified/ }));
+    await user.click(screen.getByRole("button", { name: "Sort by Modified" }));
 
     await waitFor(() =>
       expect(mockGetFiles).toHaveBeenLastCalledWith({

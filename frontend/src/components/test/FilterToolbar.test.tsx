@@ -182,45 +182,6 @@ describe("FilterToolbar - Clear button disabled state (activeFilterCount)", () =
   });
 });
 
-describe("FilterToolbar - Modified sort toggle", () => {
-  function getSortButton() {
-    return screen.getByRole("button", { name: /Sort: Modified/ });
-  }
-
-  it("sets sortBy=modifiedAt and sortDir=asc on the first click", async () => {
-    const onChangeSpy = vi.fn();
-    const user = userEvent.setup();
-    render(<Harness onChangeSpy={onChangeSpy} />);
-
-    await user.click(getSortButton());
-
-    expect(onChangeSpy).toHaveBeenCalledWith({ sortBy: "modifiedAt", sortDir: "asc" });
-    expect(getSortButton()).toHaveAttribute("aria-pressed", "true");
-  });
-
-  it("flips asc -> desc -> asc on repeated clicks", async () => {
-    const onChangeSpy = vi.fn();
-    const user = userEvent.setup();
-    render(<Harness onChangeSpy={onChangeSpy} />);
-    const button = getSortButton();
-
-    await user.click(button);
-    expect(onChangeSpy).toHaveBeenNthCalledWith(1, { sortBy: "modifiedAt", sortDir: "asc" });
-
-    await user.click(button);
-    expect(onChangeSpy).toHaveBeenNthCalledWith(2, { sortBy: "modifiedAt", sortDir: "desc" });
-
-    await user.click(button);
-    expect(onChangeSpy).toHaveBeenNthCalledWith(3, { sortBy: "modifiedAt", sortDir: "asc" });
-  });
-
-  it("is not aria-pressed and not active when no sort is applied", () => {
-    render(<Harness />);
-
-    expect(getSortButton()).toHaveAttribute("aria-pressed", "false");
-  });
-});
-
 describe("FilterToolbar - Batch Edit button", () => {
   it("is disabled when selectedCount is 0 or 1", () => {
     const { rerender } = render(<Harness selectedCount={0} />);
@@ -342,19 +303,6 @@ describe("FilterToolbar - locked mode", () => {
 
     expect(onChangeSpy).toHaveBeenCalledWith({ search: "rock" });
     vi.useRealTimers();
-  });
-
-  it("still renders a functional Sort button when locked", async () => {
-    const onChangeSpy = vi.fn();
-    const user = userEvent.setup();
-    render(<Harness locked onChangeSpy={onChangeSpy} />);
-
-    const sortButton = screen.getByRole("button", { name: /Sort: Modified/ });
-    expect(sortButton).toBeInTheDocument();
-
-    await user.click(sortButton);
-
-    expect(onChangeSpy).toHaveBeenCalledWith({ sortBy: "modifiedAt", sortDir: "asc" });
   });
 
   it("does not count non-empty statuses/scores/tags toward activeFilterCount when locked, so Clear stays disabled", () => {
