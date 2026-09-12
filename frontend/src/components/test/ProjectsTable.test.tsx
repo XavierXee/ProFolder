@@ -39,7 +39,6 @@ function renderTable(overrides: Partial<Parameters<typeof ProjectsTable>[0]> = {
     selectedIds: new Set<string>(),
     filters: {} as ProjectFilters,
     onPageChange: () => {},
-    onReveal: () => {},
     onRowClick: () => {},
     onToggleSelect: () => {},
     onToggleSelectAll: () => {},
@@ -63,7 +62,7 @@ describe("ProjectsTable - fixed column widths", () => {
       Array.from(th.classList).find((cls) => /^w-\[\d+%\]$/.test(cls))
     );
 
-    expect(widths).toHaveLength(10);
+    expect(widths).toHaveLength(9);
     expect(widths.every(Boolean)).toBe(true);
   });
 });
@@ -102,10 +101,10 @@ describe("ProjectsTable - empty states", () => {
     expect(screen.getByText("No folders found yet. Try running a scan.")).toBeInTheDocument();
   });
 
-  it("spans the empty-state message across all 10 columns", () => {
+  it("spans the empty-state message across all 9 columns", () => {
     renderTable({ projects: [], total: 0 });
 
-    expect(screen.getByText("No folders found yet. Try running a scan.").closest("td")).toHaveAttribute("colSpan", "10");
+    expect(screen.getByText("No folders found yet. Try running a scan.").closest("td")).toHaveAttribute("colSpan", "9");
   });
 
   it("shows the 'no folders match your filters' message when total is nonzero but the current page is empty", () => {
@@ -122,10 +121,10 @@ describe("ProjectsTable - loading state", () => {
     expect(screen.getByText("Loading project folders…")).toBeInTheDocument();
   });
 
-  it("spans the loading message across all 10 columns", () => {
+  it("spans the loading message across all 9 columns", () => {
     renderTable({ loading: true, projects: [makeProject()] });
 
-    expect(screen.getByText("Loading project folders…").closest("td")).toHaveAttribute("colSpan", "10");
+    expect(screen.getByText("Loading project folders…").closest("td")).toHaveAttribute("colSpan", "9");
   });
 });
 
@@ -308,27 +307,29 @@ describe("ProjectsTable - sortable headers", () => {
   });
 });
 
-describe("ProjectsTable - Reveal in Finder", () => {
-  it("calls onReveal with the project's path when clicked", async () => {
-    const onReveal = vi.fn();
-    const user = userEvent.setup();
-    renderTable({ projects: [makeProject({ path: "/music/My Song" })], onReveal });
+describe("ProjectsTable - Reveal in Finder column removal", () => {
+  it("does not render a Reveal in Finder button/column (that action lives only in ProjectDetailPanel now)", () => {
+    const { container } = renderTable({ projects: [makeProject()] });
 
-    await user.click(screen.getByRole("button", { name: "Reveal in Finder" }));
+    expect(screen.queryByRole("button", { name: "Reveal in Finder" })).not.toBeInTheDocument();
+    expect(container.querySelectorAll("thead th")).toHaveLength(9);
+    expect(container.querySelectorAll("tbody tr td")).toHaveLength(9);
+  });
+});
 
-    expect(onReveal).toHaveBeenCalledWith("/music/My Song");
+describe("ProjectsTable - checkbox column centering", () => {
+  it("centers the select-all checkbox header", () => {
+    renderTable();
+
+    const header = screen.getByLabelText("Select all visible project folders").closest("th");
+    expect(header).toHaveClass("text-center");
   });
 
-  it("stops the click from propagating to the row's onRowClick", async () => {
-    const onReveal = vi.fn();
-    const onRowClick = vi.fn();
-    const user = userEvent.setup();
-    renderTable({ projects: [makeProject()], onReveal, onRowClick });
+  it("centers the row checkbox cell", () => {
+    renderTable({ projects: [makeProject({ id: "p1", name: "Song One" })] });
 
-    await user.click(screen.getByRole("button", { name: "Reveal in Finder" }));
-
-    expect(onReveal).toHaveBeenCalledTimes(1);
-    expect(onRowClick).not.toHaveBeenCalled();
+    const cell = screen.getByLabelText("Select Song One").closest("td");
+    expect(cell).toHaveClass("text-center");
   });
 });
 

@@ -533,7 +533,6 @@ export default function App() {
               selectedIds={selectedProjectIds}
               filters={projectFilters}
               onPageChange={handleProjectsPageChange}
-              onReveal={handleReveal}
               onRowClick={handleProjectRowClick}
               onToggleSelect={toggleProjectSelect}
               onToggleSelectAll={toggleAllProjectSelect}

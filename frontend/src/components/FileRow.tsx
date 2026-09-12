@@ -61,7 +61,7 @@ export function FileRow({
             : "border-black/5 hover:bg-black/3"
       }`}
     >
-      <td className="px-4 py-3.5 w-8">
+      <td className="px-4 py-3.5 text-center">
         <RowCheckbox checked={checked} onChange={onToggleCheck} ariaLabel={`Select ${file.filename}`} />
       </td>
       <td className="px-4 py-3.5">

@@ -88,7 +88,8 @@ export function FileTable({
     }
   }, [flashId]);
 
-  const staticTh = `px-4 py-3 text-left text-xs font-mono font-medium uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`;
+  const thBase = `px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`;
+  const staticTh = `${thBase} text-left`;
   const allSelected = files.length > 0 && files.every((f) => selectedIds.has(f.id));
 
   return (
@@ -96,7 +97,7 @@ export function FileTable({
       <caption className="sr-only">Scanned audio files, sortable by column</caption>
       <thead className={`border-b sticky top-0 z-10 ${isDark ? "bg-[#0d0f14] border-white/8" : "bg-[#f4f6f9] border-black/8"}`}>
         <tr>
-          <th scope="col" className={`${staticTh} w-[4%]`}>
+          <th scope="col" className={`${thBase} text-center w-[4%]`}>
             <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible files" />
           </th>
           <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Track / File" className="w-[24%]" />

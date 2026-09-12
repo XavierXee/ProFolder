@@ -69,7 +69,6 @@ export function ProjectsTable({
   selectedIds,
   filters,
   onPageChange,
-  onReveal,
   onRowClick,
   onToggleSelect,
   onToggleSelectAll,
@@ -87,7 +86,6 @@ export function ProjectsTable({
   selectedIds: Set<string>;
   filters: ProjectFilters;
   onPageChange: (page: number) => void;
-  onReveal: (path: string) => void;
   onRowClick: (id: string) => void;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: () => void;
@@ -111,37 +109,36 @@ export function ProjectsTable({
               <th scope="col" className={`${staticTh} w-[4%]`}>
                 <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible project folders" />
               </th>
-              <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Project Folder" className="text-left w-[22%]" />
-              <th scope="col" className={`${staticTh} w-[8%]`}>
+              <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Project Folder" className="text-left w-[24%]" />
+              <th scope="col" className={`${staticTh} w-[9%]`}>
                 Type
               </th>
-              <th scope="col" className={`${staticTh} w-[10%]`}>
+              <th scope="col" className={`${staticTh} w-[11%]`}>
                 Status
               </th>
-              <th scope="col" className={`${leftTh} w-[14%]`}>
+              <th scope="col" className={`${leftTh} w-[15%]`}>
                 Tags
               </th>
-              <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center w-[8%]" label="Score" />
-              <th scope="col" className={`${staticTh} w-[8%]`}>
+              <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center w-[9%]" label="Score" />
+              <th scope="col" className={`${staticTh} w-[9%]`}>
                 Audio Files
               </th>
               <th scope="col" className={`${staticTh} w-[8%]`}>
                 Media
               </th>
-              <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center w-[10%]" label="Modified" />
-              <th scope="col" className={`${staticTh} w-[8%]`}></th>
+              <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center w-[11%]" label="Modified" />
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={10} className={`px-6 py-10 text-center text-sm ${meta}`}>
+                <td colSpan={9} className={`px-6 py-10 text-center text-sm ${meta}`}>
                   Loading project folders…
                 </td>
               </tr>
             ) : projects.length === 0 ? (
               <tr>
-                <td colSpan={10} className={`px-6 py-10 text-center text-sm ${meta}`}>
+                <td colSpan={9} className={`px-6 py-10 text-center text-sm ${meta}`}>
                   {total === 0 ? "No folders found yet. Try running a scan." : "No folders match your filters."}
                 </td>
               </tr>
@@ -167,7 +164,7 @@ export function ProjectsTable({
                           : "border-black/5 hover:bg-black/3"
                     }`}
                   >
-                    <td className="px-4 py-3.5 w-8">
+                    <td className="px-4 py-3.5 text-center">
                       <RowCheckbox checked={selectedIds.has(project.id)} onChange={() => onToggleSelect(project.id)} ariaLabel={`Select ${project.name}`} />
                     </td>
                     <td className="px-4 py-3.5">
@@ -256,14 +253,6 @@ export function ProjectsTable({
                       ) : (
                         <span className={`text-xs font-mono ${isDark ? "text-slate-500" : "text-slate-400"}`}>{formatTime(project.contentModifiedAt)}</span>
                       )}
-                    </td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => onReveal(project.path)}
-                        className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
-                      >
-                        Reveal in Finder
-                      </button>
                     </td>
                   </tr>
                 );

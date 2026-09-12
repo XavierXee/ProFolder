@@ -276,4 +276,11 @@ describe("FileTable - select-all checkbox", () => {
 
     expect(onToggleSelectAll).toHaveBeenCalledTimes(1);
   });
+
+  it("centers the select-all checkbox header to match the row checkbox cells", () => {
+    renderTable({ files: [] });
+
+    const header = getSelectAllCheckbox().closest("th");
+    expect(header).toHaveClass("text-center");
+  });
 });

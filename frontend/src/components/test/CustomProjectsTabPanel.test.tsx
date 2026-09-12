@@ -482,14 +482,20 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
 });
 
 describe("CustomProjectsTabPanel - reveal", () => {
+  // Reveal in Finder is only reachable through ProjectDetailPanel (opened via a row click) now
+  // that ProjectsTable no longer renders its own Reveal button/column.
   it("calls api.reveal with the project's path", async () => {
     const project = makeProject({ id: "p1", name: "Amen Break", path: "/music/Amen Break" });
     mockGetProjects.mockResolvedValue(makePaged({ projects: [project], total: 1 }));
+    mockGetProjectDetail.mockResolvedValue(makeDetail({ id: "p1", name: "Amen Break", path: "/music/Amen Break" }));
     const user = userEvent.setup();
     renderPanel();
 
     await waitFor(() => expect(screen.getByText("Amen Break")).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "Reveal in Finder" }));
+    await user.click(screen.getByText("Amen Break"));
+
+    const dialog = await screen.findByRole("dialog", { name: "Folder detail: Amen Break" });
+    await user.click(within(dialog).getByRole("button", { name: "Reveal in Finder" }));
 
     expect(mockReveal).toHaveBeenCalledWith("/music/Amen Break");
   });
@@ -497,13 +503,17 @@ describe("CustomProjectsTabPanel - reveal", () => {
   it("calls setBanner with the error message when the reveal rejects, mirroring App.tsx's handleReveal", async () => {
     const project = makeProject({ id: "p1", name: "Amen Break", path: "/music/Amen Break" });
     mockGetProjects.mockResolvedValue(makePaged({ projects: [project], total: 1 }));
+    mockGetProjectDetail.mockResolvedValue(makeDetail({ id: "p1", name: "Amen Break", path: "/music/Amen Break" }));
     mockReveal.mockRejectedValue(new Error("Path is outside the music root"));
     const setBanner = vi.fn();
     const user = userEvent.setup();
     renderPanel({ setBanner });
 
     await waitFor(() => expect(screen.getByText("Amen Break")).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "Reveal in Finder" }));
+    await user.click(screen.getByText("Amen Break"));
+
+    const dialog = await screen.findByRole("dialog", { name: "Folder detail: Amen Break" });
+    await user.click(within(dialog).getByRole("button", { name: "Reveal in Finder" }));
 
     await waitFor(() => expect(setBanner).toHaveBeenCalledWith("Path is outside the music root"));
   });

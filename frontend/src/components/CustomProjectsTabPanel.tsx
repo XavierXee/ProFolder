@@ -189,7 +189,6 @@ export default function CustomProjectsTabPanel({
         selectedIds={selectedProjectIds}
         filters={filters}
         onPageChange={handlePageChange}
-        onReveal={handleReveal}
         onRowClick={handleProjectRowClick}
         onToggleSelect={toggleProjectSelect}
         onToggleSelectAll={toggleAllProjectSelect}

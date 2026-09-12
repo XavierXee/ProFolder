@@ -187,4 +187,11 @@ describe("FileRow", () => {
     expect(onToggleCheck).toHaveBeenCalledTimes(1);
     expect(onClick).not.toHaveBeenCalled();
   });
+
+  it("centers the checkbox cell to match the header's centered alignment", () => {
+    renderRow({ file: makeFile({ filename: "beat.wav" }) });
+
+    const cell = screen.getByLabelText("Select beat.wav").closest("td");
+    expect(cell).toHaveClass("text-center");
+  });
 });
