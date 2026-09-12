@@ -300,10 +300,21 @@ Then("I should not see a {string} filter control", async ({ page }, triggerLabel
   await expect(pickerButton).toHaveCount(0);
 });
 
-// FilterToolbar.tsx's own "Sort: Modified" toggle button — still rendered (only the Status/Score/
-// Tags pickers are hidden) when `locked` is set. Mirrors projects.steps.ts's `sortButton` exactly.
+// The old FilterToolbar.tsx "Sort: Modified" toggle button is gone — every scenario in
+// locked-filtering.feature that uses this step is against a Files-type custom tab (see
+// CustomFilesTabPanel.tsx, which renders the same FileTable.tsx every other Files-tab scenario
+// does), so this locates that table's "Modified" column-header sort button instead, mirroring the
+// generic `sortColumnHeader`/`sortButton` helpers in common.steps.ts (see that file's doc comment
+// for why the exact match is `"Sort by Modified"`, not just `"Modified"` — the `<th>`'s accessible
+// name is inherited from its inner button's `aria-label`, not its visible text). Column headers
+// use `aria-sort` ("ascending"/"descending"/"none"), not `aria-pressed` — there's no
+// `aria-pressed` anywhere on a `SortTh` button.
+function toolbarSortColumnHeader(page: Page) {
+  return page.getByRole("columnheader", { name: "Sort by Modified", exact: true });
+}
+
 function toolbarSortButton(page: Page) {
-  return page.getByRole("button", { name: "Sort: Modified" });
+  return toolbarSortColumnHeader(page).getByRole("button");
 }
 
 When("I click the custom tab sort button", async ({ page }) => {
@@ -311,11 +322,11 @@ When("I click the custom tab sort button", async ({ page }) => {
 });
 
 Then("the custom tab sort button should indicate active sort", async ({ page }) => {
-  await expect(toolbarSortButton(page)).toHaveAttribute("aria-pressed", "true");
+  await expect(toolbarSortColumnHeader(page)).not.toHaveAttribute("aria-sort", "none");
 });
 
 Then("the custom tab sort button should not indicate active sort", async ({ page }) => {
-  await expect(toolbarSortButton(page)).toHaveAttribute("aria-pressed", "false");
+  await expect(toolbarSortColumnHeader(page)).toHaveAttribute("aria-sort", "none");
 });
 
 // Both CustomFilesTabPanel and CustomProjectsTabPanel pass the same "Search by filename or path"/

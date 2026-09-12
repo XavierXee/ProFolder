@@ -260,6 +260,13 @@ const ALL_FILES_E2E_FIXTURES = [
   "Files E2E Sort Oldest.wav",
   "Files E2E Sort Middle.wav",
   "Files E2E Sort Newest.wav",
+  // "Files E2E ScoreSort Low/Mid/High.wav" — Task 8's dedicated fixtures for the Score-column
+  // sorting scenarios (see files-tab/sorting.feature): score isn't scan-derived, so unlike the
+  // "Sort Oldest/Middle/Newest" mtime-stamped fixtures above, these get their scores set at
+  // runtime via the existing "file ... has status ..., score ..." step instead.
+  "Files E2E ScoreSort Low.wav",
+  "Files E2E ScoreSort Mid.wav",
+  "Files E2E ScoreSort High.wav",
   "Files E2E DetailPanel Take.wav",
   "reverse-take-1.wav",
   "reverse-take-2.wav",
@@ -345,35 +352,20 @@ Then("I should see exactly {int} files in the table", async ({ page }, count: nu
 // --- Sorting (Task 5a.3) -----------------------------------------------------------------------
 //
 // FileTable.tsx has three independently-sortable columns (see SortTh usages: `name` under the
-// "Track / File" header, `folder` under "Location", `modifiedAt` under "Modified"), unlike
-// FilterToolbar.tsx's single hardcoded "Sort: Modified" button the Projects tab uses — so, unlike
-// projects.steps.ts's `sortButton(page)`, this helper is parameterized by the column's header
-// label. Each `<th scope="col">` gets the implicit ARIA `columnheader` role (it's a real semantic
-// <table>), and its accessible name is its full text content — the column label plus, once that
-// column is the active sort, a trailing " ↑"/" ↓" appended directly inline (not inside a separate
-// `aria-hidden` span the way FilterToolbar.tsx's indicator is — see `sortIndicator` in
-// FileTable.tsx). Matching on just the column label (Playwright's default `name` matching is a
-// case-insensitive substring, not exact) finds the header/button regardless of whether that
-// indicator is currently appended.
-function sortColumnHeader(page: Page, columnLabel: string) {
-  return page.getByRole("columnheader", { name: columnLabel });
-}
-
-function sortButton(page: Page, columnLabel: string) {
-  return sortColumnHeader(page, columnLabel).getByRole("button");
-}
-
-When("I click the {string} sort button", async ({ page }, columnLabel: string) => {
-  await sortButton(page, columnLabel).click();
-});
-
+// "Track / File" header, `folder` under "Location", `modifiedAt` under "Modified"). The generic
+// per-column `sortColumnHeader`/`sortButton` helpers and their step defs (parameterized by column
+// label, since both FileTable.tsx and ProjectsTable.tsx now expose real sortable column headers)
+// live in common.steps.ts instead of here — see that file's doc comment near those helpers — so
+// this section only keeps the order-sensitive row-order assertion, which needs Files-specific
+// table access (`filesTable`).
+//
 // Order-sensitive companion to "I should see only these files in the table: ..." / "I should see
-// exactly N files in the table", mirroring projects.steps.ts's equivalent: filters the table's
-// visible rows down to just the given (expected) identifiers before comparing sequence, so other
-// fixtures that might incidentally be visible don't break the order assertion — only relative
-// order among the named identifiers is asserted. Wrapped in `expect(...).toPass()` since the
-// table updates asynchronously after a sort click (new API request + re-render), so the first
-// read may briefly still reflect the pre-click order.
+// exactly N files in the table": filters the table's visible rows down to just the given
+// (expected) identifiers before comparing sequence, so other fixtures that might incidentally be
+// visible don't break the order assertion — only relative order among the named identifiers is
+// asserted. Wrapped in `expect(...).toPass()` since the table updates asynchronously after a sort
+// click (new API request + re-render), so the first read may briefly still reflect the pre-click
+// order.
 //
 // Deliberately takes generic "identifiers" rather than always filenames: the Location-column
 // scenarios pass folder text (e.g. "Files E2E FolderSort A") instead, since their 3 fixtures
@@ -390,16 +382,6 @@ Then("I should see these files in this order: {string}", async ({ page }, identi
       .filter((identifier): identifier is string => identifier !== undefined);
     expect(actualOrder).toEqual(expectedOrder);
   }).toPass();
-});
-
-Then("the {string} sort button should indicate ascending order", async ({ page }, columnLabel: string) => {
-  await expect(sortColumnHeader(page, columnLabel)).toHaveAttribute("aria-sort", "ascending");
-  await expect(sortButton(page, columnLabel)).toContainText("↑");
-});
-
-Then("the {string} sort button should indicate descending order", async ({ page }, columnLabel: string) => {
-  await expect(sortColumnHeader(page, columnLabel)).toHaveAttribute("aria-sort", "descending");
-  await expect(sortButton(page, columnLabel)).toContainText("↓");
 });
 
 // --- Detail panel: status/tags/score edit-and-persist scenarios (Tasks 5b.1, 5b.2) --------------

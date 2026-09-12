@@ -16,7 +16,7 @@
  * but must be followed by every scenario added after it.
  */
 
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 
 const { Given, When, Then } = createBdd();
@@ -67,4 +67,52 @@ Then("the {string} tab should finish loading without a backend error", async ({ 
   const total = Number(text.match(/^\d+ of (\d+) /)?.[1]);
   expect(total).toBeGreaterThan(0);
   await expect(page.getByText(/request failed/i)).toHaveCount(0);
+});
+
+// --- Column-header sorting (Task 5a.3, relocated here in Task 8) -------------------------------
+//
+// Both FileTable.tsx and ProjectsTable.tsx expose real, independently-sortable column headers
+// (see SortTh usages in each — FileTable.tsx: `name`/"Track / File", `score`/"Score",
+// `folder`/"Location", `modifiedAt`/"Modified"; ProjectsTable.tsx: `name`/"Project Folder",
+// `score`/"Score", `modifiedAt`/"Modified") — the old Projects-only single hardcoded
+// "Sort: Modified" toolbar button (FilterToolbar.tsx) has been fully removed, so these helpers and
+// step defs are shared by both tabs' sorting scenarios rather than duplicated per tab. Each
+// `<th scope="col">` gets the implicit ARIA `columnheader` role (it's a real semantic <table>).
+//
+// Its accessible name is NOT its visible text ("<label>", plus a trailing " ↑"/" ↓" once that
+// column becomes the active sort) — confirmed via an `ariaSnapshot()` dump against a live page:
+// the inner `<button>` has an explicit `aria-label="Sort by <label>"` (see SortTh in
+// FileTable.tsx/ProjectsTable.tsx), which — per the accessible-name-from-content computation —
+// is what the `<th>` inherits as ITS OWN name too, superseding the button's rendered text
+// entirely. Critically, that `aria-label` never includes the sort-direction arrow (only the
+// button's rendered *text* does, which `.toContainText()` below still reads correctly, since that
+// checks DOM text content, not the accessible name) — so the header's accessible name is the
+// constant, exact string `"Sort by <label>"` regardless of active/inactive state. Matching that
+// full exact string (rather than a plain substring/prefix match on just `<label>`) is also what
+// avoids a real collision confirmed by a strict-mode-violation failure: ProjectsTable.tsx's
+// select-all-checkbox `<th>` has no text of its own, so its own accessible name is inherited from
+// ITS checkbox's `aria-label="Select all visible project folders"` — which, case-insensitively,
+// contains "Project Folder" as a substring (and even as a *prefix-anchored* match once "Sort by "
+// is stripped), colliding with the Project Folder column's own SortTh. The exact `"Sort by
+// <label>"` string never collides with that unrelated checkbox label.
+function sortColumnHeader(page: Page, columnLabel: string) {
+  return page.getByRole("columnheader", { name: `Sort by ${columnLabel}`, exact: true });
+}
+
+function sortButton(page: Page, columnLabel: string) {
+  return sortColumnHeader(page, columnLabel).getByRole("button");
+}
+
+When("I click the {string} sort button", async ({ page }, columnLabel: string) => {
+  await sortButton(page, columnLabel).click();
+});
+
+Then("the {string} sort button should indicate ascending order", async ({ page }, columnLabel: string) => {
+  await expect(sortColumnHeader(page, columnLabel)).toHaveAttribute("aria-sort", "ascending");
+  await expect(sortButton(page, columnLabel)).toContainText("↑");
+});
+
+Then("the {string} sort button should indicate descending order", async ({ page }, columnLabel: string) => {
+  await expect(sortColumnHeader(page, columnLabel)).toHaveAttribute("aria-sort", "descending");
+  await expect(sortButton(page, columnLabel)).toContainText("↓");
 });

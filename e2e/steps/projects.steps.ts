@@ -176,6 +176,13 @@ const ALL_PROJECTS_E2E_FIXTURES = [
   "Projects E2E Sort Middle",
   "Projects E2E Sort Newest",
   "Projects E2E Sort Oldest",
+  // "Projects E2E ScoreSort Low/Mid/High" — Task 8's dedicated fixtures for the Score-column
+  // sorting scenarios (see projects-tab/sorting.feature): score isn't scan-derived, so unlike the
+  // "Sort Oldest/Middle/Newest" mtime-stamped fixtures above, these get their scores set at
+  // runtime via the existing "project ... has status ..., score ..." step instead.
+  "Projects E2E ScoreSort Low",
+  "Projects E2E ScoreSort Mid",
+  "Projects E2E ScoreSort High",
   // "Batch E2E Projects ..." — Task 6.2's 3 batch-edit fixtures (see batch-edit.feature).
   "Batch E2E Projects Alpha",
   "Batch E2E Projects Bravo",
@@ -225,17 +232,6 @@ Then("I should see only these projects in the table: {string}", async ({ page },
   }
 });
 
-// FilterToolbar.tsx's Sort button: `Sort: Modified` is the button's full accessible name (the
-// direction arrow that follows is rendered inside an `aria-hidden="true"` span, so it's excluded
-// from accessible-name computation and doesn't need to be matched here).
-function sortButton(page: Page) {
-  return page.getByRole("button", { name: "Sort: Modified" });
-}
-
-When("I click the projects sort button", async ({ page }) => {
-  await sortButton(page).click();
-});
-
 // Order-sensitive companion to "I should see only these projects in the table: ...": filters the
 // table's visible rows down to just the given (expected) names before comparing sequence, so
 // other fixtures that might incidentally be visible (e.g. if a future fixture's name happens to
@@ -253,18 +249,6 @@ Then("I should see these projects in this order: {string}", async ({ page }, nam
       .filter((name): name is string => name !== undefined);
     expect(actualOrder).toEqual(expectedOrder);
   }).toPass();
-});
-
-Then("the projects sort button should indicate ascending order", async ({ page }) => {
-  const button = sortButton(page);
-  await expect(button).toHaveAttribute("aria-pressed", "true");
-  await expect(button).toContainText("↑");
-});
-
-Then("the projects sort button should indicate descending order", async ({ page }) => {
-  const button = sortButton(page);
-  await expect(button).toHaveAttribute("aria-pressed", "true");
-  await expect(button).toContainText("↓");
 });
 
 // ProjectsTable.tsx picks between two empty-result messages based on the *filtered* `total`
