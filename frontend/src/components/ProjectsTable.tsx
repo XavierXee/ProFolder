@@ -105,31 +105,31 @@ export function ProjectsTable({
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <main className={`flex-1 overflow-auto ${playerActive ? "pb-20" : ""}`} aria-live="polite" aria-label="Project folders">
-        <table className="w-full border-collapse" aria-label="Project folders">
+        <table className="w-full border-collapse table-fixed" aria-label="Project folders">
           <thead className={`border-b sticky top-0 z-10 ${isDark ? "bg-[#0d0f14] border-white/8" : "bg-[#f4f6f9] border-black/8"}`}>
             <tr>
-              <th scope="col" className={`${staticTh} w-8`}>
+              <th scope="col" className={`${staticTh} w-[4%]`}>
                 <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible project folders" />
               </th>
-              <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Project Folder" />
-              <th scope="col" className={staticTh}>
+              <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Project Folder" className="text-left w-[22%]" />
+              <th scope="col" className={`${staticTh} w-[8%]`}>
                 Type
               </th>
-              <th scope="col" className={`${staticTh} w-32`}>
+              <th scope="col" className={`${staticTh} w-[10%]`}>
                 Status
               </th>
-              <th scope="col" className={leftTh}>
+              <th scope="col" className={`${leftTh} w-[14%]`}>
                 Tags
               </th>
-              <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center" label="Score" />
-              <th scope="col" className={staticTh}>
+              <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center w-[8%]" label="Score" />
+              <th scope="col" className={`${staticTh} w-[8%]`}>
                 Audio Files
               </th>
-              <th scope="col" className={staticTh}>
+              <th scope="col" className={`${staticTh} w-[8%]`}>
                 Media
               </th>
-              <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center" label="Modified" />
-              <th scope="col" className={staticTh}></th>
+              <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center w-[10%]" label="Modified" />
+              <th scope="col" className={`${staticTh} w-[8%]`}></th>
             </tr>
           </thead>
           <tbody>
@@ -171,7 +171,7 @@ export function ProjectsTable({
                       <RowCheckbox checked={selectedIds.has(project.id)} onChange={() => onToggleSelect(project.id)} ariaLabel={`Select ${project.name}`} />
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className={`text-sm font-medium ${isDark ? "text-slate-200" : "text-slate-800"}`}>{project.name}</div>
+                      <div className={`text-sm font-medium truncate ${isDark ? "text-slate-200" : "text-slate-800"}`}>{project.name}</div>
                       <div className={`text-xs font-mono mt-0.5 truncate max-w-xs ${meta}`} title={project.path}>
                         {project.id}
                       </div>

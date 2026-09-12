@@ -118,7 +118,7 @@ export function FileRow({
         )}
       </td>
       <td className="px-4 py-3.5">
-        <span className={`text-xs font-mono ${isDark ? "text-slate-400" : "text-slate-600"}`}>{file.projectId ?? "—"}</span>
+        <span className={`block truncate text-xs font-mono ${isDark ? "text-slate-400" : "text-slate-600"}`}>{file.projectId ?? "—"}</span>
       </td>
       <td className="px-4 py-3.5 min-w-28">
         <ScoreBadge score={file.score} isDark={isDark} />

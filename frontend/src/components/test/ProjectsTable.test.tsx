@@ -49,6 +49,25 @@ function renderTable(overrides: Partial<Parameters<typeof ProjectsTable>[0]> = {
   return render(<ProjectsTable {...props} />);
 }
 
+describe("ProjectsTable - fixed column widths", () => {
+  it("uses a fixed table layout so column widths don't depend on cell content", () => {
+    const { container } = renderTable();
+
+    expect(container.querySelector("table")).toHaveClass("table-fixed");
+  });
+
+  it("gives every header cell an explicit percentage width", () => {
+    const { container } = renderTable();
+
+    const widths = Array.from(container.querySelectorAll("thead th")).map((th) =>
+      Array.from(th.classList).find((cls) => /^w-\[\d+%\]$/.test(cls))
+    );
+
+    expect(widths).toHaveLength(10);
+    expect(widths.every(Boolean)).toBe(true);
+  });
+});
+
 describe("ProjectsTable - typeLabel/typeTooltip", () => {
   it("shows the DAW label and a 'detected via' tooltip for a project with a detected DAW type", () => {
     const projects = [makeProject({ dawType: "ableton", detectedVia: ".als file" })];

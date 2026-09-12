@@ -92,26 +92,26 @@ export function FileTable({
   const allSelected = files.length > 0 && files.every((f) => selectedIds.has(f.id));
 
   return (
-    <table className="w-full border-collapse" aria-label="Audio files">
+    <table className="w-full border-collapse table-fixed" aria-label="Audio files">
       <caption className="sr-only">Scanned audio files, sortable by column</caption>
       <thead className={`border-b sticky top-0 z-10 ${isDark ? "bg-[#0d0f14] border-white/8" : "bg-[#f4f6f9] border-black/8"}`}>
         <tr>
-          <th scope="col" className={`${staticTh} w-8`}>
+          <th scope="col" className={`${staticTh} w-[4%]`}>
             <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible files" />
           </th>
-          <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Track / File" />
-          <th scope="col" className={`${staticTh} w-32`}>
+          <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Track / File" className="w-[24%]" />
+          <th scope="col" className={`${staticTh} w-[12%]`}>
             Status
           </th>
-          <th scope="col" className={staticTh}>
+          <th scope="col" className={`${staticTh} w-[16%]`}>
             Tags
           </th>
-          <th scope="col" className={staticTh}>
+          <th scope="col" className={`${staticTh} w-[10%]`}>
             Project
           </th>
-          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Score" />
-          <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Location" />
-          <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Modified" />
+          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Score" className="w-[8%]" />
+          <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Location" className="w-[16%]" />
+          <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Modified" className="w-[10%]" />
         </tr>
       </thead>
       <tbody>
