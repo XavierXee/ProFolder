@@ -4,6 +4,7 @@ import { getEffectiveMusicRoot } from "../config/musicRoot.js";
 import { openDb } from "../database/db.js";
 import { MacFinderService } from "../services/FinderService.js";
 import { MacFolderPickerService } from "../services/FolderPickerService.js";
+import { MacTrashService } from "../services/TrashService.js";
 import { createFilesRouter } from "./routes/files.js";
 import { createProjectsRouter } from "./routes/projects.js";
 import { createScanRouter } from "./routes/scan.js";
@@ -17,6 +18,7 @@ import { createCustomTabsRouter } from "./routes/customTabs.js";
 export function createServer(db: ReturnType<typeof openDb>) {
   const finderService = new MacFinderService(() => getEffectiveMusicRoot(db));
   const folderPickerService = new MacFolderPickerService();
+  const trashService = new MacTrashService(() => getEffectiveMusicRoot(db));
 
   const app = express();
   app.use(express.json());
