@@ -86,6 +86,20 @@ export function loadActiveProjectIds(db: Database.Database): Set<string> {
   return new Set(rows.map((r) => r.id));
 }
 
+/** Like `loadActiveProjectIds`, but restricted to rows that were actually DAW-classified
+ * during a scan (`daw_type IS NOT NULL`). The `projects` table also holds a row for every
+ * plain (non-DAW) top-level folder the scanner walked, purely so the UI can list them
+ * alongside real projects — the scanner's own file-association logic (`findProjectRoot` in
+ * `scanner/projectDetector.ts`) only ever associates files with DAW-classified folders, so
+ * any code determining a file's project association (e.g. `findNearestAncestorProjectId` in
+ * `audioFileRepository.ts`) must use this, not the unfiltered `loadActiveProjectIds`. */
+export function loadActiveDawProjectIds(db: Database.Database): Set<string> {
+  const rows = db
+    .prepare(`SELECT id FROM projects WHERE is_removed = 0 AND daw_type IS NOT NULL`)
+    .all() as { id: string }[];
+  return new Set(rows.map((r) => r.id));
+}
+
 export function upsertProject(
   db: Database.Database,
   project: Omit<Project, "status" | "isRemoved" | "tags" | "score">

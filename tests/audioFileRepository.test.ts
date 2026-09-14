@@ -13,8 +13,16 @@ import {
   findById,
   getLibraryStats,
   markRemoved,
+  moveFile,
+  cloneFile,
   type AudioFileUpsertInput,
 } from "../src/database/repositories/audioFileRepository.js";
+import {
+  upsertProject,
+  findById as findProjectById,
+} from "../src/database/repositories/projectRepository.js";
+import { syncProjectFromFiles } from "../src/database/repositories/linkSync.js";
+import type { DawType } from "../src/scanner/dawDetector.js";
 
 let db: Database.Database;
 
@@ -262,5 +270,488 @@ describe("addTagsToFiles", () => {
     expect(findById(db, "file-00.wav")!.tags.sort()).toEqual(["batch", "existing"]);
     expect(findById(db, "file-01.wav")!.tags).toEqual(["batch"]);
     expect(findById(db, "file-02.wav")!.tags).toEqual([]);
+  });
+});
+
+const MUSIC_ROOT = "/Music";
+
+/** `dawType` defaults to undefined (a plain, non-DAW-classified folder row — the same
+ * shape the scanner writes for a top-level folder that wasn't recognized as a DAW
+ * project) — pass an explicit `dawType` to construct a DAW-classified project fixture. */
+function makeProject(id: string, dawType?: DawType) {
+  const now = new Date().toISOString();
+  return {
+    id,
+    name: id,
+    path: `${MUSIC_ROOT}/${id}`,
+    dawType,
+    firstSeenAt: now,
+    lastSeenAt: now,
+    hasVideo: false,
+    hasImage: false,
+    contentModifiedAt: null,
+  };
+}
+
+function tagIdsFor(dbInstance: Database.Database, audioFileId: string): number[] {
+  const rows = dbInstance
+    .prepare(`SELECT tag_id FROM audio_file_tags WHERE audio_file_id = ?`)
+    .all(audioFileId) as { tag_id: number }[];
+  return rows.map((r) => r.tag_id).sort((a, b) => a - b);
+}
+
+describe("moveFile", () => {
+  it("rekeys id/path fields, preserving status/tags/score, when the file stays under the same project", () => {
+    upsertProject(db, makeProject("ProjectA", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/track1.wav",
+        path: `${MUSIC_ROOT}/ProjectA/track1.wav`,
+        relativePath: "ProjectA/track1.wav",
+        filename: "track1.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+    updateStatus(db, "ProjectA/track1.wav", "draft");
+    setScore(db, "ProjectA/track1.wav", 4);
+    setTags(db, "ProjectA/track1.wav", ["mix", "vocals"]);
+
+    const result = moveFile(db, "ProjectA/track1.wav", `${MUSIC_ROOT}/ProjectA/renamed.wav`, MUSIC_ROOT);
+
+    expect(findById(db, "ProjectA/track1.wav")).toBeUndefined();
+    expect(result.id).toBe("ProjectA/renamed.wav");
+    expect(result.status).toBe("draft");
+    expect(result.score).toBe(4);
+    expect(result.tags.sort()).toEqual(["mix", "vocals"]);
+    expect(result.projectId).toBe("ProjectA");
+    expect(result.filename).toBe("renamed.wav");
+    expect(result.relativePath).toBe("ProjectA/renamed.wav");
+    expect(result.containingFolder).toBe(`${MUSIC_ROOT}/ProjectA`);
+
+    // Prove the join rows were actually rekeyed, not orphaned, via a direct query.
+    expect(tagIdsFor(db, "ProjectA/track1.wav")).toEqual([]);
+    expect(tagIdsFor(db, "ProjectA/renamed.wav")).toHaveLength(2);
+  });
+
+  it("updates projectId and recomputes both projects' aggregate scores when the file moves to a different project", () => {
+    upsertProject(db, makeProject("ProjectA", "ableton"));
+    upsertProject(db, makeProject("ProjectB", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/onlyfive.wav",
+        path: `${MUSIC_ROOT}/ProjectA/onlyfive.wav`,
+        relativePath: "ProjectA/onlyfive.wav",
+        filename: "onlyfive.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectB/existing.wav",
+        path: `${MUSIC_ROOT}/ProjectB/existing.wav`,
+        relativePath: "ProjectB/existing.wav",
+        filename: "existing.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectB`,
+        projectId: "ProjectB",
+      })
+    );
+    setScore(db, "ProjectA/onlyfive.wav", 5);
+    setScore(db, "ProjectB/existing.wav", 2);
+    syncProjectFromFiles(db, "ProjectA");
+    syncProjectFromFiles(db, "ProjectB");
+    expect(findProjectById(db, "ProjectA")!.score).toBe(5);
+    expect(findProjectById(db, "ProjectB")!.score).toBe(2);
+
+    const result = moveFile(
+      db,
+      "ProjectA/onlyfive.wav",
+      `${MUSIC_ROOT}/ProjectB/onlyfive.wav`,
+      MUSIC_ROOT
+    );
+
+    expect(result.projectId).toBe("ProjectB");
+    // ProjectA lost its only scored file, so its aggregate score should drop.
+    expect(findProjectById(db, "ProjectA")!.score).toBeNull();
+    // ProjectB gains a file scoring higher than its previous max.
+    expect(findProjectById(db, "ProjectB")!.score).toBe(5);
+  });
+
+  it("clears projectId and recomputes the old project's aggregate when the file moves outside any project", () => {
+    upsertProject(db, makeProject("ProjectA"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/onlyfive.wav",
+        path: `${MUSIC_ROOT}/ProjectA/onlyfive.wav`,
+        relativePath: "ProjectA/onlyfive.wav",
+        filename: "onlyfive.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+    setScore(db, "ProjectA/onlyfive.wav", 5);
+    syncProjectFromFiles(db, "ProjectA");
+    expect(findProjectById(db, "ProjectA")!.score).toBe(5);
+
+    const result = moveFile(db, "ProjectA/onlyfive.wav", `${MUSIC_ROOT}/Unfiled/onlyfive.wav`, MUSIC_ROOT);
+
+    expect(result.projectId).toBeUndefined();
+    expect(findProjectById(db, "ProjectA")!.score).toBeNull();
+  });
+
+  it("rolls back the whole transaction if the destination id already exists, leaving both rows untouched", () => {
+    upsertProject(db, makeProject("ProjectA"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/a.wav",
+        path: `${MUSIC_ROOT}/ProjectA/a.wav`,
+        relativePath: "ProjectA/a.wav",
+        filename: "a.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/b.wav",
+        path: `${MUSIC_ROOT}/ProjectA/b.wav`,
+        relativePath: "ProjectA/b.wav",
+        filename: "b.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+    setScore(db, "ProjectA/a.wav", 3);
+    setTags(db, "ProjectA/a.wav", ["keep"]);
+
+    expect(() =>
+      moveFile(db, "ProjectA/a.wav", `${MUSIC_ROOT}/ProjectA/b.wav`, MUSIC_ROOT)
+    ).toThrow();
+
+    // Nothing partially rekeyed: the source row, its path fields, and its tag join
+    // rows are exactly as they were before the failed attempt.
+    const a = findById(db, "ProjectA/a.wav")!;
+    expect(a).toBeDefined();
+    expect(a.score).toBe(3);
+    expect(a.tags).toEqual(["keep"]);
+    expect(tagIdsFor(db, "ProjectA/a.wav")).toHaveLength(1);
+
+    const b = findById(db, "ProjectA/b.wav")!;
+    expect(b).toBeDefined();
+    expect(b.score).toBeNull();
+  });
+
+  it("rekeys tag join rows without tripping foreign-key enforcement (PRAGMA defer_foreign_keys)", () => {
+    // Scoped to this test only, mirroring production's openDb() which always runs
+    // with foreign_keys = ON — the raw in-memory DB the other tests share does not,
+    // so this is the one place that actually exercises real FK enforcement.
+    db.pragma("foreign_keys = ON");
+
+    upsertProject(db, makeProject("ProjectA"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/track1.wav",
+        path: `${MUSIC_ROOT}/ProjectA/track1.wav`,
+        relativePath: "ProjectA/track1.wav",
+        filename: "track1.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+    setTags(db, "ProjectA/track1.wav", ["mix"]);
+
+    expect(() =>
+      moveFile(db, "ProjectA/track1.wav", `${MUSIC_ROOT}/ProjectA/renamed.wav`, MUSIC_ROOT)
+    ).not.toThrow();
+
+    expect(tagIdsFor(db, "ProjectA/renamed.wav")).toHaveLength(1);
+  });
+
+  it("throws when the source id doesn't exist", () => {
+    expect(() => moveFile(db, "does-not-exist.wav", `${MUSIC_ROOT}/x.wav`, MUSIC_ROOT)).toThrow();
+  });
+});
+
+describe("cloneFile", () => {
+  it("creates a new row preserving status/tags/score, leaving the source completely untouched", () => {
+    upsertProject(db, makeProject("ProjectA", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/track1.wav",
+        path: `${MUSIC_ROOT}/ProjectA/track1.wav`,
+        relativePath: "ProjectA/track1.wav",
+        filename: "track1.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+    updateStatus(db, "ProjectA/track1.wav", "released");
+    setScore(db, "ProjectA/track1.wav", 4);
+    setTags(db, "ProjectA/track1.wav", ["mix", "vocals"]);
+
+    const before = findById(db, "ProjectA/track1.wav")!;
+    const tagCountBefore = (db.prepare(`SELECT COUNT(*) AS c FROM tags`).get() as { c: number }).c;
+
+    const clone = cloneFile(
+      db,
+      "ProjectA/track1.wav",
+      `${MUSIC_ROOT}/ProjectA/track1-copy.wav`,
+      MUSIC_ROOT
+    );
+
+    expect(clone.id).toBe("ProjectA/track1-copy.wav");
+    expect(clone.status).toBe("released");
+    expect(clone.score).toBe(4);
+    expect(clone.tags.sort()).toEqual(["mix", "vocals"]);
+    expect(clone.projectId).toBe("ProjectA");
+
+    // Source row is completely untouched.
+    const after = findById(db, "ProjectA/track1.wav")!;
+    expect(after).toEqual(before);
+
+    // New row's join rows point at the SAME tag_id values as the source's — not new
+    // duplicate `tags` rows.
+    const sourceTagIds = tagIdsFor(db, "ProjectA/track1.wav");
+    const cloneTagIds = tagIdsFor(db, "ProjectA/track1-copy.wav");
+    expect(cloneTagIds).toEqual(sourceTagIds);
+
+    const tagCountAfter = (db.prepare(`SELECT COUNT(*) AS c FROM tags`).get() as { c: number }).c;
+    expect(tagCountAfter).toBe(tagCountBefore);
+  });
+
+  it("landing under a different project recomputes only the new project's aggregate", () => {
+    upsertProject(db, makeProject("ProjectA", "ableton"));
+    upsertProject(db, makeProject("ProjectB", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/onlyfive.wav",
+        path: `${MUSIC_ROOT}/ProjectA/onlyfive.wav`,
+        relativePath: "ProjectA/onlyfive.wav",
+        filename: "onlyfive.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+    setScore(db, "ProjectA/onlyfive.wav", 5);
+    syncProjectFromFiles(db, "ProjectA");
+    syncProjectFromFiles(db, "ProjectB");
+    expect(findProjectById(db, "ProjectA")!.score).toBe(5);
+    expect(findProjectById(db, "ProjectB")!.score).toBeNull();
+
+    const clone = cloneFile(
+      db,
+      "ProjectA/onlyfive.wav",
+      `${MUSIC_ROOT}/ProjectB/onlyfive.wav`,
+      MUSIC_ROOT
+    );
+
+    expect(clone.projectId).toBe("ProjectB");
+    // Source project's aggregate is unaffected — the source file itself never changed.
+    expect(findProjectById(db, "ProjectA")!.score).toBe(5);
+    // New project gains the clone's score.
+    expect(findProjectById(db, "ProjectB")!.score).toBe(5);
+  });
+
+  it("throws when the source id doesn't exist", () => {
+    expect(() => cloneFile(db, "does-not-exist.wav", `${MUSIC_ROOT}/x.wav`, MUSIC_ROOT)).toThrow();
+  });
+});
+
+describe("ancestor-project matching does segment-boundary matching, not naive string-prefix matching", () => {
+  it("moveFile: a file landing in a sibling folder whose name merely starts with a project's name is NOT associated with that project", () => {
+    // Project "Demo" and an unrelated sibling folder "DemoTracks" that happens to share
+    // "Demo" as a string prefix. A naive `fileRelativePath.startsWith(projectId)` check
+    // (instead of exact path-segment matching) would incorrectly associate
+    // "DemoTracks/track.wav" with project "Demo".
+    upsertProject(db, makeProject("Demo", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "Unfiled/track.wav",
+        path: `${MUSIC_ROOT}/Unfiled/track.wav`,
+        relativePath: "Unfiled/track.wav",
+        filename: "track.wav",
+        containingFolder: `${MUSIC_ROOT}/Unfiled`,
+      })
+    );
+
+    const result = moveFile(
+      db,
+      "Unfiled/track.wav",
+      `${MUSIC_ROOT}/DemoTracks/track.wav`,
+      MUSIC_ROOT
+    );
+
+    expect(result.projectId).toBeUndefined();
+  });
+
+  it("cloneFile: a file landing in a sibling folder whose name merely starts with a project's name is NOT associated with that project", () => {
+    upsertProject(db, makeProject("Demo", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "Unfiled/track.wav",
+        path: `${MUSIC_ROOT}/Unfiled/track.wav`,
+        relativePath: "Unfiled/track.wav",
+        filename: "track.wav",
+        containingFolder: `${MUSIC_ROOT}/Unfiled`,
+      })
+    );
+
+    const clone = cloneFile(
+      db,
+      "Unfiled/track.wav",
+      `${MUSIC_ROOT}/DemoTracks/track-copy.wav`,
+      MUSIC_ROOT
+    );
+
+    expect(clone.projectId).toBeUndefined();
+  });
+
+  it("moveFile: a file landing directly inside the correctly-named project IS associated with it (positive control for the above)", () => {
+    upsertProject(db, makeProject("Demo", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "Unfiled/track.wav",
+        path: `${MUSIC_ROOT}/Unfiled/track.wav`,
+        relativePath: "Unfiled/track.wav",
+        filename: "track.wav",
+        containingFolder: `${MUSIC_ROOT}/Unfiled`,
+      })
+    );
+
+    const result = moveFile(db, "Unfiled/track.wav", `${MUSIC_ROOT}/Demo/track.wav`, MUSIC_ROOT);
+
+    expect(result.projectId).toBe("Demo");
+  });
+});
+
+describe("ancestor-project matching only associates with DAW-classified project rows, not plain folders", () => {
+  it("moveFile: a file landing inside a PLAIN (non-DAW) top-level folder is NOT associated with it, matching what a fresh scan would produce", () => {
+    // "Samples" got a `projects` row during the scan (every top-level folder does, so the
+    // UI can list plain folders alongside real projects), but it was never DAW-classified
+    // (no dawType) — the scanner's real association logic never links files to it, so
+    // neither should moveFile/cloneFile.
+    upsertProject(db, makeProject("Samples"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "Unfiled/track.wav",
+        path: `${MUSIC_ROOT}/Unfiled/track.wav`,
+        relativePath: "Unfiled/track.wav",
+        filename: "track.wav",
+        containingFolder: `${MUSIC_ROOT}/Unfiled`,
+      })
+    );
+
+    const result = moveFile(db, "Unfiled/track.wav", `${MUSIC_ROOT}/Samples/track.wav`, MUSIC_ROOT);
+
+    expect(result.projectId).toBeUndefined();
+  });
+
+  it("cloneFile: a file landing inside a PLAIN (non-DAW) top-level folder is NOT associated with it, matching what a fresh scan would produce", () => {
+    upsertProject(db, makeProject("Samples"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "Unfiled/track.wav",
+        path: `${MUSIC_ROOT}/Unfiled/track.wav`,
+        relativePath: "Unfiled/track.wav",
+        filename: "track.wav",
+        containingFolder: `${MUSIC_ROOT}/Unfiled`,
+      })
+    );
+
+    const clone = cloneFile(
+      db,
+      "Unfiled/track.wav",
+      `${MUSIC_ROOT}/Samples/track-copy.wav`,
+      MUSIC_ROOT
+    );
+
+    expect(clone.projectId).toBeUndefined();
+  });
+
+  it("moveFile: a file landing inside a DAW-classified project folder IS associated with it (positive control for the above)", () => {
+    upsertProject(db, makeProject("RealProject", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "Unfiled/track.wav",
+        path: `${MUSIC_ROOT}/Unfiled/track.wav`,
+        relativePath: "Unfiled/track.wav",
+        filename: "track.wav",
+        containingFolder: `${MUSIC_ROOT}/Unfiled`,
+      })
+    );
+
+    const result = moveFile(
+      db,
+      "Unfiled/track.wav",
+      `${MUSIC_ROOT}/RealProject/track.wav`,
+      MUSIC_ROOT
+    );
+
+    expect(result.projectId).toBe("RealProject");
+  });
+});
+
+describe("moveFile/cloneFile reject an out-of-root destination instead of silently corrupting the DB", () => {
+  it("moveFile throws when newAbsolutePath resolves outside musicRoot", () => {
+    upsertProject(db, makeProject("ProjectA", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/track1.wav",
+        path: `${MUSIC_ROOT}/ProjectA/track1.wav`,
+        relativePath: "ProjectA/track1.wav",
+        filename: "track1.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+
+    expect(() =>
+      moveFile(db, "ProjectA/track1.wav", "/Elsewhere/track1.wav", MUSIC_ROOT)
+    ).toThrow();
+
+    // Nothing was mutated: the source row is untouched, no bogus `..`-prefixed row exists.
+    const source = findById(db, "ProjectA/track1.wav")!;
+    expect(source).toBeDefined();
+    expect(source.path).toBe(`${MUSIC_ROOT}/ProjectA/track1.wav`);
+  });
+
+  it("cloneFile throws when newAbsolutePath resolves outside musicRoot", () => {
+    upsertProject(db, makeProject("ProjectA", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/track1.wav",
+        path: `${MUSIC_ROOT}/ProjectA/track1.wav`,
+        relativePath: "ProjectA/track1.wav",
+        filename: "track1.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+
+    expect(() =>
+      cloneFile(db, "ProjectA/track1.wav", "/Elsewhere/track1-copy.wav", MUSIC_ROOT)
+    ).toThrow();
+
+    // No stray clone row was created under a bogus `..`-prefixed id.
+    const total = (db.prepare(`SELECT COUNT(*) AS c FROM audio_files`).get() as { c: number }).c;
+    expect(total).toBe(26); // 25 base fixtures + the one ProjectA/track1.wav inserted above
   });
 });

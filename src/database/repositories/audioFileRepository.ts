@@ -1,5 +1,8 @@
+import path from "node:path";
 import type Database from "better-sqlite3";
 import type { AudioFile, TrackStatus } from "../../models/AudioFile.js";
+import { loadActiveDawProjectIds } from "./projectRepository.js";
+import { syncProjectFromFiles } from "./linkSync.js";
 
 export type AudioFileUpsertInput = Omit<AudioFile, "tags" | "status" | "score"> & {
   status?: TrackStatus;
@@ -370,4 +373,202 @@ export function addTagsToFiles(db: Database.Database, ids: string[], tagNames: s
     }
   });
   tx();
+}
+
+/** Derives the same location-based fields the scanner would compute for a file at
+ * `absolutePath` (see `id`/`relativePath`/`containingFolder`/`filename`/`extension`
+ * derivation in `scanner/scanner.ts`'s per-file loop) — kept in sync with that logic so
+ * a moved/cloned row looks exactly like a freshly-scanned row at the same location.
+ *
+ * Rejects an `absolutePath` that doesn't resolve inside `musicRoot`: without this check,
+ * an out-of-root path would silently derive a `..`-prefixed relative id with no error,
+ * corrupting the DB with a nonsensical id rather than failing cleanly. */
+function deriveLocationFields(musicRoot: string, absolutePath: string) {
+  const resolvedRoot = path.resolve(musicRoot);
+  const resolvedPath = path.resolve(absolutePath);
+  const relativePath = path.relative(resolvedRoot, resolvedPath);
+  if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+    throw new Error(
+      `deriveLocationFields: "${absolutePath}" resolves outside musicRoot "${musicRoot}"`
+    );
+  }
+  const filename = path.basename(resolvedPath);
+  return {
+    id: relativePath,
+    path: resolvedPath,
+    relativePath,
+    filename,
+    extension: path.extname(filename).toLowerCase(),
+    containingFolder: path.dirname(resolvedPath),
+  };
+}
+
+/** Finds the nearest ancestor project (by id, which is a relative path — see
+ * `scanner.ts`'s `id: dir.relativePath`) containing a given relative file path, by
+ * walking up its path segments and checking each against the currently-active,
+ * DAW-classified `projects` rows. Mirrors the walk-to-root algorithm `findProjectRoot` in
+ * `scanner/projectDetector.ts` uses during a scan, but adapted to run off already-
+ * persisted project rows instead of a live DAW-marker classification map — move/copy
+ * happen outside a scan and have no such live filesystem classification data available.
+ *
+ * Deliberately restricted to DAW-classified rows (`loadActiveDawProjectIds`, not the
+ * unfiltered `loadActiveProjectIds`): the `projects` table also holds a row for every
+ * plain (non-DAW) top-level folder the scanner walked (so the UI can list them alongside
+ * real projects), but the scanner's real association logic (`findProjectRoot`) never
+ * associates files with those plain folders — matching them here would associate a moved/
+ * cloned file with a folder a fresh scan would never associate it with. */
+function findNearestAncestorProjectId(db: Database.Database, fileRelativePath: string): string | undefined {
+  const activeDawProjectIds = loadActiveDawProjectIds(db);
+  let dir = path.dirname(fileRelativePath);
+  while (true) {
+    if (dir === "." || dir === "") return undefined;
+    if (activeDawProjectIds.has(dir)) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) return undefined;
+    dir = parent;
+  }
+}
+
+/**
+ * Rekeys a single audio file's row in place to reflect a physical move that has
+ * already happened (via `FileOpsService.movePath` in a later, composing task) —
+ * this function does NOT touch the filesystem, only the DB. `id` is the current
+ * (pre-move) id; `newAbsolutePath` is where the file now physically lives.
+ *
+ * Preserves status/tags/score/timestamps (same row, just re-keyed). Re-derives the
+ * file's project association from its new location and, if it changed, recomputes
+ * both the old and new project's aggregate score/tags via `syncProjectFromFiles`.
+ *
+ * `audio_file_tags` references `audio_files.id` with no `ON UPDATE CASCADE`, so
+ * rekeying the parent id would otherwise trip an immediate foreign-key violation the
+ * instant the `audio_files` row's id changes (its child tag rows would momentarily
+ * reference a vanished id) — `PRAGMA defer_foreign_keys = ON` postpones that check to
+ * COMMIT, giving the child-row rekey below a chance to catch up within the same
+ * transaction before the check fires.
+ */
+export function moveFile(
+  db: Database.Database,
+  id: string,
+  newAbsolutePath: string,
+  musicRoot: string
+): AudioFile {
+  const source = findById(db, id);
+  if (!source) {
+    throw new Error(`moveFile: no audio file found with id "${id}"`);
+  }
+
+  const location = deriveLocationFields(musicRoot, newAbsolutePath);
+  const newProjectId = findNearestAncestorProjectId(db, location.relativePath);
+  const oldProjectId = source.projectId;
+
+  const tx = db.transaction(() => {
+    db.pragma("defer_foreign_keys = ON");
+    db.prepare(
+      `UPDATE audio_files SET
+        id = @newId, path = @path, relative_path = @relativePath, filename = @filename,
+        extension = @extension, containing_folder = @containingFolder, project_id = @projectId
+      WHERE id = @oldId`
+    ).run({
+      newId: location.id,
+      path: location.path,
+      relativePath: location.relativePath,
+      filename: location.filename,
+      extension: location.extension,
+      containingFolder: location.containingFolder,
+      projectId: newProjectId ?? null,
+      oldId: id,
+    });
+    db.prepare(`UPDATE audio_file_tags SET audio_file_id = ? WHERE audio_file_id = ?`).run(
+      location.id,
+      id
+    );
+  });
+  tx();
+
+  if (newProjectId !== oldProjectId) {
+    if (oldProjectId) syncProjectFromFiles(db, oldProjectId);
+    if (newProjectId) syncProjectFromFiles(db, newProjectId);
+  }
+
+  return findById(db, location.id)!;
+}
+
+/**
+ * Creates a new audio file row at `newAbsolutePath` carrying over `status`/`score`/
+ * tags (pointing at the SAME `tags` rows, not duplicating them) from the source file
+ * `id` — the source row is left completely untouched. Like `moveFile`, this does NOT
+ * touch the filesystem; it assumes a physical copy already happened (via a later,
+ * composing task using `FileOpsService.copyPath`).
+ *
+ * Content-derived fields (`size`/`createdAt`/`modifiedAt`) are carried over from the
+ * source, since this function has no filesystem access to re-stat the copy; location-
+ * derived fields (`filename`/`extension`/`relativePath`/`containingFolder`) are
+ * re-derived from `newAbsolutePath`, same as `moveFile`. The clone is a brand-new
+ * library entity, so `firstSeenAt`/`lastSeenAt` are set to now, not carried over.
+ *
+ * Determines the new row's project the same way as `moveFile` (nearest ancestor of
+ * the new location). Only recomputes the *new* project's aggregate (via
+ * `syncProjectFromFiles`), and only if it differs from the source's project — the
+ * source project's aggregate is unaffected, since the source file itself didn't change.
+ */
+export function cloneFile(
+  db: Database.Database,
+  id: string,
+  newAbsolutePath: string,
+  musicRoot: string
+): AudioFile {
+  const source = findById(db, id);
+  if (!source) {
+    throw new Error(`cloneFile: no audio file found with id "${id}"`);
+  }
+
+  const location = deriveLocationFields(musicRoot, newAbsolutePath);
+  const newProjectId = findNearestAncestorProjectId(db, location.relativePath);
+  const nowIso = new Date().toISOString();
+
+  const tx = db.transaction(() => {
+    db.prepare(
+      `INSERT INTO audio_files (
+        id, path, relative_path, filename, extension, size, created_at, modified_at,
+        containing_folder, project_id, status, score,
+        first_seen_at, last_seen_at, is_removed
+      ) VALUES (
+        @id, @path, @relativePath, @filename, @extension, @size, @createdAt, @modifiedAt,
+        @containingFolder, @projectId, @status, @score,
+        @firstSeenAt, @lastSeenAt, 0
+      )`
+    ).run({
+      id: location.id,
+      path: location.path,
+      relativePath: location.relativePath,
+      filename: location.filename,
+      extension: location.extension,
+      size: source.size,
+      createdAt: source.createdAt ?? null,
+      modifiedAt: source.modifiedAt,
+      containingFolder: location.containingFolder,
+      projectId: newProjectId ?? null,
+      status: source.status,
+      score: source.score,
+      firstSeenAt: nowIso,
+      lastSeenAt: nowIso,
+    });
+
+    if (source.tags.length > 0) {
+      const sourceTagRows = db
+        .prepare(`SELECT tag_id FROM audio_file_tags WHERE audio_file_id = ?`)
+        .all(id) as { tag_id: number }[];
+      const insert = db.prepare(`INSERT INTO audio_file_tags (audio_file_id, tag_id) VALUES (?, ?)`);
+      for (const tagRow of sourceTagRows) {
+        insert.run(location.id, tagRow.tag_id);
+      }
+    }
+  });
+  tx();
+
+  if (newProjectId && newProjectId !== source.projectId) {
+    syncProjectFromFiles(db, newProjectId);
+  }
+
+  return findById(db, location.id)!;
 }
