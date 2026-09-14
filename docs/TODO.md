@@ -141,18 +141,17 @@ must have fixed size too (already implemented), n of n files/projects must have 
 Sort, Tags, Score and Status already have fixed size. Only the general search bar should adjust size to fill the remaining space
 within the filter bar
 
-## 4. Sorting improvements
+## 4. Sorting improvements [x]
 
 Extend the sorting feature, I want to be able to sort items not only by Modified date but also by name or score, all ascending
 and descending
 
-## 5. New feature: Move files and folder to different directories (custom tabs only)
+## 5. New feature: Copy/Move/Delete files and project folders
 
-- For created custom tabs (according to the new feature in previous paragraph), add an option to copy all files or folders
-  (depending on the tab type) to a specific folder
-- UI: show a "Copy to folder" button that will show the user to a popup dialog box in which they can select directory in the filesystem where all items from the tab
-will be copied to
-- In the dialog box, add a quick text explaining what the feature does. Something like "All items from the list will be copied (duplicated) in {selected folder}"
+- Add an option to copy/move/delete selected files or project folders
+- For copying and moving the UI should let the user select in which directory the file or project folder should be moved or copied to
+- This option should available in the details panel for both project folders and files as well as in batch edit option
+- In the dialog box, add a quick text explaining what the feature does. Something like "All items from the list will be copied (duplicated) in {selected folder}" (adapt for moving or deleting)
 - The dialog should have a apply / cancel option and can be closed
 - add all necessary test (unit test and playwright) to make sure the feature is properly covered
 - update REQUIREMENTS.md with the changes made
