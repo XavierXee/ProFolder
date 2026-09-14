@@ -124,6 +124,53 @@ export function batchAddFileTags(ids: string[], tags: string[]): Promise<{ updat
   return request(`/files/batch/tags`, { method: "PATCH", body: JSON.stringify({ ids, tags }) });
 }
 
+/** Shared response shape for every batch copy/move/delete route (files and projects
+ * alike): each id is processed independently (best-effort, no rollback), so the caller
+ * needs the per-item result rather than a bare count. */
+export type BatchOpResult = {
+  succeeded: string[];
+  failed: { id: string; error: string }[];
+};
+
+export function copyFile(id: string, destDir: string): Promise<AudioFile> {
+  return request<AudioFile>(`/files/${encodeId(id)}/copy`, {
+    method: "POST",
+    body: JSON.stringify({ destDir }),
+  });
+}
+
+export function moveFile(id: string, destDir: string): Promise<AudioFile> {
+  return request<AudioFile>(`/files/${encodeId(id)}/move`, {
+    method: "POST",
+    body: JSON.stringify({ destDir }),
+  });
+}
+
+export async function deleteFile(id: string): Promise<void> {
+  await request(`/files/${encodeId(id)}`, { method: "DELETE" });
+}
+
+export function batchCopyFiles(ids: string[], destDir: string): Promise<BatchOpResult> {
+  return request<BatchOpResult>(`/files/batch/copy`, {
+    method: "POST",
+    body: JSON.stringify({ ids, destDir }),
+  });
+}
+
+export function batchMoveFiles(ids: string[], destDir: string): Promise<BatchOpResult> {
+  return request<BatchOpResult>(`/files/batch/move`, {
+    method: "POST",
+    body: JSON.stringify({ ids, destDir }),
+  });
+}
+
+export function batchDeleteFiles(ids: string[]): Promise<BatchOpResult> {
+  return request<BatchOpResult>(`/files/batch`, {
+    method: "DELETE",
+    body: JSON.stringify({ ids }),
+  });
+}
+
 export type ProjectFilters = {
   search?: string;
   /** OR'd together (any matching status counts). */
@@ -205,6 +252,62 @@ export function batchUpdateProjectScore(ids: string[], score: number | null): Pr
 /** Adds these tags to every listed project (union — a project keeps its own existing tags too). */
 export function batchAddProjectTags(ids: string[], tags: string[]): Promise<{ updated: number }> {
   return request(`/projects/batch/tags`, { method: "PATCH", body: JSON.stringify({ ids, tags }) });
+}
+
+export type CopyProjectResult = {
+  project: Project;
+  clonedNestedProjectCount: number;
+  clonedFileCount: number;
+};
+
+export type MoveProjectResult = {
+  project: Project;
+  movedNestedProjectCount: number;
+  movedFileCount: number;
+};
+
+export type DeleteProjectResult = {
+  removedProjectIds: string[];
+  removedFileIds: string[];
+};
+
+export function copyProject(id: string, destDir: string): Promise<CopyProjectResult> {
+  return request<CopyProjectResult>(`/projects/${encodeId(id)}/copy`, {
+    method: "POST",
+    body: JSON.stringify({ destDir }),
+  });
+}
+
+export function moveProject(id: string, destDir: string): Promise<MoveProjectResult> {
+  return request<MoveProjectResult>(`/projects/${encodeId(id)}/move`, {
+    method: "POST",
+    body: JSON.stringify({ destDir }),
+  });
+}
+
+export function deleteProject(id: string): Promise<DeleteProjectResult> {
+  return request<DeleteProjectResult>(`/projects/${encodeId(id)}`, { method: "DELETE" });
+}
+
+export function batchCopyProjects(ids: string[], destDir: string): Promise<BatchOpResult> {
+  return request<BatchOpResult>(`/projects/batch/copy`, {
+    method: "POST",
+    body: JSON.stringify({ ids, destDir }),
+  });
+}
+
+export function batchMoveProjects(ids: string[], destDir: string): Promise<BatchOpResult> {
+  return request<BatchOpResult>(`/projects/batch/move`, {
+    method: "POST",
+    body: JSON.stringify({ ids, destDir }),
+  });
+}
+
+export function batchDeleteProjects(ids: string[]): Promise<BatchOpResult> {
+  return request<BatchOpResult>(`/projects/batch`, {
+    method: "DELETE",
+    body: JSON.stringify({ ids }),
+  });
 }
 
 export type ProjectDuplicatesResult = {
