@@ -5,6 +5,7 @@ import { openDb } from "../database/db.js";
 import { MacFinderService } from "../services/FinderService.js";
 import { MacFolderPickerService } from "../services/FolderPickerService.js";
 import { MacTrashService } from "../services/TrashService.js";
+import { NodeFileOpsService } from "../services/FileOpsService.js";
 import { createFilesRouter } from "./routes/files.js";
 import { createProjectsRouter } from "./routes/projects.js";
 import { createScanRouter } from "./routes/scan.js";
@@ -19,12 +20,13 @@ export function createServer(db: ReturnType<typeof openDb>) {
   const finderService = new MacFinderService(() => getEffectiveMusicRoot(db));
   const folderPickerService = new MacFolderPickerService();
   const trashService = new MacTrashService(() => getEffectiveMusicRoot(db));
+  const fileOpsService = new NodeFileOpsService(() => getEffectiveMusicRoot(db));
 
   const app = express();
   app.use(express.json());
 
   app.use("/api/config", createConfigRouter(db, folderPickerService));
-  app.use("/api/files", createFilesRouter(db));
+  app.use("/api/files", createFilesRouter(db, fileOpsService, trashService));
   app.use("/api/projects", createProjectsRouter(db));
   app.use("/api/scan", createScanRouter(db));
   app.use("/api/reveal", createRevealRouter(finderService));
