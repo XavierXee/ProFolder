@@ -8,6 +8,8 @@ import { FileTable } from "./FileTable.js";
 import { Pagination } from "./Pagination.js";
 import FileDetailPanel from "./FileDetailPanel.js";
 import BatchEditPanel from "./BatchEditPanel.js";
+import CopyMoveDeleteDialog from "./CopyMoveDeleteDialog.js";
+import type { CopyMoveDeleteOperation, CopyMoveDeleteOutcome, CopyMoveDeleteTarget } from "./CopyMoveDeleteDialog.js";
 
 type SortKey = NonNullable<FileFilters["sortBy"]>;
 
@@ -60,6 +62,7 @@ export default function CustomFilesTabPanel({
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
   const [showBatchPanel, setShowBatchPanel] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
+  const [fileOpDialog, setFileOpDialog] = useState<{ operation: CopyMoveDeleteOperation; target: CopyMoveDeleteTarget } | null>(null);
 
   const selectedFile = files.find((f) => f.id === selectedId) ?? null;
 
@@ -164,6 +167,23 @@ export default function CustomFilesTabPanel({
     refreshTags();
   }
 
+  function handleFileOperation(operation: CopyMoveDeleteOperation, file: AudioFile) {
+    setFileOpDialog({ operation, target: { kind: "single", id: file.id, name: file.filename } });
+  }
+
+  function handleFileOpSuccess(_outcome: CopyMoveDeleteOutcome) {
+    const operation = fileOpDialog?.operation ?? "copy";
+    // A move changes the file's id; a delete removes it entirely — either way the panel is
+    // keyed to an id that no longer refers to the (still-open) item, so close it. A copy
+    // leaves the original file/id untouched, so the panel can stay open as-is. Mirrors
+    // App.tsx's handleFileOpSuccess exactly.
+    if (operation !== "copy") setSelectedId(null);
+    setBanner(operation === "copy" ? "File copied." : operation === "move" ? "File moved." : "File moved to Trash.");
+    refetch();
+    refreshStats();
+    refetchProjects(); // a file's project membership/aggregate counts can shift on copy/move/delete
+  }
+
   return (
     <>
       <FilterToolbar
@@ -222,6 +242,7 @@ export default function CustomFilesTabPanel({
         onSaveTags={handleFileTagsSave}
         onSaveScore={handleFileScoreSave}
         onReveal={handleReveal}
+        onFileOperation={handleFileOperation}
       />
 
       <BatchEditPanel
@@ -233,6 +254,17 @@ export default function CustomFilesTabPanel({
         onClose={() => setShowBatchPanel(false)}
         onApplyScore={handleBatchFileScore}
         onApplyTag={handleBatchFileTag}
+      />
+
+      <CopyMoveDeleteDialog
+        open={fileOpDialog !== null}
+        isDark={isDark}
+        operation={fileOpDialog?.operation ?? "copy"}
+        itemType="files"
+        target={fileOpDialog?.target ?? { kind: "single", id: "", name: "" }}
+        onClose={() => setFileOpDialog(null)}
+        onSuccess={handleFileOpSuccess}
+        onError={setBanner}
       />
     </>
   );

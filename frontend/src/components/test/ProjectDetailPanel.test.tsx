@@ -88,6 +88,7 @@ function renderPanel(overrides: Partial<Parameters<typeof ProjectDetailPanel>[0]
     onSaveStatus: vi.fn().mockResolvedValue(undefined),
     onSaveTags: vi.fn().mockResolvedValue(undefined),
     onSaveScore: vi.fn().mockResolvedValue(undefined),
+    onProjectOperation: vi.fn(),
     ...overrides,
   };
   return { ...render(<ProjectDetailPanel {...props} />), props };
@@ -140,6 +141,45 @@ describe("ProjectDetailPanel - basic rendering", () => {
     await user.click(screen.getByRole("button", { name: "Reveal in Finder" }));
 
     expect(onReveal).toHaveBeenCalledWith("/music/My Song");
+  });
+});
+
+describe("ProjectDetailPanel - Copy/Move/Delete buttons", () => {
+  it("calls onProjectOperation with 'copy' and the project when the Copy button is clicked", async () => {
+    const onProjectOperation = vi.fn();
+    const user = userEvent.setup();
+    const project = makeProject({ id: "p1", name: "My Song", path: "/music/My Song" });
+    renderPanel({ project, onProjectOperation });
+
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    expect(onProjectOperation).toHaveBeenCalledTimes(1);
+    expect(onProjectOperation).toHaveBeenCalledWith("copy", project);
+  });
+
+  it("calls onProjectOperation with 'move' and the project (including its own path, for the caller to exclude in the destination picker) when the Move button is clicked", async () => {
+    const onProjectOperation = vi.fn();
+    const user = userEvent.setup();
+    const project = makeProject({ id: "p1", name: "My Song", path: "/music/My Song" });
+    renderPanel({ project, onProjectOperation });
+
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    expect(onProjectOperation).toHaveBeenCalledTimes(1);
+    expect(onProjectOperation).toHaveBeenCalledWith("move", project);
+    expect(onProjectOperation.mock.calls[0][1].path).toBe("/music/My Song");
+  });
+
+  it("calls onProjectOperation with 'delete' and the project when the Delete button is clicked", async () => {
+    const onProjectOperation = vi.fn();
+    const user = userEvent.setup();
+    const project = makeProject({ id: "p1", name: "My Song" });
+    renderPanel({ project, onProjectOperation });
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(onProjectOperation).toHaveBeenCalledTimes(1);
+    expect(onProjectOperation).toHaveBeenCalledWith("delete", project);
   });
 });
 
@@ -302,6 +342,7 @@ describe("ProjectDetailPanel - duplicates banner", () => {
         onSaveStatus={vi.fn().mockResolvedValue(undefined)}
         onSaveTags={vi.fn().mockResolvedValue(undefined)}
         onSaveScore={vi.fn().mockResolvedValue(undefined)}
+        onProjectOperation={vi.fn()}
       />
     );
 
@@ -471,6 +512,7 @@ describe("ProjectDetailPanel - re-sync on project id change", () => {
         onSaveStatus={onSaveStatus}
         onSaveTags={vi.fn().mockResolvedValue(undefined)}
         onSaveScore={vi.fn().mockResolvedValue(undefined)}
+        onProjectOperation={vi.fn()}
       />
     );
 

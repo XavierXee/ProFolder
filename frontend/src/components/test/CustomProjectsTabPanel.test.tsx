@@ -16,6 +16,10 @@ vi.mock("../../api/client.js", () => ({
   batchUpdateProjectScore: vi.fn(),
   batchAddProjectTags: vi.fn(),
   reveal: vi.fn(),
+  getFolderTree: vi.fn(),
+  copyProject: vi.fn(),
+  moveProject: vi.fn(),
+  deleteProject: vi.fn(),
 }));
 
 import * as api from "../../api/client.js";
@@ -29,6 +33,10 @@ const mockUpdateProjectScore = vi.mocked(api.updateProjectScore);
 const mockBatchUpdateProjectScore = vi.mocked(api.batchUpdateProjectScore);
 const mockBatchAddProjectTags = vi.mocked(api.batchAddProjectTags);
 const mockReveal = vi.mocked(api.reveal);
+const mockGetFolderTree = vi.mocked(api.getFolderTree);
+const mockCopyProject = vi.mocked(api.copyProject);
+const mockMoveProject = vi.mocked(api.moveProject);
+const mockDeleteProject = vi.mocked(api.deleteProject);
 
 type ProjectRow = Project & { audioFileCount: number };
 
@@ -135,6 +143,10 @@ beforeEach(() => {
   mockBatchUpdateProjectScore.mockReset().mockResolvedValue({ updated: 2 });
   mockBatchAddProjectTags.mockReset().mockResolvedValue({ updated: 2 });
   mockReveal.mockReset().mockResolvedValue(undefined);
+  mockGetFolderTree.mockReset().mockResolvedValue({ name: "music", path: "/music", type: "folder", children: [] });
+  mockCopyProject.mockReset().mockResolvedValue({} as any);
+  mockMoveProject.mockReset().mockResolvedValue({} as any);
+  mockDeleteProject.mockReset().mockResolvedValue({} as any);
 });
 
 describe("CustomProjectsTabPanel - locked filters seed the initial fetch", () => {
@@ -516,6 +528,48 @@ describe("CustomProjectsTabPanel - reveal", () => {
     await user.click(within(dialog).getByRole("button", { name: "Reveal in Finder" }));
 
     await waitFor(() => expect(setBanner).toHaveBeenCalledWith("Path is outside the music root"));
+  });
+});
+
+describe("CustomProjectsTabPanel - Copy/Move/Delete wiring", () => {
+  it("opens the CopyMoveDeleteDialog with the correct operation/title when Move is clicked from the detail panel", async () => {
+    const project = makeProject({ id: "p1", name: "Amen Break", path: "/music/Amen Break" });
+    mockGetProjects.mockResolvedValue(makePaged({ projects: [project], total: 1 }));
+    mockGetProjectDetail.mockResolvedValue(makeDetail({ id: "p1", name: "Amen Break", path: "/music/Amen Break" }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    await waitFor(() => expect(screen.getByText("Amen Break")).toBeInTheDocument());
+    await user.click(screen.getByText("Amen Break"));
+    const detailDialog = await screen.findByRole("dialog", { name: "Folder detail: Amen Break" });
+    await user.click(within(detailDialog).getByRole("button", { name: "Move" }));
+
+    expect(screen.getByRole("dialog", { name: 'Move "Amen Break"' })).toBeInTheDocument();
+  });
+
+  it("on a successful Delete: calls api.deleteProject, refetches locally, calls refetchFiles + refreshStats, sets the banner, and closes the detail panel", async () => {
+    const project = makeProject({ id: "p1", name: "Amen Break", path: "/music/Amen Break" });
+    mockGetProjects.mockResolvedValue(makePaged({ projects: [project], total: 1 }));
+    mockGetProjectDetail.mockResolvedValue(makeDetail({ id: "p1", name: "Amen Break", path: "/music/Amen Break" }));
+    const user = userEvent.setup();
+    const { props } = renderPanel();
+
+    await waitFor(() => expect(screen.getByText("Amen Break")).toBeInTheDocument());
+    await user.click(screen.getByText("Amen Break"));
+    const detailDialog = await screen.findByRole("dialog", { name: "Folder detail: Amen Break" });
+    await user.click(within(detailDialog).getByRole("button", { name: "Delete" }));
+
+    const opDialog = screen.getByRole("dialog", { name: 'Move to Trash "Amen Break"' });
+    const callsBefore = mockGetProjects.mock.calls.length;
+    await user.click(within(opDialog).getByRole("button", { name: "Move to Trash" }));
+
+    await waitFor(() => expect(mockDeleteProject).toHaveBeenCalledWith("p1"));
+    await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(callsBefore + 1));
+    expect(props.refetchFiles).toHaveBeenCalledTimes(1);
+    expect(props.refreshStats).toHaveBeenCalledTimes(1);
+    expect(props.setBanner).toHaveBeenCalledWith("Folder moved to Trash.");
+    expect(screen.queryByRole("dialog", { name: "Folder detail: Amen Break" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: 'Move to Trash "Amen Break"' })).not.toBeInTheDocument();
   });
 });
 

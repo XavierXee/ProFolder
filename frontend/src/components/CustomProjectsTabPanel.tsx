@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
 import type { ProjectFilters } from "../api/client.js";
 import { useProjects } from "../hooks/useProjects.js";
-import type { CustomTab, TrackStatus } from "../types.js";
+import type { CustomTab, Project, TrackStatus } from "../types.js";
 import FilterToolbar from "./FilterToolbar.js";
 import { ProjectsTable } from "./ProjectsTable.js";
 import ProjectDetailPanel from "./ProjectDetailPanel.js";
 import BatchEditPanel from "./BatchEditPanel.js";
+import CopyMoveDeleteDialog from "./CopyMoveDeleteDialog.js";
+import type { CopyMoveDeleteOperation, CopyMoveDeleteOutcome, CopyMoveDeleteTarget } from "./CopyMoveDeleteDialog.js";
 
 type SortKey = NonNullable<ProjectFilters["sortBy"]>;
 
@@ -14,13 +16,13 @@ type Props = {
   tab: CustomTab;
   allTags: string[];
   isDark: boolean;
-  /** App-level refresh for the header stats (draft/unscored counts). Included for symmetry
-   * with `CustomFilesTabPanel` and passed down by App.tsx, but — mirroring App.tsx's own
+  /** App-level refresh for the header stats (draft/unscored counts). Mirroring App.tsx's own
    * handleProjectStatusSave/handleProjectTagsSave/handleProjectScoreSave and batch
-   * equivalents, none of which call `refreshStats` today — it is intentionally not invoked
-   * by any handler below. Stats are computed from the audio_files table only (see
-   * `audioFileRepository.ts`), and App.tsx's project-side handlers never refresh them either,
-   * so calling it here would be new behavior beyond what this task mirrors. */
+   * equivalents (none of which call `refreshStats`, since those mutations don't change how
+   * many files exist), this panel's own status/tags/score handlers below don't call it
+   * either. Copy/Move/Delete are different: they add, relocate, or remove file rows outright,
+   * which can change the draft/unscored counts — so this panel's `handleProjectOpSuccess`
+   * below DOES call it, mirroring App.tsx's own `handleProjectOpSuccess`. */
   refreshStats: () => void;
   /** App-level refresh for the global tag list (used by tag pickers/autocomplete everywhere). */
   refreshTags: () => void;
@@ -47,6 +49,7 @@ export default function CustomProjectsTabPanel({
   tab,
   allTags,
   isDark,
+  refreshStats,
   refreshTags,
   refetchFiles,
   scanCompletionSignal,
@@ -62,6 +65,9 @@ export default function CustomProjectsTabPanel({
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [showBatchPanel, setShowBatchPanel] = useState(false);
+  const [projectOpDialog, setProjectOpDialog] = useState<{ operation: CopyMoveDeleteOperation; target: CopyMoveDeleteTarget; excludedPath?: string } | null>(
+    null
+  );
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
 
@@ -159,6 +165,21 @@ export default function CustomProjectsTabPanel({
     refreshTags();
   }
 
+  function handleProjectOperation(operation: CopyMoveDeleteOperation, project: Project & { audioFileCount: number }) {
+    setProjectOpDialog({ operation, target: { kind: "single", id: project.id, name: project.name }, excludedPath: project.path });
+  }
+
+  function handleProjectOpSuccess(_outcome: CopyMoveDeleteOutcome) {
+    const operation = projectOpDialog?.operation ?? "copy";
+    // Mirrors App.tsx's handleProjectOpSuccess: a move/delete invalidates the id this panel's
+    // detail view is keyed to, so close it; a copy leaves the original project/id untouched.
+    if (operation !== "copy") setSelectedProjectId(null);
+    setBanner(operation === "copy" ? "Folder copied." : operation === "move" ? "Folder moved." : "Folder moved to Trash.");
+    refetch();
+    refetchFiles(); // a project's member files move/disappear along with it on move/delete
+    refreshStats();
+  }
+
   return (
     <>
       <FilterToolbar
@@ -205,6 +226,7 @@ export default function CustomProjectsTabPanel({
         onSaveStatus={handleProjectStatusSave}
         onSaveTags={handleProjectTagsSave}
         onSaveScore={handleProjectScoreSave}
+        onProjectOperation={handleProjectOperation}
       />
 
       <BatchEditPanel
@@ -216,6 +238,18 @@ export default function CustomProjectsTabPanel({
         onClose={() => setShowBatchPanel(false)}
         onApplyScore={handleBatchProjectScore}
         onApplyTag={handleBatchProjectTag}
+      />
+
+      <CopyMoveDeleteDialog
+        open={projectOpDialog !== null}
+        isDark={isDark}
+        operation={projectOpDialog?.operation ?? "copy"}
+        itemType="projects"
+        target={projectOpDialog?.target ?? { kind: "single", id: "", name: "" }}
+        excludedPath={projectOpDialog?.excludedPath}
+        onClose={() => setProjectOpDialog(null)}
+        onSuccess={handleProjectOpSuccess}
+        onError={setBanner}
       />
     </>
   );

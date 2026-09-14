@@ -34,6 +34,7 @@ function renderPanel(overrides: Partial<Parameters<typeof FileDetailPanel>[0]> =
     onSaveTags: vi.fn().mockResolvedValue(undefined),
     onSaveScore: vi.fn().mockResolvedValue(undefined),
     onReveal: () => {},
+    onFileOperation: vi.fn(),
     ...overrides,
   };
   return { ...render(<FileDetailPanel {...props} />), props };
@@ -111,6 +112,44 @@ describe("FileDetailPanel - basic rendering", () => {
     renderPanel({ file: makeFile({ projectPath: undefined }) });
 
     expect(screen.queryByRole("button", { name: "Reveal project" })).not.toBeInTheDocument();
+  });
+});
+
+describe("FileDetailPanel - Copy/Move/Delete buttons", () => {
+  it("calls onFileOperation with 'copy' and the file when the Copy button is clicked", async () => {
+    const onFileOperation = vi.fn();
+    const user = userEvent.setup();
+    const file = makeFile({ id: "f1", filename: "beat.wav" });
+    renderPanel({ file, onFileOperation });
+
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    expect(onFileOperation).toHaveBeenCalledTimes(1);
+    expect(onFileOperation).toHaveBeenCalledWith("copy", file);
+  });
+
+  it("calls onFileOperation with 'move' and the file when the Move button is clicked", async () => {
+    const onFileOperation = vi.fn();
+    const user = userEvent.setup();
+    const file = makeFile({ id: "f1", filename: "beat.wav" });
+    renderPanel({ file, onFileOperation });
+
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    expect(onFileOperation).toHaveBeenCalledTimes(1);
+    expect(onFileOperation).toHaveBeenCalledWith("move", file);
+  });
+
+  it("calls onFileOperation with 'delete' and the file when the Delete button is clicked", async () => {
+    const onFileOperation = vi.fn();
+    const user = userEvent.setup();
+    const file = makeFile({ id: "f1", filename: "beat.wav" });
+    renderPanel({ file, onFileOperation });
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(onFileOperation).toHaveBeenCalledTimes(1);
+    expect(onFileOperation).toHaveBeenCalledWith("delete", file);
   });
 });
 
@@ -324,6 +363,7 @@ describe("FileDetailPanel - re-sync on file id change", () => {
         onSaveTags={vi.fn().mockResolvedValue(undefined)}
         onSaveScore={vi.fn().mockResolvedValue(undefined)}
         onReveal={() => {}}
+        onFileOperation={vi.fn()}
       />
     );
 

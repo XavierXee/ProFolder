@@ -14,6 +14,10 @@ vi.mock("../../api/client.js", () => ({
   batchUpdateFileScore: vi.fn(),
   batchAddFileTags: vi.fn(),
   reveal: vi.fn(),
+  getFolderTree: vi.fn(),
+  copyFile: vi.fn(),
+  moveFile: vi.fn(),
+  deleteFile: vi.fn(),
 }));
 
 import * as api from "../../api/client.js";
@@ -25,6 +29,10 @@ const mockUpdateFileScore = vi.mocked(api.updateFileScore);
 const mockBatchUpdateFileScore = vi.mocked(api.batchUpdateFileScore);
 const mockBatchAddFileTags = vi.mocked(api.batchAddFileTags);
 const mockReveal = vi.mocked(api.reveal);
+const mockGetFolderTree = vi.mocked(api.getFolderTree);
+const mockCopyFile = vi.mocked(api.copyFile);
+const mockMoveFile = vi.mocked(api.moveFile);
+const mockDeleteFile = vi.mocked(api.deleteFile);
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -98,6 +106,10 @@ beforeEach(() => {
   mockBatchUpdateFileScore.mockReset().mockResolvedValue({ updated: 2 });
   mockBatchAddFileTags.mockReset().mockResolvedValue({ updated: 2 });
   mockReveal.mockReset().mockResolvedValue(undefined);
+  mockGetFolderTree.mockReset().mockResolvedValue({ name: "music", path: "/music", type: "folder", children: [] });
+  mockCopyFile.mockReset().mockResolvedValue(makeFile());
+  mockMoveFile.mockReset().mockResolvedValue(makeFile());
+  mockDeleteFile.mockReset().mockResolvedValue(undefined);
 });
 
 describe("CustomFilesTabPanel - locked filters seed the initial fetch", () => {
@@ -457,6 +469,46 @@ describe("CustomFilesTabPanel - reveal", () => {
     await user.click(screen.getByRole("button", { name: "Reveal file in Finder" }));
 
     await waitFor(() => expect(setBanner).toHaveBeenCalledWith("Path is outside the music root"));
+  });
+});
+
+describe("CustomFilesTabPanel - Copy/Move/Delete wiring", () => {
+  it("opens the CopyMoveDeleteDialog with the correct operation/title when Move is clicked from the detail panel", async () => {
+    const file = makeFile({ id: "f1", filename: "kick.wav" });
+    mockGetFiles.mockResolvedValue(makePaged({ files: [file], total: 1 }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    await waitFor(() => expect(screen.getByText("kick.wav")).toBeInTheDocument());
+    await user.click(screen.getByText("kick.wav"));
+    const detailDialog = screen.getByRole("dialog", { name: "File detail: kick.wav" });
+    await user.click(within(detailDialog).getByRole("button", { name: "Move" }));
+
+    expect(screen.getByRole("dialog", { name: 'Move "kick.wav"' })).toBeInTheDocument();
+  });
+
+  it("on a successful Delete: calls api.deleteFile, refetches locally, calls refreshStats + refetchProjects, sets the banner, and closes the detail panel", async () => {
+    const file = makeFile({ id: "f1", filename: "kick.wav" });
+    mockGetFiles.mockResolvedValue(makePaged({ files: [file], total: 1 }));
+    const user = userEvent.setup();
+    const { props } = renderPanel();
+
+    await waitFor(() => expect(screen.getByText("kick.wav")).toBeInTheDocument());
+    await user.click(screen.getByText("kick.wav"));
+    const detailDialog = screen.getByRole("dialog", { name: "File detail: kick.wav" });
+    await user.click(within(detailDialog).getByRole("button", { name: "Delete" }));
+
+    const opDialog = screen.getByRole("dialog", { name: 'Move to Trash "kick.wav"' });
+    const callsBefore = mockGetFiles.mock.calls.length;
+    await user.click(within(opDialog).getByRole("button", { name: "Move to Trash" }));
+
+    await waitFor(() => expect(mockDeleteFile).toHaveBeenCalledWith("f1"));
+    await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(callsBefore + 1));
+    expect(props.refreshStats).toHaveBeenCalledTimes(1);
+    expect(props.refetchProjects).toHaveBeenCalledTimes(1);
+    expect(props.setBanner).toHaveBeenCalledWith("File moved to Trash.");
+    expect(screen.queryByRole("dialog", { name: "File detail: kick.wav" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: 'Move to Trash "kick.wav"' })).not.toBeInTheDocument();
   });
 });
 

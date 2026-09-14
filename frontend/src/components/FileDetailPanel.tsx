@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { AudioFile, TrackStatus } from "../types.js";
+import type { CopyMoveDeleteOperation } from "./CopyMoveDeleteDialog.js";
 import StatusBadge from "./StatusBadge.js";
 import ScoreBadge from "./ScoreBadge.js";
 import { ScoreEditor } from "./ScoreEditor.js";
@@ -32,9 +33,13 @@ type Props = {
   onSaveTags: (id: string, tags: string[]) => Promise<void>;
   onSaveScore: (id: string, score: number | null) => Promise<void>;
   onReveal: (path: string) => void;
+  /** Opens the CopyMoveDeleteDialog (owned by the parent, not this panel) for this single
+   * file with the given operation. The parent constructs the dialog's `target`/`itemType`
+   * from the file this callback is invoked with. */
+  onFileOperation: (operation: CopyMoveDeleteOperation, file: AudioFile) => void;
 };
 
-export default function FileDetailPanel({ file, isDark, allTags = [], onClose, onSaveStatus, onSaveTags, onSaveScore, onReveal }: Props) {
+export default function FileDetailPanel({ file, isDark, allTags = [], onClose, onSaveStatus, onSaveTags, onSaveScore, onReveal, onFileOperation }: Props) {
   const [status, setStatus] = useState<TrackStatus>("unknown");
   const [tags, setTags] = useState<string[]>([]);
   const [score, setScore] = useState<number | null>(null);
@@ -177,6 +182,26 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                       Reveal project
                     </button>
                   )}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => onFileOperation("copy", file)}
+                    className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                  >
+                    Copy
+                  </button>
+                  <button
+                    onClick={() => onFileOperation("move", file)}
+                    className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                  >
+                    Move
+                  </button>
+                  <button
+                    onClick={() => onFileOperation("delete", file)}
+                    className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
 

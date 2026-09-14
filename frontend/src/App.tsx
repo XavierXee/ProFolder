@@ -18,9 +18,11 @@ import CreateCustomTabModal from "./components/CreateCustomTabModal.js";
 import DeleteTabConfirmDialog from "./components/DeleteTabConfirmDialog.js";
 import CustomFilesTabPanel from "./components/CustomFilesTabPanel.js";
 import CustomProjectsTabPanel from "./components/CustomProjectsTabPanel.js";
+import CopyMoveDeleteDialog from "./components/CopyMoveDeleteDialog.js";
+import type { CopyMoveDeleteOperation, CopyMoveDeleteOutcome, CopyMoveDeleteTarget } from "./components/CopyMoveDeleteDialog.js";
 import * as api from "./api/client.js";
 import type { FileFilters, LibraryStats, ProjectFilters, ScanStats } from "./api/client.js";
-import type { AudioFile, CustomTab, TrackStatus } from "./types.js";
+import type { AudioFile, CustomTab, Project, TrackStatus } from "./types.js";
 
 type Tab = "projects" | "files" | number;
 
@@ -29,6 +31,16 @@ const THEME_STORAGE_KEY = "musicLibraryManager.isDark";
 function loadStoredIsDark(): boolean {
   const stored = localStorage.getItem(THEME_STORAGE_KEY);
   return stored === null ? true : stored === "true";
+}
+
+/** Banner text for a completed single-item copy/move/delete, shared by the default and
+ * custom Files/Projects tabs. A single-item request either resolves as a full success
+ * (outcome.succeededCount === 1) or throws (handled via onError, never onSuccess) — see
+ * CopyMoveDeleteDialog's `runSingle`/doc comment — so no partial-failure wording is needed. */
+function copyMoveDeleteSuccessMessage(operation: CopyMoveDeleteOperation, itemLabel: "File" | "Folder"): string {
+  if (operation === "copy") return `${itemLabel} copied.`;
+  if (operation === "move") return `${itemLabel} moved.`;
+  return `${itemLabel} moved to Trash.`;
 }
 
 export default function App() {
@@ -76,6 +88,8 @@ export default function App() {
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [showFilesBatchPanel, setShowFilesBatchPanel] = useState(false);
   const [showProjectsBatchPanel, setShowProjectsBatchPanel] = useState(false);
+  const [fileOpDialog, setFileOpDialog] = useState<{ operation: CopyMoveDeleteOperation; target: CopyMoveDeleteTarget } | null>(null);
+  const [projectOpDialog, setProjectOpDialog] = useState<{ operation: CopyMoveDeleteOperation; target: CopyMoveDeleteTarget; excludedPath?: string } | null>(null);
   const [playingFile, setPlayingFile] = useState<AudioFile | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
@@ -251,6 +265,37 @@ export default function App() {
     } catch (err) {
       setBanner(err instanceof Error ? err.message : "Could not reveal in Finder");
     }
+  }
+
+  function handleFileOperation(operation: CopyMoveDeleteOperation, file: AudioFile) {
+    setFileOpDialog({ operation, target: { kind: "single", id: file.id, name: file.filename } });
+  }
+
+  function handleProjectOperation(operation: CopyMoveDeleteOperation, project: Project & { audioFileCount: number }) {
+    // excludedPath is only meaningful for a project move (see CopyMoveDeleteDialog's doc
+    // comment) but harmless to pass for copy/delete too, since it's not forwarded there.
+    setProjectOpDialog({ operation, target: { kind: "single", id: project.id, name: project.name }, excludedPath: project.path });
+  }
+
+  function handleFileOpSuccess(_outcome: CopyMoveDeleteOutcome) {
+    const operation = fileOpDialog?.operation ?? "copy";
+    // A move changes the file's id; a delete removes it entirely — either way the panel is
+    // keyed to an id that no longer refers to the (still-open) item, so close it. A copy
+    // leaves the original file/id untouched, so the panel can stay open as-is.
+    if (operation !== "copy") setSelectedId(null);
+    setBanner(copyMoveDeleteSuccessMessage(operation, "File"));
+    refetch();
+    refreshStats();
+    refetchProjects(); // a file's project membership/aggregate counts can shift on copy/move/delete
+  }
+
+  function handleProjectOpSuccess(_outcome: CopyMoveDeleteOutcome) {
+    const operation = projectOpDialog?.operation ?? "copy";
+    if (operation !== "copy") setSelectedProjectId(null);
+    setBanner(copyMoveDeleteSuccessMessage(operation, "Folder"));
+    refetchProjects();
+    refetch(); // a project's member files move/disappear along with it on move/delete
+    refreshStats();
   }
 
   function handlePlayClick(file: AudioFile) {
@@ -634,6 +679,7 @@ export default function App() {
         onSaveTags={handleFileTagsSave}
         onSaveScore={handleFileScoreSave}
         onReveal={handleReveal}
+        onFileOperation={handleFileOperation}
       />
 
       <ProjectDetailPanel
@@ -645,6 +691,30 @@ export default function App() {
         onSaveStatus={handleProjectStatusSave}
         onSaveTags={handleProjectTagsSave}
         onSaveScore={handleProjectScoreSave}
+        onProjectOperation={handleProjectOperation}
+      />
+
+      <CopyMoveDeleteDialog
+        open={fileOpDialog !== null}
+        isDark={isDark}
+        operation={fileOpDialog?.operation ?? "copy"}
+        itemType="files"
+        target={fileOpDialog?.target ?? { kind: "single", id: "", name: "" }}
+        onClose={() => setFileOpDialog(null)}
+        onSuccess={handleFileOpSuccess}
+        onError={setBanner}
+      />
+
+      <CopyMoveDeleteDialog
+        open={projectOpDialog !== null}
+        isDark={isDark}
+        operation={projectOpDialog?.operation ?? "copy"}
+        itemType="projects"
+        target={projectOpDialog?.target ?? { kind: "single", id: "", name: "" }}
+        excludedPath={projectOpDialog?.excludedPath}
+        onClose={() => setProjectOpDialog(null)}
+        onSuccess={handleProjectOpSuccess}
+        onError={setBanner}
       />
 
       <ScanFolderPanel

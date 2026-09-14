@@ -3,6 +3,7 @@ import * as api from "../api/client.js";
 import type { FolderNode, ProjectDetail, ProjectDuplicatesResult } from "../api/client.js";
 import type { Project, TrackStatus } from "../types.js";
 import { DAW_LABELS } from "../types.js";
+import type { CopyMoveDeleteOperation } from "./CopyMoveDeleteDialog.js";
 import StatusBadge from "./StatusBadge.js";
 import ScoreBadge from "./ScoreBadge.js";
 import { ScoreEditor } from "./ScoreEditor.js";
@@ -58,9 +59,13 @@ type Props = {
   onSaveStatus: (id: string, status: TrackStatus) => Promise<void>;
   onSaveTags: (id: string, tags: string[]) => Promise<void>;
   onSaveScore: (id: string, score: number | null) => Promise<void>;
+  /** Opens the CopyMoveDeleteDialog (owned by the parent, not this panel) for this single
+   * project with the given operation. The parent constructs the dialog's `target`/`itemType`
+   * (and, for a move, `excludedPath`) from the project this callback is invoked with. */
+  onProjectOperation: (operation: CopyMoveDeleteOperation, project: Project & { audioFileCount: number }) => void;
 };
 
-export default function ProjectDetailPanel({ project, isDark, allTags = [], onClose, onReveal, onSaveStatus, onSaveTags, onSaveScore }: Props) {
+export default function ProjectDetailPanel({ project, isDark, allTags = [], onClose, onReveal, onSaveStatus, onSaveTags, onSaveScore, onProjectOperation }: Props) {
   const [detail, setDetail] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -242,6 +247,24 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                   className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
                 >
                   Reveal in Finder
+                </button>
+                <button
+                  onClick={() => onProjectOperation("copy", project)}
+                  className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                >
+                  Copy
+                </button>
+                <button
+                  onClick={() => onProjectOperation("move", project)}
+                  className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                >
+                  Move
+                </button>
+                <button
+                  onClick={() => onProjectOperation("delete", project)}
+                  className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
+                >
+                  Delete
                 </button>
               </div>
 
