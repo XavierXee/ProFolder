@@ -1,0 +1,528 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import CopyMoveDeleteDialog, { buildExplanationText, type CopyMoveDeleteTarget } from "../CopyMoveDeleteDialog.js";
+import type { FolderNode } from "../../api/client.js";
+
+vi.mock("../../api/client.js", () => ({
+  getFolderTree: vi.fn(),
+  copyFile: vi.fn(),
+  moveFile: vi.fn(),
+  deleteFile: vi.fn(),
+  batchCopyFiles: vi.fn(),
+  batchMoveFiles: vi.fn(),
+  batchDeleteFiles: vi.fn(),
+  copyProject: vi.fn(),
+  moveProject: vi.fn(),
+  deleteProject: vi.fn(),
+  batchCopyProjects: vi.fn(),
+  batchMoveProjects: vi.fn(),
+  batchDeleteProjects: vi.fn(),
+}));
+
+import * as api from "../../api/client.js";
+
+const mockGetFolderTree = vi.mocked(api.getFolderTree);
+const mockCopyFile = vi.mocked(api.copyFile);
+const mockMoveFile = vi.mocked(api.moveFile);
+const mockDeleteFile = vi.mocked(api.deleteFile);
+const mockBatchCopyFiles = vi.mocked(api.batchCopyFiles);
+const mockBatchMoveFiles = vi.mocked(api.batchMoveFiles);
+const mockBatchDeleteFiles = vi.mocked(api.batchDeleteFiles);
+const mockCopyProject = vi.mocked(api.copyProject);
+const mockMoveProject = vi.mocked(api.moveProject);
+const mockDeleteProject = vi.mocked(api.deleteProject);
+const mockBatchCopyProjects = vi.mocked(api.batchCopyProjects);
+const mockBatchMoveProjects = vi.mocked(api.batchMoveProjects);
+const mockBatchDeleteProjects = vi.mocked(api.batchDeleteProjects);
+
+// Two-level fixture: root "/music" > "Artist" ("/music/Artist") > "Sub" ("/music/Artist/Sub").
+const subNode: FolderNode = { name: "Sub", path: "/music/Artist/Sub", type: "folder", children: [] };
+const artistNode: FolderNode = { name: "Artist", path: "/music/Artist", type: "folder", children: [subNode] };
+const otherNode: FolderNode = { name: "Other", path: "/music/Other", type: "folder", children: [] };
+const tree: FolderNode = { name: "music", path: "/music", type: "folder", children: [artistNode, otherNode] };
+
+function renderDialog(overrides: Partial<Parameters<typeof CopyMoveDeleteDialog>[0]> = {}) {
+  const props = {
+    open: true,
+    isDark: true,
+    operation: "copy" as const,
+    itemType: "files" as const,
+    target: { kind: "single", id: "file-1", name: "track.mp3" } as CopyMoveDeleteTarget,
+    excludedPath: undefined,
+    onClose: vi.fn(),
+    onSuccess: vi.fn(),
+    onError: vi.fn(),
+    ...overrides,
+  };
+  return { ...render(<CopyMoveDeleteDialog {...props} />), props };
+}
+
+async function selectDestination(user: ReturnType<typeof userEvent.setup>, name = "Artist") {
+  await waitFor(() => expect(screen.getByRole("radio", { name })).toBeInTheDocument());
+  await user.click(screen.getByRole("radio", { name }));
+}
+
+beforeEach(() => {
+  mockGetFolderTree.mockReset().mockResolvedValue(tree);
+  mockCopyFile.mockReset().mockResolvedValue({} as any);
+  mockMoveFile.mockReset().mockResolvedValue({} as any);
+  mockDeleteFile.mockReset().mockResolvedValue(undefined);
+  mockBatchCopyFiles.mockReset().mockResolvedValue({ succeeded: ["file-1", "file-2"], failed: [] });
+  mockBatchMoveFiles.mockReset().mockResolvedValue({ succeeded: ["file-1", "file-2"], failed: [] });
+  mockBatchDeleteFiles.mockReset().mockResolvedValue({ succeeded: ["file-1", "file-2"], failed: [] });
+  mockCopyProject.mockReset().mockResolvedValue({} as any);
+  mockMoveProject.mockReset().mockResolvedValue({} as any);
+  mockDeleteProject.mockReset().mockResolvedValue({} as any);
+  mockBatchCopyProjects.mockReset().mockResolvedValue({ succeeded: ["p-1", "p-2"], failed: [] });
+  mockBatchMoveProjects.mockReset().mockResolvedValue({ succeeded: ["p-1", "p-2"], failed: [] });
+  mockBatchDeleteProjects.mockReset().mockResolvedValue({ succeeded: ["p-1", "p-2"], failed: [] });
+});
+
+describe("buildExplanationText", () => {
+  const single: CopyMoveDeleteTarget = { kind: "single", id: "a", name: "track.mp3" };
+  const batch: CopyMoveDeleteTarget = { kind: "batch", ids: ["a", "b", "c"], count: 3 };
+
+  it("copy, single file, no destination chosen yet", () => {
+    expect(buildExplanationText("copy", "files", single, null)).toBe("This file will be copied (duplicated) in the folder you choose below.");
+  });
+
+  it("copy, single file, with a selected destination", () => {
+    expect(buildExplanationText("copy", "files", single, "/music/Artist")).toBe("This file will be copied (duplicated) in /music/Artist.");
+  });
+
+  it("copy, batch of files, plural wording", () => {
+    expect(buildExplanationText("copy", "files", batch, "/music/Artist")).toBe("These 3 files will be copied (duplicated) in /music/Artist.");
+  });
+
+  it("move, single project, uses 'moved ... to' wording", () => {
+    expect(buildExplanationText("move", "projects", single, "/music/Artist")).toBe("This project will be moved to /music/Artist.");
+  });
+
+  it("move, batch of projects, plural wording", () => {
+    expect(buildExplanationText("move", "projects", batch, "/music/Artist")).toBe("These 3 projects will be moved to /music/Artist.");
+  });
+
+  it("delete, single file, states Trash (not permanent deletion), and ignores destination", () => {
+    expect(buildExplanationText("delete", "files", single, "/music/Artist")).toBe("This file will be moved to the Trash.");
+  });
+
+  it("delete, batch of projects, plural wording, Trash phrasing", () => {
+    expect(buildExplanationText("delete", "projects", batch, null)).toBe("These 3 projects will be moved to the Trash.");
+  });
+});
+
+describe("CopyMoveDeleteDialog - rendering / explanatory text wiring", () => {
+  it("renders the copy explanation for a single file and reflects it in the title", async () => {
+    renderDialog({ operation: "copy", itemType: "files", target: { kind: "single", id: "f1", name: "kick.wav" } });
+
+    expect(screen.getByRole("dialog", { name: 'Copy "kick.wav"' })).toBeInTheDocument();
+    expect(screen.getByText("This file will be copied (duplicated) in the folder you choose below.")).toBeInTheDocument();
+  });
+
+  it("renders the move explanation for a batch of projects", async () => {
+    renderDialog({ operation: "move", itemType: "projects", target: { kind: "batch", ids: ["p1", "p2"], count: 2 } });
+
+    expect(screen.getByRole("dialog", { name: "Move 2 projects" })).toBeInTheDocument();
+    expect(screen.getByText("These 2 projects will be moved to the folder you choose below.")).toBeInTheDocument();
+  });
+
+  it("renders the delete/Trash explanation and title, with no destination picker", async () => {
+    renderDialog({ operation: "delete", itemType: "files", target: { kind: "single", id: "f1", name: "kick.wav" } });
+
+    expect(screen.getByRole("dialog", { name: 'Move to Trash "kick.wav"' })).toBeInTheDocument();
+    expect(screen.getByText("This file will be moved to the Trash.")).toBeInTheDocument();
+    expect(screen.queryByRole("tree")).not.toBeInTheDocument();
+  });
+
+  it("renders nothing when open is false", () => {
+    renderDialog({ open: false });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("CopyMoveDeleteDialog - Apply enablement", () => {
+  it("Apply is disabled for copy until a destination is selected", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "copy" });
+
+    expect(screen.getByRole("button", { name: "Copy" })).toBeDisabled();
+
+    await selectDestination(user);
+
+    expect(screen.getByRole("button", { name: "Copy" })).not.toBeDisabled();
+  });
+
+  it("Apply is disabled for move until a destination is selected", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "move" });
+
+    expect(screen.getByRole("button", { name: "Move" })).toBeDisabled();
+
+    await selectDestination(user);
+
+    expect(screen.getByRole("button", { name: "Move" })).not.toBeDisabled();
+  });
+
+  it("Apply (Move to Trash) is enabled immediately for delete, with no destination step required", () => {
+    renderDialog({ operation: "delete" });
+
+    expect(screen.getByRole("button", { name: "Move to Trash" })).not.toBeDisabled();
+  });
+
+  it("Apply (Move to Trash) stays disabled for an empty batch", () => {
+    const emptyBatch: CopyMoveDeleteTarget = { kind: "batch", ids: [], count: 0 };
+    renderDialog({ operation: "delete", target: emptyBatch });
+
+    expect(screen.getByRole("button", { name: "Move to Trash" })).toBeDisabled();
+  });
+
+  it("Apply (Copy) stays disabled for an empty batch, even after a destination is selected", async () => {
+    const user = userEvent.setup();
+    const emptyBatch: CopyMoveDeleteTarget = { kind: "batch", ids: [], count: 0 };
+    renderDialog({ operation: "copy", target: emptyBatch });
+
+    expect(screen.getByRole("button", { name: "Copy" })).toBeDisabled();
+
+    await selectDestination(user);
+
+    expect(screen.getByRole("button", { name: "Copy" })).toBeDisabled();
+  });
+
+  it("Apply (Move) stays disabled for an empty batch, even after a destination is selected", async () => {
+    const user = userEvent.setup();
+    const emptyBatch: CopyMoveDeleteTarget = { kind: "batch", ids: [], count: 0 };
+    renderDialog({ operation: "move", target: emptyBatch });
+
+    expect(screen.getByRole("button", { name: "Move" })).toBeDisabled();
+
+    await selectDestination(user);
+
+    expect(screen.getByRole("button", { name: "Move" })).toBeDisabled();
+  });
+});
+
+describe("CopyMoveDeleteDialog - correct client function per operation/type/target", () => {
+  it("copy + files + single calls copyFile with the destination", async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    renderDialog({ operation: "copy", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" }, onSuccess });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(mockCopyFile).toHaveBeenCalledWith("f1", "/music/Artist"));
+    expect(onSuccess).toHaveBeenCalledWith({ succeededCount: 1, failedCount: 0 });
+  });
+
+  it("move + files + batch calls batchMoveFiles with ids and destination", async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    renderDialog({ operation: "move", itemType: "files", target: { kind: "batch", ids: ["f1", "f2"], count: 2 }, onSuccess });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    await waitFor(() => expect(mockBatchMoveFiles).toHaveBeenCalledWith(["f1", "f2"], "/music/Artist"));
+    expect(onSuccess).toHaveBeenCalledWith({ succeededCount: 2, failedCount: 0 });
+  });
+
+  it("delete + files + single calls deleteFile", async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    renderDialog({ operation: "delete", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" }, onSuccess });
+
+    await user.click(screen.getByRole("button", { name: "Move to Trash" }));
+
+    await waitFor(() => expect(mockDeleteFile).toHaveBeenCalledWith("f1"));
+    expect(onSuccess).toHaveBeenCalledWith({ succeededCount: 1, failedCount: 0 });
+  });
+
+  it("delete + files + batch calls batchDeleteFiles with ids", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "delete", itemType: "files", target: { kind: "batch", ids: ["f1", "f2"], count: 2 } });
+
+    await user.click(screen.getByRole("button", { name: "Move to Trash" }));
+
+    await waitFor(() => expect(mockBatchDeleteFiles).toHaveBeenCalledWith(["f1", "f2"]));
+  });
+
+  it("copy + projects + single calls copyProject with the destination", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "copy", itemType: "projects", target: { kind: "single", id: "p1", name: "Song Idea" } });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(mockCopyProject).toHaveBeenCalledWith("p1", "/music/Artist"));
+  });
+
+  it("copy + projects + batch calls batchCopyProjects with ids and destination", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "copy", itemType: "projects", target: { kind: "batch", ids: ["p1", "p2"], count: 2 } });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(mockBatchCopyProjects).toHaveBeenCalledWith(["p1", "p2"], "/music/Artist"));
+  });
+
+  it("move + projects + single calls moveProject with the destination", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "move", itemType: "projects", target: { kind: "single", id: "p1", name: "Song Idea" } });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    await waitFor(() => expect(mockMoveProject).toHaveBeenCalledWith("p1", "/music/Artist"));
+  });
+
+  it("move + projects + batch calls batchMoveProjects with ids and destination", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "move", itemType: "projects", target: { kind: "batch", ids: ["p1", "p2"], count: 2 } });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    await waitFor(() => expect(mockBatchMoveProjects).toHaveBeenCalledWith(["p1", "p2"], "/music/Artist"));
+  });
+
+  it("delete + projects + single calls deleteProject", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "delete", itemType: "projects", target: { kind: "single", id: "p1", name: "Song Idea" } });
+
+    await user.click(screen.getByRole("button", { name: "Move to Trash" }));
+
+    await waitFor(() => expect(mockDeleteProject).toHaveBeenCalledWith("p1"));
+  });
+
+  it("delete + projects + batch calls batchDeleteProjects with ids", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "delete", itemType: "projects", target: { kind: "batch", ids: ["p1", "p2"], count: 2 } });
+
+    await user.click(screen.getByRole("button", { name: "Move to Trash" }));
+
+    await waitFor(() => expect(mockBatchDeleteProjects).toHaveBeenCalledWith(["p1", "p2"]));
+  });
+
+  it("move + files + single calls moveFile, and the picker has nothing excluded for a file", async () => {
+    const user = userEvent.setup();
+    renderDialog({
+      operation: "move",
+      itemType: "files",
+      target: { kind: "single", id: "f1", name: "a.wav" },
+      excludedPath: "/music/Artist",
+    });
+
+    // Unlike the project case below, a file's own containing folder is not excluded —
+    // it remains selectable.
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Artist" })).not.toBeDisabled());
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    await waitFor(() => expect(mockMoveFile).toHaveBeenCalledWith("f1", "/music/Artist"));
+  });
+});
+
+describe("CopyMoveDeleteDialog - excludedPath forwarding", () => {
+  it("forwards excludedPath to the picker for a single-project move, disabling that folder and its descendants", async () => {
+    renderDialog({
+      operation: "move",
+      itemType: "projects",
+      target: { kind: "single", id: "p1", name: "Song Idea" },
+      excludedPath: "/music/Artist",
+    });
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Artist" })).toBeInTheDocument());
+    expect(screen.getByRole("radio", { name: "Artist" })).toBeDisabled();
+  });
+
+  it("does not forward excludedPath for a batch of projects", async () => {
+    renderDialog({
+      operation: "move",
+      itemType: "projects",
+      target: { kind: "batch", ids: ["p1", "p2"], count: 2 },
+      excludedPath: "/music/Artist",
+    });
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Artist" })).toBeInTheDocument());
+    expect(screen.getByRole("radio", { name: "Artist" })).not.toBeDisabled();
+  });
+
+  it("does not forward excludedPath for a copy (only move needs it)", async () => {
+    renderDialog({
+      operation: "copy",
+      itemType: "projects",
+      target: { kind: "single", id: "p1", name: "Song Idea" },
+      excludedPath: "/music/Artist",
+    });
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Artist" })).toBeInTheDocument());
+    expect(screen.getByRole("radio", { name: "Artist" })).not.toBeDisabled();
+  });
+});
+
+describe("CopyMoveDeleteDialog - success / error callbacks", () => {
+  it("calls onSuccess and onClose on a fully successful batch, without calling onError", async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+    const onClose = vi.fn();
+    renderDialog({
+      operation: "copy",
+      itemType: "files",
+      target: { kind: "batch", ids: ["f1", "f2"], count: 2 },
+      onSuccess,
+      onError,
+      onClose,
+    });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ succeededCount: 2, failedCount: 0 }));
+    expect(onError).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("still calls onSuccess (with failedCount > 0) and closes on a partially-failed batch, matching best-effort batch semantics", async () => {
+    mockBatchCopyFiles.mockResolvedValue({ succeeded: ["f1"], failed: [{ id: "f2", error: "disk full" }] });
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    const onClose = vi.fn();
+    renderDialog({
+      operation: "copy",
+      itemType: "files",
+      target: { kind: "batch", ids: ["f1", "f2"], count: 2 },
+      onSuccess,
+      onClose,
+    });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ succeededCount: 1, failedCount: 1 }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onError and keeps the dialog open (not onSuccess) when a single-item request rejects", async () => {
+    mockCopyFile.mockRejectedValue(new Error("destination not writable"));
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+    const onClose = vi.fn();
+    renderDialog({
+      operation: "copy",
+      itemType: "files",
+      target: { kind: "single", id: "f1", name: "a.wav" },
+      onSuccess,
+      onError,
+      onClose,
+    });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith("destination not writable"));
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("destination not writable")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+});
+
+describe("CopyMoveDeleteDialog - busy state prevents double submission", () => {
+  it("disables Apply and shows a busy label while the request is in flight, and only calls the client function once", async () => {
+    let resolveCopy!: (v: any) => void;
+    mockCopyFile.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCopy = resolve;
+      })
+    );
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderDialog({ operation: "copy", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" }, onClose });
+
+    await selectDestination(user);
+    const applyButton = screen.getByRole("button", { name: "Copy" });
+    await user.click(applyButton);
+
+    const busyButton = screen.getByRole("button", { name: "Copying…" });
+    expect(busyButton).toBeDisabled();
+
+    // A second click attempt while busy must not fire a second request.
+    await user.click(busyButton);
+    expect(mockCopyFile).toHaveBeenCalledTimes(1);
+
+    resolveCopy({});
+    // onClose is the observable "operation completed" signal here — the component only
+    // unmounts when its *parent* reacts to onClose by flipping the open prop, which this
+    // isolated render harness doesn't do.
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it("Cancel and the close button are disabled while busy", async () => {
+    let resolveCopy!: (v: any) => void;
+    mockCopyFile.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCopy = resolve;
+      })
+    );
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderDialog({ operation: "copy", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" }, onClose });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Close dialog" })).toBeDisabled();
+
+    resolveCopy({});
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("CopyMoveDeleteDialog - dismissal", () => {
+  it("calls onClose on Escape", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderDialog({ onClose });
+
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onClose on backdrop click", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const { container } = renderDialog({ onClose });
+
+    const backdrop = container.querySelector('[aria-hidden="true"]');
+    expect(backdrop).not.toBeNull();
+    await user.click(backdrop as Element);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onClose on close-button click", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderDialog({ onClose });
+
+    await user.click(screen.getByRole("button", { name: "Close dialog" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onClose on Cancel-button click", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderDialog({ onClose });
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
