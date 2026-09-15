@@ -29,6 +29,12 @@ vi.mock("../api/client.js", () => ({
   copyProject: vi.fn(),
   moveProject: vi.fn(),
   deleteProject: vi.fn(),
+  batchCopyFiles: vi.fn(),
+  batchMoveFiles: vi.fn(),
+  batchDeleteFiles: vi.fn(),
+  batchCopyProjects: vi.fn(),
+  batchMoveProjects: vi.fn(),
+  batchDeleteProjects: vi.fn(),
 }));
 
 import * as api from "../api/client.js";
@@ -49,6 +55,12 @@ const mockDeleteFile = vi.mocked(api.deleteFile);
 const mockCopyProject = vi.mocked(api.copyProject);
 const mockMoveProject = vi.mocked(api.moveProject);
 const mockDeleteProject = vi.mocked(api.deleteProject);
+const mockBatchCopyFiles = vi.mocked(api.batchCopyFiles);
+const mockBatchMoveFiles = vi.mocked(api.batchMoveFiles);
+const mockBatchDeleteFiles = vi.mocked(api.batchDeleteFiles);
+const mockBatchCopyProjects = vi.mocked(api.batchCopyProjects);
+const mockBatchMoveProjects = vi.mocked(api.batchMoveProjects);
+const mockBatchDeleteProjects = vi.mocked(api.batchDeleteProjects);
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -155,6 +167,12 @@ beforeEach(() => {
   mockCopyProject.mockReset().mockResolvedValue({} as any);
   mockMoveProject.mockReset().mockResolvedValue({} as any);
   mockDeleteProject.mockReset().mockResolvedValue({} as any);
+  mockBatchCopyFiles.mockReset().mockResolvedValue({ succeeded: [], failed: [] });
+  mockBatchMoveFiles.mockReset().mockResolvedValue({ succeeded: [], failed: [] });
+  mockBatchDeleteFiles.mockReset().mockResolvedValue({ succeeded: [], failed: [] });
+  mockBatchCopyProjects.mockReset().mockResolvedValue({ succeeded: [], failed: [] });
+  mockBatchMoveProjects.mockReset().mockResolvedValue({ succeeded: [], failed: [] });
+  mockBatchDeleteProjects.mockReset().mockResolvedValue({ succeeded: [], failed: [] });
 });
 
 async function switchToFilesTab(user: ReturnType<typeof userEvent.setup>) {
@@ -301,5 +319,95 @@ describe("App - file operations (Copy/Move/Delete) wiring, Projects tab", () => 
     // The project's own folder ("Alpha Sessions") is rendered but disabled as a destination
     // option, since App.tsx passes excludedPath={project.path} for a project move.
     expect(within(opDialog).getByRole("radio", { name: "Alpha Sessions" })).toBeDisabled();
+  });
+});
+
+describe("App - batch Copy/Move/Delete wiring (Task 10), Files tab", () => {
+  const TWO_FILES_PAGE: PagedFiles = {
+    files: [
+      makeFile({ id: "file-1", filename: "Kick One.wav", relativePath: "Drums/Kick One.wav" }),
+      makeFile({ id: "file-2", filename: "Snare One.wav", relativePath: "Drums/Snare One.wav" }),
+    ],
+    total: 2,
+    page: 1,
+    pageSize: 50,
+    totalPages: 1,
+  };
+
+  it("on a successful batch Move: calls api.batchMoveFiles with both ids and the chosen destination, refetches files/stats/projects, sets a pluralized banner, and leaves the batch panel open", async () => {
+    mockGetFiles.mockResolvedValue(TWO_FILES_PAGE);
+    mockBatchMoveFiles.mockResolvedValue({ succeeded: ["file-1", "file-2"], failed: [] });
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+    await waitFor(() => expect(screen.getByText("Snare One.wav")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Kick One.wav" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Snare One.wav" }));
+    await user.click(screen.getByRole("button", { name: "Batch Edit (2)" }));
+
+    const batchDialog = screen.getByRole("dialog", { name: "Batch edit audio files" });
+    await user.click(within(batchDialog).getByRole("button", { name: "Move" }));
+
+    const opDialog = screen.getByRole("dialog", { name: "Move 2 files" });
+    await selectDestination(user);
+    const filesCallsBefore = mockGetFiles.mock.calls.length;
+    const statsCallsBefore = mockGetStats.mock.calls.length;
+    const projectsCallsBefore = mockGetProjects.mock.calls.length;
+    await user.click(within(opDialog).getByRole("button", { name: "Move" }));
+
+    await waitFor(() => expect(mockBatchMoveFiles).toHaveBeenCalledWith(["file-1", "file-2"], "/music/Other"));
+    await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(filesCallsBefore + 1));
+    await waitFor(() => expect(mockGetStats.mock.calls.length).toBe(statsCallsBefore + 1));
+    await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(projectsCallsBefore + 1));
+    expect(screen.getByText("2 Files moved.")).toBeInTheDocument();
+    // The batch panel stays open after a successful operation — mirrors the existing batch
+    // score/tag actions, which also don't close it (see BatchEditPanel.test.tsx). BatchEditPanel
+    // is permanently mounted (CSS transform toggles visibility, unlike CopyMoveDeleteDialog which
+    // unmounts via `if (!open) return null`), so its dialog role/name are in the DOM either way —
+    // the open/closed state has to be checked via the translate-x-0/translate-x-full class instead.
+    expect(screen.getByRole("dialog", { name: "Batch edit audio files" })).toHaveClass("translate-x-0");
+    expect(screen.queryByRole("dialog", { name: "Move 2 files" })).not.toBeInTheDocument();
+  });
+});
+
+describe("App - batch Copy/Move/Delete wiring (Task 10), Projects tab", () => {
+  const TWO_PROJECTS_PAGE: PagedProjects = {
+    projects: [
+      makeProject({ id: "proj-1", name: "Alpha Sessions", path: "/music/Alpha Sessions" }),
+      makeProject({ id: "proj-2", name: "Beta Sessions", path: "/music/Beta Sessions" }),
+    ],
+    total: 2,
+    page: 1,
+    pageSize: 50,
+    totalPages: 1,
+  };
+
+  it("on a successful batch Delete: calls api.batchDeleteProjects with both ids, refetches projects/files/stats, and sets a pluralized banner", async () => {
+    mockGetProjects.mockResolvedValue(TWO_PROJECTS_PAGE);
+    mockBatchDeleteProjects.mockResolvedValue({ succeeded: ["proj-1", "proj-2"], failed: [] });
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("Beta Sessions")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Alpha Sessions" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Beta Sessions" }));
+    await user.click(screen.getByRole("button", { name: "Batch Edit (2)" }));
+
+    const batchDialog = screen.getByRole("dialog", { name: "Batch edit project folders" });
+    await user.click(within(batchDialog).getByRole("button", { name: "Delete" }));
+
+    const opDialog = screen.getByRole("dialog", { name: "Move to Trash 2 projects" });
+    const projectsCallsBefore = mockGetProjects.mock.calls.length;
+    const filesCallsBefore = mockGetFiles.mock.calls.length;
+    const statsCallsBefore = mockGetStats.mock.calls.length;
+    await user.click(within(opDialog).getByRole("button", { name: "Move to Trash" }));
+
+    await waitFor(() => expect(mockBatchDeleteProjects).toHaveBeenCalledWith(["proj-1", "proj-2"]));
+    await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(projectsCallsBefore + 1));
+    await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(filesCallsBefore + 1));
+    await waitFor(() => expect(mockGetStats.mock.calls.length).toBe(statsCallsBefore + 1));
+    expect(screen.getByText("2 Folders moved to Trash.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Batch edit project folders" })).toBeInTheDocument();
   });
 });

@@ -171,14 +171,33 @@ export default function CustomFilesTabPanel({
     setFileOpDialog({ operation, target: { kind: "single", id: file.id, name: file.filename } });
   }
 
-  function handleFileOpSuccess(_outcome: CopyMoveDeleteOutcome) {
+  // Reuses the same fileOpDialog state/dialog as the single-item operation above —
+  // CopyMoveDeleteTarget already has a "batch" variant. Mirrors App.tsx's
+  // handleFilesBatchOperation exactly.
+  function handleBatchOperation(operation: CopyMoveDeleteOperation, ids: string[]) {
+    setFileOpDialog({ operation, target: { kind: "batch", ids, count: ids.length } });
+  }
+
+  // Mirrors App.tsx's copyMoveDeleteSuccessMessage: a single item is always 1/0 (see
+  // CopyMoveDeleteOutcome's doc comment), so keeps the original singular wording; a batch
+  // reports how many of the ids sent actually succeeded and calls out a partial failure.
+  function fileOpSuccessMessage(operation: CopyMoveDeleteOperation, outcome: CopyMoveDeleteOutcome): string {
+    const verb = operation === "copy" ? "copied" : operation === "move" ? "moved" : "moved to Trash";
+    if (outcome.succeededCount === 1 && outcome.failedCount === 0) return `File ${verb}.`;
+    if (outcome.failedCount === 0) return `${outcome.succeededCount} files ${verb}.`;
+    return `${outcome.succeededCount} of ${outcome.succeededCount + outcome.failedCount} files ${verb}; ${outcome.failedCount} failed.`;
+  }
+
+  function handleFileOpSuccess(outcome: CopyMoveDeleteOutcome) {
     const operation = fileOpDialog?.operation ?? "copy";
     // A move changes the file's id; a delete removes it entirely — either way the panel is
     // keyed to an id that no longer refers to the (still-open) item, so close it. A copy
     // leaves the original file/id untouched, so the panel can stay open as-is. Mirrors
-    // App.tsx's handleFileOpSuccess exactly.
+    // App.tsx's handleFileOpSuccess exactly. selectedId is already null for a batch operation
+    // (the batch panel and detail panel are never open at the same time), so this is a
+    // harmless no-op in that case.
     if (operation !== "copy") setSelectedId(null);
-    setBanner(operation === "copy" ? "File copied." : operation === "move" ? "File moved." : "File moved to Trash.");
+    setBanner(fileOpSuccessMessage(operation, outcome));
     refetch();
     refreshStats();
     refetchProjects(); // a file's project membership/aggregate counts can shift on copy/move/delete
@@ -251,9 +270,12 @@ export default function CustomFilesTabPanel({
         itemLabel="audio file"
         isDark={isDark}
         allTags={allTags}
+        itemType="files"
+        selectedIds={[...selectedFileIds]}
         onClose={() => setShowBatchPanel(false)}
         onApplyScore={handleBatchFileScore}
         onApplyTag={handleBatchFileTag}
+        onBatchOperation={handleBatchOperation}
       />
 
       <CopyMoveDeleteDialog

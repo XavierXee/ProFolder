@@ -1,6 +1,33 @@
 import { useEffect, useRef, useState } from "react";
 import { ScoreEditor } from "./ScoreEditor.js";
 import { TagAutocompleteInput } from "./TagAutocompleteInput.js";
+import { isDescendantOrSelf } from "./ScanFolderPanel.js";
+import type { CopyMoveDeleteItemType, CopyMoveDeleteOperation } from "./CopyMoveDeleteDialog.js";
+
+/** For a Projects batch, removes any id whose path is a descendant of another id's path also
+ * present in the same batch. Why: `POST /api/projects/batch/move`/`batch/copy` process `ids`
+ * sequentially, re-reading each project's *current* path from the DB on each iteration — if
+ * an ancestor project in the batch is processed first, its subtree (including any
+ * still-pending descendant id from the same batch) gets rekeyed to the new location as a side
+ * effect, so the loop then moves the descendant a *second* time, out from under its just-moved
+ * ancestor and flattening it into the destination instead of staying nested (see docs/TODO.md's
+ * Copy/Move/Delete Task 8 follow-up). Excluding the descendant client-side avoids ever sending
+ * that combination. Not applicable to Files batches — files have no nesting relationship to
+ * each other. Exported because it's directly unit-tested (this app's convention, see
+ * the project notes).
+ */
+export function excludeNestedProjectIds(ids: string[], projectPaths: { id: string; path: string }[]): string[] {
+  const pathById = new Map(projectPaths.map((p) => [p.id, p.path]));
+  return ids.filter((id) => {
+    const path = pathById.get(id);
+    if (path === undefined) return true;
+    return !ids.some((otherId) => {
+      if (otherId === id) return false;
+      const otherPath = pathById.get(otherId);
+      return otherPath !== undefined && isDescendantOrSelf(path, otherPath);
+    });
+  });
+}
 
 type Props = {
   open: boolean;
@@ -8,12 +35,41 @@ type Props = {
   itemLabel: string;
   isDark: boolean;
   allTags?: string[];
+  /** "files" or "projects" — which kind of item this batch panel edits. Drives whether the
+   * ancestor/descendant dedup above applies (projects only) before `onBatchOperation` is
+   * invoked; otherwise purely informational for the caller, which already knows it opens the
+   * matching `CopyMoveDeleteDialog` itemType. */
+  itemType: CopyMoveDeleteItemType;
+  /** Ids of the currently selected batch, used (after dedup, for projects) to build the
+   * CopyMoveDeleteDialog target when a Copy/Move/Delete button below is clicked. */
+  selectedIds: string[];
+  /** id -> root-relative path for every currently *visible* project, used only when
+   * itemType === "projects" to run the ancestor/descendant dedup above. Ignored for
+   * itemType === "files". */
+  projectPaths?: { id: string; path: string }[];
   onClose: () => void;
   onApplyScore: (score: number | null) => Promise<void>;
   onApplyTag: (tag: string) => Promise<void>;
+  /** Opens the CopyMoveDeleteDialog (owned by the parent, not this panel) for the current
+   * batch with the given operation and (for a Projects batch) already-deduped ids — mirrors
+   * FileDetailPanel/ProjectDetailPanel's onFileOperation/onProjectOperation pattern. */
+  onBatchOperation: (operation: CopyMoveDeleteOperation, ids: string[]) => void;
 };
 
-export default function BatchEditPanel({ open, count, itemLabel, isDark, allTags = [], onClose, onApplyScore, onApplyTag }: Props) {
+export default function BatchEditPanel({
+  open,
+  count,
+  itemLabel,
+  isDark,
+  allTags = [],
+  itemType,
+  selectedIds,
+  projectPaths = [],
+  onClose,
+  onApplyScore,
+  onApplyTag,
+  onBatchOperation,
+}: Props) {
   const [lastScore, setLastScore] = useState<number | null>(null);
   const [scoreSaving, setScoreSaving] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -47,6 +103,11 @@ export default function BatchEditPanel({ open, count, itemLabel, isDark, allTags
     } finally {
       setScoreSaving(false);
     }
+  }
+
+  function handleOperationClick(operation: CopyMoveDeleteOperation) {
+    const ids = itemType === "projects" ? excludeNestedProjectIds(selectedIds, projectPaths) : selectedIds;
+    onBatchOperation(operation, ids);
   }
 
   async function handleAddTag(raw: string) {
@@ -156,6 +217,36 @@ export default function BatchEditPanel({ open, count, itemLabel, isDark, allTags
                 ))}
               </div>
             )}
+          </div>
+
+          <div className={`border-t ${divider}`} />
+
+          <div>
+            <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Copy / Move / Delete</p>
+            <p className={`text-xs mb-3 ${meta}`}>
+              Applies to all {count} selected {itemLabel}
+              {count === 1 ? "" : "s"}.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleOperationClick("copy")}
+                className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+              >
+                Copy
+              </button>
+              <button
+                onClick={() => handleOperationClick("move")}
+                className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+              >
+                Move
+              </button>
+              <button
+                onClick={() => handleOperationClick("delete")}
+                className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
 

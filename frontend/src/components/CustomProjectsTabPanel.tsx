@@ -169,12 +169,33 @@ export default function CustomProjectsTabPanel({
     setProjectOpDialog({ operation, target: { kind: "single", id: project.id, name: project.name }, excludedPath: project.path });
   }
 
-  function handleProjectOpSuccess(_outcome: CopyMoveDeleteOutcome) {
+  // Reuses the same projectOpDialog state/dialog as the single-item operation above —
+  // CopyMoveDeleteTarget already has a "batch" variant. excludedPath is never set here
+  // (batches have no single well-defined "own folder" — the ancestor/descendant case is
+  // handled by BatchEditPanel's own excludeNestedProjectIds dedup before this is called).
+  // Mirrors App.tsx's handleProjectsBatchOperation exactly.
+  function handleBatchOperation(operation: CopyMoveDeleteOperation, ids: string[]) {
+    setProjectOpDialog({ operation, target: { kind: "batch", ids, count: ids.length } });
+  }
+
+  // Mirrors App.tsx's copyMoveDeleteSuccessMessage: a single item is always 1/0 (see
+  // CopyMoveDeleteOutcome's doc comment), so keeps the original singular wording; a batch
+  // reports how many of the ids sent actually succeeded and calls out a partial failure.
+  function projectOpSuccessMessage(operation: CopyMoveDeleteOperation, outcome: CopyMoveDeleteOutcome): string {
+    const verb = operation === "copy" ? "copied" : operation === "move" ? "moved" : "moved to Trash";
+    if (outcome.succeededCount === 1 && outcome.failedCount === 0) return `Folder ${verb}.`;
+    if (outcome.failedCount === 0) return `${outcome.succeededCount} folders ${verb}.`;
+    return `${outcome.succeededCount} of ${outcome.succeededCount + outcome.failedCount} folders ${verb}; ${outcome.failedCount} failed.`;
+  }
+
+  function handleProjectOpSuccess(outcome: CopyMoveDeleteOutcome) {
     const operation = projectOpDialog?.operation ?? "copy";
     // Mirrors App.tsx's handleProjectOpSuccess: a move/delete invalidates the id this panel's
     // detail view is keyed to, so close it; a copy leaves the original project/id untouched.
+    // selectedProjectId is already null for a batch operation (the batch panel and detail
+    // panel are never open at the same time), so this is a harmless no-op in that case.
     if (operation !== "copy") setSelectedProjectId(null);
-    setBanner(operation === "copy" ? "Folder copied." : operation === "move" ? "Folder moved." : "Folder moved to Trash.");
+    setBanner(projectOpSuccessMessage(operation, outcome));
     refetch();
     refetchFiles(); // a project's member files move/disappear along with it on move/delete
     refreshStats();
@@ -235,9 +256,13 @@ export default function CustomProjectsTabPanel({
         itemLabel="project folder"
         isDark={isDark}
         allTags={allTags}
+        itemType="projects"
+        selectedIds={[...selectedProjectIds]}
+        projectPaths={projects.map((p) => ({ id: p.id, path: p.path }))}
         onClose={() => setShowBatchPanel(false)}
         onApplyScore={handleBatchProjectScore}
         onApplyTag={handleBatchProjectTag}
+        onBatchOperation={handleBatchOperation}
       />
 
       <CopyMoveDeleteDialog

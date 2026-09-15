@@ -20,6 +20,9 @@ vi.mock("../../api/client.js", () => ({
   copyProject: vi.fn(),
   moveProject: vi.fn(),
   deleteProject: vi.fn(),
+  batchCopyProjects: vi.fn(),
+  batchMoveProjects: vi.fn(),
+  batchDeleteProjects: vi.fn(),
 }));
 
 import * as api from "../../api/client.js";
@@ -37,6 +40,9 @@ const mockGetFolderTree = vi.mocked(api.getFolderTree);
 const mockCopyProject = vi.mocked(api.copyProject);
 const mockMoveProject = vi.mocked(api.moveProject);
 const mockDeleteProject = vi.mocked(api.deleteProject);
+const mockBatchCopyProjects = vi.mocked(api.batchCopyProjects);
+const mockBatchMoveProjects = vi.mocked(api.batchMoveProjects);
+const mockBatchDeleteProjects = vi.mocked(api.batchDeleteProjects);
 
 type ProjectRow = Project & { audioFileCount: number };
 
@@ -147,6 +153,9 @@ beforeEach(() => {
   mockCopyProject.mockReset().mockResolvedValue({} as any);
   mockMoveProject.mockReset().mockResolvedValue({} as any);
   mockDeleteProject.mockReset().mockResolvedValue({} as any);
+  mockBatchCopyProjects.mockReset().mockResolvedValue({ succeeded: ["p1", "p2"], failed: [] });
+  mockBatchMoveProjects.mockReset().mockResolvedValue({ succeeded: ["p1", "p2"], failed: [] });
+  mockBatchDeleteProjects.mockReset().mockResolvedValue({ succeeded: ["p1", "p2"], failed: [] });
 });
 
 describe("CustomProjectsTabPanel - locked filters seed the initial fetch", () => {
@@ -570,6 +579,88 @@ describe("CustomProjectsTabPanel - Copy/Move/Delete wiring", () => {
     expect(props.setBanner).toHaveBeenCalledWith("Folder moved to Trash.");
     expect(screen.queryByRole("dialog", { name: "Folder detail: Amen Break" })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: 'Move to Trash "Amen Break"' })).not.toBeInTheDocument();
+  });
+});
+
+describe("CustomProjectsTabPanel - batch Copy/Move/Delete wiring", () => {
+  it("opens the CopyMoveDeleteDialog for the selected batch when Move is clicked from the batch panel", async () => {
+    // Distinct, non-nested paths: the two projects are siblings, so the ancestor/descendant
+    // dedup should leave both ids in the batch.
+    const projects = [
+      makeProject({ id: "p1", name: "Amen Break", path: "/music/Amen Break" }),
+      makeProject({ id: "p2", name: "Break Beat", path: "/music/Break Beat" }),
+    ];
+    mockGetProjects.mockResolvedValue(makePaged({ projects, total: 2 }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    await waitFor(() => expect(screen.getByText("Amen Break")).toBeInTheDocument());
+    await user.click(screen.getByRole("checkbox", { name: "Select Amen Break" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Break Beat" }));
+    await user.click(screen.getByRole("button", { name: /Batch Edit/ }));
+
+    const batchDialog = screen.getByRole("dialog", { name: "Batch edit project folders" });
+    await user.click(within(batchDialog).getByRole("button", { name: "Move" }));
+
+    expect(screen.getByRole("dialog", { name: "Move 2 projects" })).toBeInTheDocument();
+  });
+
+  it("on a successful batch Delete: calls api.batchDeleteProjects with both ids, refetches locally, calls refetchFiles + refreshStats, and sets the banner", async () => {
+    const projects = [
+      makeProject({ id: "p1", name: "Amen Break", path: "/music/Amen Break" }),
+      makeProject({ id: "p2", name: "Break Beat", path: "/music/Break Beat" }),
+    ];
+    mockGetProjects.mockResolvedValue(makePaged({ projects, total: 2 }));
+    const user = userEvent.setup();
+    const { props } = renderPanel();
+
+    await waitFor(() => expect(screen.getByText("Amen Break")).toBeInTheDocument());
+    await user.click(screen.getByRole("checkbox", { name: "Select Amen Break" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Break Beat" }));
+    await user.click(screen.getByRole("button", { name: /Batch Edit/ }));
+
+    const batchDialog = screen.getByRole("dialog", { name: "Batch edit project folders" });
+    await user.click(within(batchDialog).getByRole("button", { name: "Delete" }));
+
+    const opDialog = screen.getByRole("dialog", { name: "Move to Trash 2 projects" });
+    const callsBefore = mockGetProjects.mock.calls.length;
+    await user.click(within(opDialog).getByRole("button", { name: "Move to Trash" }));
+
+    await waitFor(() => expect(mockBatchDeleteProjects).toHaveBeenCalledWith(["p1", "p2"]));
+    await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(callsBefore + 1));
+    expect(props.refetchFiles).toHaveBeenCalledTimes(1);
+    expect(props.refreshStats).toHaveBeenCalledTimes(1);
+    expect(props.setBanner).toHaveBeenCalledWith("2 folders moved to Trash.");
+    // The batch panel itself stays open (mirrors the existing batch score/tag behavior).
+    // BatchEditPanel is permanently mounted (CSS transform toggles visibility rather than
+    // unmounting), so its dialog role/name is in the DOM regardless of open/closed state —
+    // the open/closed state has to be checked via the translate-x-0/translate-x-full class.
+    expect(screen.getByRole("dialog", { name: "Batch edit project folders" })).toHaveClass("translate-x-0");
+  });
+
+  it("excludes a selected nested sub-project from a batch Move, sending only the parent's id", async () => {
+    // "Break Beat" is selected alongside its own nested sub-project "Break Beat/Stems" — the
+    // ancestor/descendant dedup (BatchEditPanel's excludeNestedProjectIds, driven by the
+    // projectPaths this panel passes down from its own currently-visible `projects` list)
+    // should drop the descendant before the batch request is ever sent.
+    const parent = makeProject({ id: "p1", name: "Break Beat", path: "/music/Break Beat" });
+    const child = makeProject({ id: "p2", name: "Stems", path: "/music/Break Beat/Stems" });
+    mockGetProjects.mockResolvedValue(makePaged({ projects: [parent, child], total: 2 }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    await waitFor(() => expect(screen.getByText("Break Beat")).toBeInTheDocument());
+    await user.click(screen.getByRole("checkbox", { name: "Select Break Beat" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Stems" }));
+    await user.click(screen.getByRole("button", { name: /Batch Edit/ }));
+
+    const batchDialog = screen.getByRole("dialog", { name: "Batch edit project folders" });
+    await user.click(within(batchDialog).getByRole("button", { name: "Move" }));
+
+    // Only 1 project (the parent) reaches the dialog's target, not the 2 originally selected —
+    // still a "batch" target (kind isn't downgraded to "single" by the dedup), so the title is
+    // count-based, not name-based.
+    expect(screen.getByRole("dialog", { name: "Move 1 project" })).toBeInTheDocument();
   });
 });
 

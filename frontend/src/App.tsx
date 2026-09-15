@@ -37,10 +37,16 @@ function loadStoredIsDark(): boolean {
  * custom Files/Projects tabs. A single-item request either resolves as a full success
  * (outcome.succeededCount === 1) or throws (handled via onError, never onSuccess) — see
  * CopyMoveDeleteDialog's `runSingle`/doc comment — so no partial-failure wording is needed. */
-function copyMoveDeleteSuccessMessage(operation: CopyMoveDeleteOperation, itemLabel: "File" | "Folder"): string {
-  if (operation === "copy") return `${itemLabel} copied.`;
-  if (operation === "move") return `${itemLabel} moved.`;
-  return `${itemLabel} moved to Trash.`;
+function copyMoveDeleteSuccessMessage(operation: CopyMoveDeleteOperation, itemLabel: "File" | "Folder", outcome: CopyMoveDeleteOutcome): string {
+  const verb = operation === "copy" ? "copied" : operation === "move" ? "moved" : "moved to Trash";
+  // A single item resolves 1/0 or throws (see CopyMoveDeleteOutcome's doc comment) — keep the
+  // original singular wording for that case unchanged. A batch reports how many of the ids
+  // sent actually succeeded, so mention the count, and call out a partial failure explicitly
+  // rather than silently reporting success for ids that failed.
+  if (outcome.succeededCount === 1 && outcome.failedCount === 0) return `${itemLabel} ${verb}.`;
+  const plural = `${itemLabel}s`;
+  if (outcome.failedCount === 0) return `${outcome.succeededCount} ${plural} ${verb}.`;
+  return `${outcome.succeededCount} of ${outcome.succeededCount + outcome.failedCount} ${plural} ${verb}; ${outcome.failedCount} failed.`;
 }
 
 export default function App() {
@@ -277,22 +283,37 @@ export default function App() {
     setProjectOpDialog({ operation, target: { kind: "single", id: project.id, name: project.name }, excludedPath: project.path });
   }
 
-  function handleFileOpSuccess(_outcome: CopyMoveDeleteOutcome) {
+  // Reuses the same fileOpDialog/projectOpDialog state and handlers as the single-item
+  // operations above — CopyMoveDeleteTarget already has a "batch" variant, so nothing else
+  // needs to change to support the batch case. excludedPath is never set here (batches have
+  // no single well-defined "own folder" — see excludeNestedProjectIds' doc comment in
+  // BatchEditPanel.tsx for how the ancestor/descendant case is handled instead).
+  function handleFilesBatchOperation(operation: CopyMoveDeleteOperation, ids: string[]) {
+    setFileOpDialog({ operation, target: { kind: "batch", ids, count: ids.length } });
+  }
+
+  function handleProjectsBatchOperation(operation: CopyMoveDeleteOperation, ids: string[]) {
+    setProjectOpDialog({ operation, target: { kind: "batch", ids, count: ids.length } });
+  }
+
+  function handleFileOpSuccess(outcome: CopyMoveDeleteOutcome) {
     const operation = fileOpDialog?.operation ?? "copy";
     // A move changes the file's id; a delete removes it entirely — either way the panel is
     // keyed to an id that no longer refers to the (still-open) item, so close it. A copy
-    // leaves the original file/id untouched, so the panel can stay open as-is.
+    // leaves the original file/id untouched, so the panel can stay open as-is. selectedId is
+    // already null for a batch operation (the batch panel and detail panel are never open at
+    // the same time), so this is a harmless no-op in that case.
     if (operation !== "copy") setSelectedId(null);
-    setBanner(copyMoveDeleteSuccessMessage(operation, "File"));
+    setBanner(copyMoveDeleteSuccessMessage(operation, "File", outcome));
     refetch();
     refreshStats();
     refetchProjects(); // a file's project membership/aggregate counts can shift on copy/move/delete
   }
 
-  function handleProjectOpSuccess(_outcome: CopyMoveDeleteOutcome) {
+  function handleProjectOpSuccess(outcome: CopyMoveDeleteOutcome) {
     const operation = projectOpDialog?.operation ?? "copy";
     if (operation !== "copy") setSelectedProjectId(null);
-    setBanner(copyMoveDeleteSuccessMessage(operation, "Folder"));
+    setBanner(copyMoveDeleteSuccessMessage(operation, "Folder", outcome));
     refetchProjects();
     refetch(); // a project's member files move/disappear along with it on move/delete
     refreshStats();
@@ -733,9 +754,12 @@ export default function App() {
         itemLabel="audio file"
         isDark={isDark}
         allTags={allTags}
+        itemType="files"
+        selectedIds={[...selectedFileIds]}
         onClose={() => setShowFilesBatchPanel(false)}
         onApplyScore={handleBatchFileScore}
         onApplyTag={handleBatchFileTag}
+        onBatchOperation={handleFilesBatchOperation}
       />
 
       <BatchEditPanel
@@ -744,9 +768,13 @@ export default function App() {
         itemLabel="project folder"
         isDark={isDark}
         allTags={allTags}
+        itemType="projects"
+        selectedIds={[...selectedProjectIds]}
+        projectPaths={projects.map((p) => ({ id: p.id, path: p.path }))}
         onClose={() => setShowProjectsBatchPanel(false)}
         onApplyScore={handleBatchProjectScore}
         onApplyTag={handleBatchProjectTag}
+        onBatchOperation={handleProjectsBatchOperation}
       />
 
       <CreateCustomTabModal

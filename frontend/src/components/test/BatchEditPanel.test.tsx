@@ -10,9 +10,12 @@ function renderPanel(overrides: Partial<Parameters<typeof BatchEditPanel>[0]> = 
     itemLabel: "audio file",
     isDark: true,
     allTags: [] as string[],
+    itemType: "files" as const,
+    selectedIds: ["file-1", "file-2", "file-3"],
     onClose: () => {},
     onApplyScore: vi.fn().mockResolvedValue(undefined),
     onApplyTag: vi.fn().mockResolvedValue(undefined),
+    onBatchOperation: vi.fn(),
     ...overrides,
   };
   return { ...render(<BatchEditPanel {...props} />), props };
@@ -197,9 +200,12 @@ describe("BatchEditPanel - reset on open", () => {
         itemLabel="audio file"
         isDark={true}
         allTags={[]}
+        itemType="files"
+        selectedIds={["file-1", "file-2", "file-3"]}
         onClose={() => {}}
         onApplyScore={onApplyScore}
         onApplyTag={onApplyTag}
+        onBatchOperation={() => {}}
       />
     );
     rerender(
@@ -209,9 +215,12 @@ describe("BatchEditPanel - reset on open", () => {
         itemLabel="audio file"
         isDark={true}
         allTags={[]}
+        itemType="files"
+        selectedIds={["file-1", "file-2", "file-3"]}
         onClose={() => {}}
         onApplyScore={onApplyScore}
         onApplyTag={onApplyTag}
+        onBatchOperation={() => {}}
       />
     );
 
@@ -219,5 +228,108 @@ describe("BatchEditPanel - reset on open", () => {
     expect(screen.queryByText("4/5")).not.toBeInTheDocument();
     expect(screen.getByRole("combobox")).toHaveValue("");
     screen.getAllByRole("radio").forEach((radio) => expect(radio).toHaveAttribute("aria-checked", "false"));
+  });
+});
+
+describe("BatchEditPanel - Copy/Move/Delete actions", () => {
+  it("calls onBatchOperation with 'copy' and the full selected id list for a Files batch", async () => {
+    const onBatchOperation = vi.fn();
+    const user = userEvent.setup();
+    renderPanel({ itemType: "files", selectedIds: ["file-1", "file-2", "file-3"], onBatchOperation });
+
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    expect(onBatchOperation).toHaveBeenCalledTimes(1);
+    expect(onBatchOperation).toHaveBeenCalledWith("copy", ["file-1", "file-2", "file-3"]);
+  });
+
+  it("calls onBatchOperation with 'move' and the full selected id list for a Files batch", async () => {
+    const onBatchOperation = vi.fn();
+    const user = userEvent.setup();
+    renderPanel({ itemType: "files", selectedIds: ["file-1", "file-2"], onBatchOperation });
+
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    expect(onBatchOperation).toHaveBeenCalledWith("move", ["file-1", "file-2"]);
+  });
+
+  it("calls onBatchOperation with 'delete' and the full selected id list for a Files batch", async () => {
+    const onBatchOperation = vi.fn();
+    const user = userEvent.setup();
+    renderPanel({ itemType: "files", selectedIds: ["file-1", "file-2"], onBatchOperation });
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(onBatchOperation).toHaveBeenCalledWith("delete", ["file-1", "file-2"]);
+  });
+
+  it("passes through the full id list unchanged for a Projects batch with no nesting relationship", async () => {
+    const onBatchOperation = vi.fn();
+    const user = userEvent.setup();
+    renderPanel({
+      itemType: "projects",
+      selectedIds: ["proj-a", "proj-b"],
+      projectPaths: [
+        { id: "proj-a", path: "Music/Alpha" },
+        { id: "proj-b", path: "Music/Beta" },
+      ],
+      onBatchOperation,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    expect(onBatchOperation).toHaveBeenCalledWith("move", ["proj-a", "proj-b"]);
+  });
+
+  it("excludes a selected sub-project from the batch target when its parent project is also selected", async () => {
+    const onBatchOperation = vi.fn();
+    const user = userEvent.setup();
+    renderPanel({
+      itemType: "projects",
+      selectedIds: ["parent-id", "child-id", "unrelated-id"],
+      projectPaths: [
+        { id: "parent-id", path: "Music/Parent Project" },
+        { id: "child-id", path: "Music/Parent Project/Nested Sub-Project" },
+        { id: "unrelated-id", path: "Music/Unrelated Project" },
+      ],
+      onBatchOperation,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    expect(onBatchOperation).toHaveBeenCalledWith("move", ["parent-id", "unrelated-id"]);
+  });
+
+  it("applies the same dedup for Copy and Delete, not just Move", async () => {
+    const onBatchOperation = vi.fn();
+    const user = userEvent.setup();
+    const props = {
+      itemType: "projects" as const,
+      selectedIds: ["parent-id", "child-id"],
+      projectPaths: [
+        { id: "parent-id", path: "Music/Parent Project" },
+        { id: "child-id", path: "Music/Parent Project/Nested Sub-Project" },
+      ],
+      onBatchOperation,
+    };
+    renderPanel(props);
+
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(onBatchOperation).toHaveBeenNthCalledWith(1, "copy", ["parent-id"]);
+    expect(onBatchOperation).toHaveBeenNthCalledWith(2, "delete", ["parent-id"]);
+  });
+
+  it("does not close the panel after invoking onBatchOperation (mirrors the score/tag actions, which also stay open)", async () => {
+    const onClose = vi.fn();
+    const onBatchOperation = vi.fn();
+    const user = userEvent.setup();
+    renderPanel({ onClose, onBatchOperation });
+
+    await user.click(screen.getByRole("button", { name: "Move" }));
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Batch edit audio files" })).toBeInTheDocument();
   });
 });
