@@ -188,6 +188,27 @@
 
 15.7. Each custom tab is shown in the tab bar with its name and its own "×" delete button; clicking "×" opens a confirmation dialog, and deleting is permanent (no undo, no soft-delete). Deleting the tab that is currently active falls back to the default "Project Folders" tab.
 
+## 16. Copy, Move & Delete
+
+16.1. Copy, Move, and Delete are available for a single audio file (from the File detail panel), a single project folder (from the Project detail panel), and for a multi-row batch selection (from the Batch Edit panel) on either view — in both the default "Project Folders"/"Audio Files" tabs and any custom tab of either type.
+
+16.2. Delete moves the item to the macOS Trash via Finder (`MacTrashService`, AppleScript `tell application "Finder" to delete`) — it is reversible, not a permanent filesystem deletion. This is an explicit product decision, not an oversight.
+
+16.3. Copy and Move destinations are restricted to folders inside the currently configured music root — an explicit product decision. The destination folder picker (`DestinationFolderPicker`) is populated from `GET /api/folders/tree` and only ever shows folders inside the root; the backend independently re-validates containment (`isWithinRoot`, symlink-safe) on every copy/move route regardless of what the picker sent, and rejects (400) a request whose resolved destination falls outside it.
+
+16.4. Moving or copying a project folder relocates/duplicates its whole subtree — the project itself, every nested sub-project inside it, and every audio file contained anywhere in that subtree — as a single atomic database transaction (`moveProjectSubtree`/`cloneProjectSubtree` in `src/database/repositories/subtreeRekey.ts`), performed by rekeying/cloning the existing rows' id/path fields in place rather than removing and re-discovering them via a rescan. Status, tags, and score are preserved unchanged on every affected row at the new location.
+
+16.5. Moving or copying a single audio file similarly preserves its status, tags, and score (`moveFile`/`cloneFile` in `src/database/repositories/audioFileRepository.ts`), and its project association is recomputed from its new location (nearest DAW-classified ancestor project, or none) rather than carried over from the old location.
+
+16.6. Name-collision behavior differs by operation: Move rejects (409, no partial write) if an item with the same name already exists at the destination, for both files and project folders. Copy never rejects on a name collision — it auto-renames Finder-style instead (`kick.wav` → `kick copy.wav` → `kick copy 2.wav`; `My Project` → `My Project copy` → `My Project copy 2`), for both files and project folders.
+
+16.7. Batch Copy/Move/Delete report success and failure per item, not all-or-nothing: each selected id is processed independently server-side, and a failure on one item (not found, name collision, path outside root, filesystem error) does not roll back or block items that already succeeded. The batch panel surfaces a summary banner reflecting the actual succeeded/failed counts.
+
+16.8. Known, deliberately deferred limitations (not yet fixed):
+- A destination directory that does not yet exist on disk produces a misleading error message ("Refusing to operate on a destination directory outside the configured music root") from the copy/move routes — the response is safe (400, no partial writes), but the wording is inaccurate, since a nonexistent path and a genuinely outside-root path both fail closed the same way through `isWithinRoot`'s `realpath`-based check with nothing distinguishing the two causes.
+- `POST /api/files/batch/copy` does not deduplicate a repeated id within a single request — it produces two independent auto-renamed clones instead of collapsing them. `batch/move` and `DELETE /batch` don't have this problem (the second occurrence of the same id naturally fails, since the row no longer exists there after the first occurrence is processed).
+- `POST /api/projects/batch/move` (and `batch/copy`) process a batch's ids sequentially, re-reading each project's current path from the database on every iteration; if a batch selection contains both a project and one of its own nested sub-projects, moving the ancestor first rekeys the descendant's row as a side effect, then the loop moves the already-relocated descendant again — silently flattening it out of its parent, with the outcome depending on id order rather than erroring. The UI's own batch-selection flow defends against this (`BatchEditPanel.tsx`'s `excludeNestedProjectIds` drops any selected project that is a descendant of another selected project before sending the request), but the raw API itself has no such guard for a non-UI caller.
+
 ---
 
 ## Appendix A — Key Files (for a Developer/Tester, not part of the requirements themselves)
@@ -196,6 +217,7 @@
 - Scanning: `src/scanner/{walk,ignoreRules,dawDetector,dawTypes,mediaDetector,duplicateDetector,projectDetector,audioDetector,folderTree,scanner}.ts`
 - API: `src/api/routes/{files,projects,config,scan,folders,reveal,stats,tags,customTabs}.ts`, `src/api/server.ts`
 - Custom tabs: `src/database/repositories/customTabRepository.ts`, `frontend/src/components/{CreateCustomTabModal,DeleteTabConfirmDialog,CustomFilesTabPanel,CustomProjectsTabPanel}.tsx`
+- Copy/Move/Delete: `src/services/{FileOpsService,TrashService}.ts`, `src/database/repositories/subtreeRekey.ts` (plus `moveFile`/`cloneFile` in `audioFileRepository.ts`), `frontend/src/components/{CopyMoveDeleteDialog,DestinationFolderPicker}.tsx`
 - Linking logic: `src/database/repositories/linkSync.ts`
 - Config: `src/config/{musicRoot,scanSettings,config}.ts`
 - Frontend: `frontend/src/App.tsx`, `frontend/src/components/*`, `frontend/src/hooks/{useAudioFiles,useProjects}.ts`, `frontend/src/api/client.ts`
