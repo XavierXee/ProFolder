@@ -134,6 +134,7 @@ function renderPanel(overrides: Partial<Parameters<typeof CustomProjectsTabPanel
     scanCompletionSignal: null as number | null,
     playerActive: false,
     setBanner: vi.fn(),
+    musicRoot: "/music",
     ...overrides,
   };
   return { ...render(<CustomProjectsTabPanel {...props} />), props };
@@ -149,7 +150,10 @@ beforeEach(() => {
   mockBatchUpdateProjectScore.mockReset().mockResolvedValue({ updated: 2 });
   mockBatchAddProjectTags.mockReset().mockResolvedValue({ updated: 2 });
   mockReveal.mockReset().mockResolvedValue(undefined);
-  mockGetFolderTree.mockReset().mockResolvedValue({ name: "music", path: "/music", type: "folder", children: [] });
+  // Root-relative shape (see src/scanner/folderTree.ts): the root's own path is "", never
+  // an absolute filesystem path — musicRoot ("/music" above) is what CopyMoveDeleteDialog
+  // joins it onto before calling any copy/move API function.
+  mockGetFolderTree.mockReset().mockResolvedValue({ name: "music", path: "", type: "folder", children: [] });
   mockCopyProject.mockReset().mockResolvedValue({} as any);
   mockMoveProject.mockReset().mockResolvedValue({} as any);
   mockDeleteProject.mockReset().mockResolvedValue({} as any);
@@ -434,6 +438,7 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refetchFiles={() => {}}
         playerActive={false}
         setBanner={() => {}}
+        musicRoot="/music"
         scanCompletionSignal={null}
       />
     );
@@ -450,6 +455,7 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refetchFiles={() => {}}
         playerActive={false}
         setBanner={() => {}}
+        musicRoot="/music"
         scanCompletionSignal={3}
       />
     );
@@ -475,6 +481,7 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refetchFiles={() => {}}
         playerActive={false}
         setBanner={() => {}}
+        musicRoot="/music"
         scanCompletionSignal={5}
       />
     );
@@ -493,6 +500,7 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refetchFiles={() => {}}
         playerActive={false}
         setBanner={() => {}}
+        musicRoot="/music"
         scanCompletionSignal={6}
       />
     );

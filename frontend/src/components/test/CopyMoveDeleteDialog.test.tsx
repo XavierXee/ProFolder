@@ -1,7 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import CopyMoveDeleteDialog, { buildExplanationText, type CopyMoveDeleteTarget } from "../CopyMoveDeleteDialog.js";
+import CopyMoveDeleteDialog, {
+  buildExplanationText,
+  resolveAbsoluteDestination,
+  toRelativePath,
+  type CopyMoveDeleteTarget,
+} from "../CopyMoveDeleteDialog.js";
 import type { FolderNode } from "../../api/client.js";
 
 vi.mock("../../api/client.js", () => ({
@@ -36,11 +41,15 @@ const mockBatchCopyProjects = vi.mocked(api.batchCopyProjects);
 const mockBatchMoveProjects = vi.mocked(api.batchMoveProjects);
 const mockBatchDeleteProjects = vi.mocked(api.batchDeleteProjects);
 
-// Two-level fixture: root "/music" > "Artist" ("/music/Artist") > "Sub" ("/music/Artist/Sub").
-const subNode: FolderNode = { name: "Sub", path: "/music/Artist/Sub", type: "folder", children: [] };
-const artistNode: FolderNode = { name: "Artist", path: "/music/Artist", type: "folder", children: [subNode] };
-const otherNode: FolderNode = { name: "Other", path: "/music/Other", type: "folder", children: [] };
-const tree: FolderNode = { name: "music", path: "/music", type: "folder", children: [artistNode, otherNode] };
+// Two-level fixture matching `buildFolderTree`'s REAL root-relative shape (see
+// src/scanner/folderTree.ts): the root's own path is "", and every other node's path is a
+// "/"-joined path relative to that root — never an absolute filesystem path. The mock music
+// root below ("/music") is what the dialog joins these relative paths onto before calling the
+// API, exactly like the real backend/frontend boundary.
+const subNode: FolderNode = { name: "Sub", path: "Artist/Sub", type: "folder", children: [] };
+const artistNode: FolderNode = { name: "Artist", path: "Artist", type: "folder", children: [subNode] };
+const otherNode: FolderNode = { name: "Other", path: "Other", type: "folder", children: [] };
+const tree: FolderNode = { name: "music", path: "", type: "folder", children: [artistNode, otherNode] };
 
 function renderDialog(overrides: Partial<Parameters<typeof CopyMoveDeleteDialog>[0]> = {}) {
   const props = {
@@ -50,6 +59,9 @@ function renderDialog(overrides: Partial<Parameters<typeof CopyMoveDeleteDialog>
     itemType: "files" as const,
     target: { kind: "single", id: "file-1", name: "track.mp3" } as CopyMoveDeleteTarget,
     excludedPath: undefined,
+    // The music root is an ABSOLUTE filesystem path (matching api.getConfig()'s musicRoot) —
+    // distinct from the tree's own relative path convention above.
+    musicRoot: "/music",
     onClose: vi.fn(),
     onSuccess: vi.fn(),
     onError: vi.fn(),
@@ -109,6 +121,40 @@ describe("buildExplanationText", () => {
 
   it("delete, batch of projects, plural wording, Trash phrasing", () => {
     expect(buildExplanationText("delete", "projects", batch, null)).toBe("These 3 projects will be moved to the Trash.");
+  });
+});
+
+describe("resolveAbsoluteDestination", () => {
+  it("joins a non-empty relative path onto the music root", () => {
+    expect(resolveAbsoluteDestination("/music", "Artist")).toBe("/music/Artist");
+    expect(resolveAbsoluteDestination("/music", "Artist/Sub")).toBe("/music/Artist/Sub");
+  });
+
+  it("resolves the tree root's own relative path (\"\") to the music root itself, not the music root plus a trailing slash", () => {
+    expect(resolveAbsoluteDestination("/music", "")).toBe("/music");
+  });
+
+  it("does not double up a slash when the music root already ends with one", () => {
+    expect(resolveAbsoluteDestination("/music/", "Artist")).toBe("/music/Artist");
+  });
+});
+
+describe("toRelativePath", () => {
+  it("strips the music root prefix from an absolute path inside it", () => {
+    expect(toRelativePath("/music", "/music/Artist")).toBe("Artist");
+    expect(toRelativePath("/music", "/music/Artist/Sub")).toBe("Artist/Sub");
+  });
+
+  it("resolves the music root itself to the empty string (the tree root's own path)", () => {
+    expect(toRelativePath("/music", "/music")).toBe("");
+  });
+
+  it("does not double up a slash when the music root already ends with one", () => {
+    expect(toRelativePath("/music/", "/music/Artist")).toBe("Artist");
+  });
+
+  it("falls back to returning the input unchanged if it isn't actually inside the music root (defensive only)", () => {
+    expect(toRelativePath("/music", "/elsewhere/Artist")).toBe("/elsewhere/Artist");
   });
 });
 
@@ -321,6 +367,38 @@ describe("CopyMoveDeleteDialog - correct client function per operation/type/targ
     await user.click(screen.getByRole("button", { name: "Move" }));
 
     await waitFor(() => expect(mockMoveFile).toHaveBeenCalledWith("f1", "/music/Artist"));
+  });
+
+  it("selecting the tree's own root node (relative path \"\") resolves to the music root itself, not the music root plus a trailing slash", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "copy", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" } });
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: "music" })).toBeInTheDocument());
+    await user.click(screen.getByRole("radio", { name: "music" }));
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(mockCopyFile).toHaveBeenCalledWith("f1", "/music"));
+  });
+
+  it("surfaces an error via onError (without calling the API) if Apply is somehow clicked before musicRoot has loaded", async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+    renderDialog({
+      operation: "copy",
+      itemType: "files",
+      target: { kind: "single", id: "f1", name: "a.wav" },
+      musicRoot: undefined,
+      onSuccess,
+      onError,
+    });
+
+    await selectDestination(user);
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith("Music root not loaded yet"));
+    expect(mockCopyFile).not.toHaveBeenCalled();
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 });
 

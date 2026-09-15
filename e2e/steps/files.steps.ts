@@ -305,6 +305,40 @@ const ALL_FILES_E2E_FIXTURES = [
   // leaking into an unrelated scenario's filtered view.
   "Scanning E2E Settings / Samples",
   "Scanning E2E Settings / Backup",
+  // "File Ops E2E ..." — Task 12's Copy/Move/Delete e2e fixtures (see
+  // e2e/features/file-ops/*.feature). "Delete Single"/"Batch Delete Alpha"/"Batch Delete Bravo"/
+  // "Custom Tab Delete" are each physically deleted by their own scenario (one-shot, never
+  // restored); "Picker Target" and "Cancel Target" are never mutated (their scenarios only ever
+  // Cancel, never Apply — see fileOps.steps.ts's doc comment for why). "keep.wav" lives inside
+  // the "File Ops E2E Picker Destination" folder (also registered below) and is itself scanned
+  // as its own row; it's never touched by any scenario, just present so that folder isn't empty.
+  "File Ops E2E Delete Single.wav",
+  "File Ops E2E Batch Delete Alpha.wav",
+  "File Ops E2E Batch Delete Bravo.wav",
+  "File Ops E2E Picker Target.wav",
+  "File Ops E2E Cancel Target.wav",
+  "File Ops E2E Custom Tab Delete.wav",
+  "File Ops E2E Picker Destination",
+  "keep.wav",
+  // "File Ops E2E Copy Source.wav" / "File Ops E2E Move Source.wav" / "File Ops E2E Project
+  // Track.wav" — this task's own copy/move/project-move e2e fixtures (see copy.feature/
+  // move.feature/project-move.feature). "Copy Source.wav" is exclusive to copy.feature and ends
+  // the scenario with TWO rows (the untouched original plus the new copy) — every other fixture
+  // in this table keeps its usual "exactly one row" invariant, so copy.feature's own assertions
+  // (not "I should see only these files in the table") are what check it, never this list. "Move
+  // Source.wav" is exclusive to move.feature and ends with exactly one row, relocated. "Project
+  // Track.wav" lives inside "File Ops E2E Project Move Source/" (registered in
+  // ALL_PROJECTS_E2E_FIXTURES below) and is exclusive to project-move.feature. "File Ops E2E Copy
+  // Destination"/"File Ops E2E Move Destination"/"File Ops E2E Project Move Destination" are each
+  // that scenario's own destination folder (each holding an untouched "keep.wav" placeholder,
+  // same convention as "File Ops E2E Picker Destination" above) — listed so a stray leak into
+  // another scenario's filtered view is caught by name, same rationale as every other entry here.
+  "File Ops E2E Copy Source.wav",
+  "File Ops E2E Move Source.wav",
+  "File Ops E2E Project Track.wav",
+  "File Ops E2E Copy Destination",
+  "File Ops E2E Move Destination",
+  "File Ops E2E Project Move Destination",
 ];
 
 // Asserts the visible row set is *exactly* the given filenames — every listed filename has a

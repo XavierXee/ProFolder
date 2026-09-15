@@ -99,6 +99,7 @@ function renderPanel(overrides: Partial<Parameters<typeof CustomFilesTabPanel>[0
     isPlaying: false,
     onPlayClick: vi.fn(),
     setBanner: vi.fn(),
+    musicRoot: "/music",
     ...overrides,
   };
   return { ...render(<CustomFilesTabPanel {...props} />), props };
@@ -112,7 +113,10 @@ beforeEach(() => {
   mockBatchUpdateFileScore.mockReset().mockResolvedValue({ updated: 2 });
   mockBatchAddFileTags.mockReset().mockResolvedValue({ updated: 2 });
   mockReveal.mockReset().mockResolvedValue(undefined);
-  mockGetFolderTree.mockReset().mockResolvedValue({ name: "music", path: "/music", type: "folder", children: [] });
+  // Root-relative shape (see src/scanner/folderTree.ts): the root's own path is "", never
+  // an absolute filesystem path — musicRoot ("/music" above) is what CopyMoveDeleteDialog
+  // joins it onto before calling any copy/move API function.
+  mockGetFolderTree.mockReset().mockResolvedValue({ name: "music", path: "", type: "folder", children: [] });
   mockCopyFile.mockReset().mockResolvedValue(makeFile());
   mockMoveFile.mockReset().mockResolvedValue(makeFile());
   mockDeleteFile.mockReset().mockResolvedValue(undefined);
@@ -378,6 +382,7 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
         isPlaying={false}
         onPlayClick={() => {}}
         setBanner={() => {}}
+        musicRoot="/music"
       />
     );
 
@@ -396,6 +401,7 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
         isPlaying={false}
         onPlayClick={() => {}}
         setBanner={() => {}}
+        musicRoot="/music"
       />
     );
 
@@ -423,6 +429,7 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
         isPlaying={false}
         onPlayClick={() => {}}
         setBanner={() => {}}
+        musicRoot="/music"
       />
     );
 
@@ -443,6 +450,7 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
         isPlaying={false}
         onPlayClick={() => {}}
         setBanner={() => {}}
+        musicRoot="/music"
       />
     );
 

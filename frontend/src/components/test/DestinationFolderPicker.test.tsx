@@ -14,11 +14,15 @@ import * as api from "../../api/client.js";
 const mockGetFolderTree = vi.mocked(api.getFolderTree);
 
 // Same three-level fixture shape as ScanFolderPanel.test.tsx: root > Grandparent > Parent > Child, plus a flat Sibling.
-const childNode: FolderNode = { name: "Child", path: "/music/Grandparent/Parent/Child", type: "folder", children: [] };
-const parentNode: FolderNode = { name: "Parent", path: "/music/Grandparent/Parent", type: "folder", children: [childNode] };
-const grandparentNode: FolderNode = { name: "Grandparent", path: "/music/Grandparent", type: "folder", children: [parentNode] };
-const siblingNode: FolderNode = { name: "Sibling", path: "/music/Sibling", type: "folder", children: [] };
-const tree: FolderNode = { name: "music", path: "/music", type: "folder", children: [grandparentNode, siblingNode] };
+// Paths match `buildFolderTree`'s REAL root-relative shape (src/scanner/folderTree.ts): the
+// root's own path is "", and every other node's path is a "/"-joined path relative to that
+// root — never an absolute filesystem path. This component never sees or produces an absolute
+// path itself; that conversion is the caller's (CopyMoveDeleteDialog's) responsibility.
+const childNode: FolderNode = { name: "Child", path: "Grandparent/Parent/Child", type: "folder", children: [] };
+const parentNode: FolderNode = { name: "Parent", path: "Grandparent/Parent", type: "folder", children: [childNode] };
+const grandparentNode: FolderNode = { name: "Grandparent", path: "Grandparent", type: "folder", children: [parentNode] };
+const siblingNode: FolderNode = { name: "Sibling", path: "Sibling", type: "folder", children: [] };
+const tree: FolderNode = { name: "music", path: "", type: "folder", children: [grandparentNode, siblingNode] };
 
 function Harness({
   excludedPath,

@@ -212,6 +212,34 @@ const ALL_PROJECTS_E2E_FIXTURES = [
   "Scanning E2E Settings",
   "Scanning E2E Settings/Samples",
   "Scanning E2E Settings/Backup",
+  // "File Ops E2E Picker Destination" — Task 12's Copy/Move/Delete destination-picker fixture
+  // (see e2e/features/file-ops/destination-picker.feature / cancel.feature). Has no DAW marker,
+  // but every visited folder gets its own project row regardless of DAW classification (same
+  // rationale as "Scanning E2E Exclusion Toggle" above) — this folder is only ever read (never
+  // mutated) by its scenarios, so it's stable for the whole suite run.
+  "File Ops E2E Picker Destination",
+  // "File Ops E2E Copy Destination" / "File Ops E2E Move Destination" — copy.feature's and
+  // move.feature's own destination folders (each a plain, no-DAW-marker folder holding an
+  // untouched "keep.wav" placeholder, same convention as "File Ops E2E Picker Destination"
+  // above). Neither scenario ever asserts anything about these folders' own project row — listed
+  // here only so a stray leak into another scenario's "only these projects" check is caught by
+  // name, same rationale as every other entry in this table.
+  "File Ops E2E Copy Destination",
+  "File Ops E2E Move Destination",
+  // "File Ops E2E Project Move Source" / "File Ops E2E Project Move Destination" —
+  // project-move.feature's own fixtures (see that file's doc comment). "Project Move Source" has
+  // a real Ableton (.als) marker and one audio file inside it ("File Ops E2E Project Track.wav",
+  // registered in ALL_FILES_E2E_FIXTURES above); it's the project this task's scenario moves. Its
+  // OWN row's id/path is exclusive to this scenario and physically rekeyed by the move (a one-shot
+  // mutation, never restored — same convention as every other mutating scenario in this
+  // directory), so — unlike every other name in this list, which stays fixed for the whole suite
+  // run — the row this name matches will, after project-move.feature's scenario runs, actually be
+  // found nested under "File Ops E2E Project Move Destination/" instead of at the top level (see
+  // that .feature file's own doc comment for why a plain substring match still finds it either
+  // way). "Project Move Destination" is the plain, no-DAW-marker destination folder (with its own
+  // untouched "keep.wav" placeholder) the source project is moved into.
+  "File Ops E2E Project Move Source",
+  "File Ops E2E Project Move Destination",
 ];
 
 // Asserts the visible row set is *exactly* the given names — every listed name has a row, and

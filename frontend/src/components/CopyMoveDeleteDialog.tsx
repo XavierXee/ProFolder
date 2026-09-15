@@ -27,11 +27,23 @@ type Props = {
   operation: CopyMoveDeleteOperation;
   itemType: CopyMoveDeleteItemType;
   target: CopyMoveDeleteTarget;
-  /** The item's own folder path. Only meaningful for a single PROJECT move (see the
-   * forwarding logic below for why) — pass it whenever `operation === "move"`,
-   * `itemType === "projects"`, and `target.kind === "single"`; harmless to omit/pass in
-   * any other combination since it's never forwarded to the picker there anyway. */
+  /** The item's own folder path, as an ABSOLUTE filesystem path (matching how the scanner
+   * always stores `Project.path`/`AudioFile.path` — see those models' doc comments). Only
+   * meaningful for a single PROJECT move (see the forwarding logic below for why) — pass it
+   * whenever `operation === "move"`, `itemType === "projects"`, and `target.kind === "single"`;
+   * harmless to omit/pass in any other combination since it's never forwarded to the picker
+   * there anyway. Converted to the tree's root-relative convention (via `toRelativePath`)
+   * before being forwarded to `DestinationFolderPicker`, which only ever deals in relative
+   * paths — see `musicRoot` below. */
   excludedPath?: string;
+  /** The music root as an ABSOLUTE filesystem path (e.g. from `api.getConfig()`'s
+   * `musicRoot`), or `undefined` while it hasn't loaded yet. `GET /api/folders/tree` (and
+   * therefore `DestinationFolderPicker`'s selection) reports paths relative to this root, but
+   * every copy/move backend route requires an absolute `destDir` — this dialog is the
+   * boundary that converts between the two, both for the destination the user picks
+   * (relative → absolute, right before the API call) and for `excludedPath` above
+   * (absolute → relative, before forwarding to the picker). */
+  musicRoot: string | undefined;
   onClose: () => void;
   onSuccess: (outcome: CopyMoveDeleteOutcome) => void;
   onError: (message: string) => void;
@@ -65,6 +77,32 @@ export function buildExplanationText(
   return `${subject} will be ${verb} ${preposition} ${location}.`;
 }
 
+/** Joins a picker-reported destination path (as returned by `DestinationFolderPicker`'s
+ * `onSelect` — see `buildFolderTree`'s doc comment in `src/scanner/folderTree.ts`: the tree's
+ * root reports `""`, every other node a `/`-joined path relative to that root) onto the
+ * absolute music root, since every copy/move backend route requires an absolute `destDir`
+ * (`isWithinRoot` resolves it via `fs.realpathSync`, which would otherwise resolve a relative
+ * string against the server process's cwd instead of the music root). Exported because it's
+ * directly unit-tested (this app's convention — see the project notes). */
+export function resolveAbsoluteDestination(musicRoot: string, relativePath: string): string {
+  if (relativePath === "") return musicRoot;
+  return musicRoot.endsWith("/") ? `${musicRoot}${relativePath}` : `${musicRoot}/${relativePath}`;
+}
+
+/** Inverse of `resolveAbsoluteDestination` — converts an absolute path (e.g. a project's own
+ * `path`, which the scanner always stores as an absolute filesystem path, see `Project`'s doc
+ * comment) into the tree's root-relative convention, so it can be compared against
+ * `DestinationFolderPicker`'s relative node paths for exclusion (`excludedPath`). Falls back to
+ * returning `absolutePath` unchanged if it isn't actually inside `musicRoot` — defensive only,
+ * since every path this is ever called with is a real project's own path, always inside the
+ * root by construction. Exported for the same reason as `resolveAbsoluteDestination`. */
+export function toRelativePath(musicRoot: string, absolutePath: string): string {
+  const root = musicRoot.endsWith("/") ? musicRoot.slice(0, -1) : musicRoot;
+  if (absolutePath === root) return "";
+  const prefix = `${root}/`;
+  return absolutePath.startsWith(prefix) ? absolutePath.slice(prefix.length) : absolutePath;
+}
+
 function applyButtonLabel(operation: CopyMoveDeleteOperation, busy: boolean): string {
   if (operation === "copy") return busy ? "Copying…" : "Copy";
   if (operation === "move") return busy ? "Moving…" : "Move";
@@ -82,7 +120,8 @@ async function runSingle(
   operation: CopyMoveDeleteOperation,
   itemType: CopyMoveDeleteItemType,
   id: string,
-  destinationPath: string | null
+  destinationPath: string | null,
+  musicRoot: string | undefined
 ): Promise<CopyMoveDeleteOutcome> {
   if (operation === "delete") {
     if (itemType === "files") await api.deleteFile(id);
@@ -90,12 +129,14 @@ async function runSingle(
     return { succeededCount: 1, failedCount: 0 };
   }
   if (destinationPath === null) throw new Error("No destination selected");
+  if (musicRoot === undefined) throw new Error("Music root not loaded yet");
+  const absoluteDestination = resolveAbsoluteDestination(musicRoot, destinationPath);
   if (operation === "copy") {
-    if (itemType === "files") await api.copyFile(id, destinationPath);
-    else await api.copyProject(id, destinationPath);
+    if (itemType === "files") await api.copyFile(id, absoluteDestination);
+    else await api.copyProject(id, absoluteDestination);
   } else {
-    if (itemType === "files") await api.moveFile(id, destinationPath);
-    else await api.moveProject(id, destinationPath);
+    if (itemType === "files") await api.moveFile(id, absoluteDestination);
+    else await api.moveProject(id, absoluteDestination);
   }
   return { succeededCount: 1, failedCount: 0 };
 }
@@ -104,23 +145,26 @@ async function runBatch(
   operation: CopyMoveDeleteOperation,
   itemType: CopyMoveDeleteItemType,
   ids: string[],
-  destinationPath: string | null
+  destinationPath: string | null,
+  musicRoot: string | undefined
 ): Promise<CopyMoveDeleteOutcome> {
   let result: BatchOpResult;
   if (operation === "delete") {
     result = itemType === "files" ? await api.batchDeleteFiles(ids) : await api.batchDeleteProjects(ids);
   } else {
     if (destinationPath === null) throw new Error("No destination selected");
+    if (musicRoot === undefined) throw new Error("Music root not loaded yet");
+    const absoluteDestination = resolveAbsoluteDestination(musicRoot, destinationPath);
     if (operation === "copy") {
-      result = itemType === "files" ? await api.batchCopyFiles(ids, destinationPath) : await api.batchCopyProjects(ids, destinationPath);
+      result = itemType === "files" ? await api.batchCopyFiles(ids, absoluteDestination) : await api.batchCopyProjects(ids, absoluteDestination);
     } else {
-      result = itemType === "files" ? await api.batchMoveFiles(ids, destinationPath) : await api.batchMoveProjects(ids, destinationPath);
+      result = itemType === "files" ? await api.batchMoveFiles(ids, absoluteDestination) : await api.batchMoveProjects(ids, absoluteDestination);
     }
   }
   return { succeededCount: result.succeeded.length, failedCount: result.failed.length };
 }
 
-export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType, target, excludedPath, onClose, onSuccess, onError }: Props) {
+export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType, target, excludedPath, musicRoot, onClose, onSuccess, onError }: Props) {
   const [destinationPath, setDestinationPath] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -158,7 +202,12 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
   // "moving" a file into the folder it's already in is at worst a harmless no-op, not a
   // structurally invalid nesting, so there's nothing meaningful to exclude for files (or
   // for batches, which don't have a single well-defined "own folder" to exclude anyway).
-  const pickerExcludedPath = operation === "move" && itemType === "projects" && target.kind === "single" ? excludedPath : undefined;
+  const pickerExcludedPath =
+    operation === "move" && itemType === "projects" && target.kind === "single" && excludedPath !== undefined
+      ? musicRoot !== undefined
+        ? toRelativePath(musicRoot, excludedPath)
+        : excludedPath
+      : undefined;
 
   function handleBackdropOrCancel() {
     if (busy) return;
@@ -172,8 +221,8 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
     try {
       const outcome =
         target.kind === "single"
-          ? await runSingle(operation, itemType, target.id, destinationPath)
-          : await runBatch(operation, itemType, target.ids, destinationPath);
+          ? await runSingle(operation, itemType, target.id, destinationPath, musicRoot)
+          : await runBatch(operation, itemType, target.ids, destinationPath, musicRoot);
       onSuccess(outcome);
       onClose();
     } catch (err) {

@@ -665,6 +665,7 @@ export default function App() {
               isPlaying={isPlaying}
               onPlayClick={handlePlayClick}
               setBanner={setBanner}
+              musicRoot={musicRoot}
             />
           ) : (
             <CustomProjectsTabPanel
@@ -678,6 +679,7 @@ export default function App() {
               scanCompletionSignal={lastScanChanges}
               playerActive={playingFile !== null}
               setBanner={setBanner}
+              musicRoot={musicRoot}
             />
           ))
         )}
@@ -721,6 +723,7 @@ export default function App() {
         operation={fileOpDialog?.operation ?? "copy"}
         itemType="files"
         target={fileOpDialog?.target ?? { kind: "single", id: "", name: "" }}
+        musicRoot={musicRoot}
         onClose={() => setFileOpDialog(null)}
         onSuccess={handleFileOpSuccess}
         onError={setBanner}
@@ -733,6 +736,7 @@ export default function App() {
         itemType="projects"
         target={projectOpDialog?.target ?? { kind: "single", id: "", name: "" }}
         excludedPath={projectOpDialog?.excludedPath}
+        musicRoot={musicRoot}
         onClose={() => setProjectOpDialog(null)}
         onSuccess={handleProjectOpSuccess}
         onError={setBanner}

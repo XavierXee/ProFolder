@@ -40,6 +40,11 @@ type Props = {
   /** App-level banner setter (App.tsx's `setBanner`), used to surface a reveal failure the
    * same way App.tsx's own `handleReveal` does — see that function for the exact message. */
   setBanner: (message: string) => void;
+  /** App.tsx's own `musicRoot` state (an absolute filesystem path, or `undefined` before
+   * `api.getConfig()` resolves) — passed straight through to this panel's own
+   * `CopyMoveDeleteDialog`, which needs it to convert the destination picker's root-relative
+   * selection into the absolute path every copy/move backend route requires. */
+  musicRoot: string | undefined;
 };
 
 export default function CustomFilesTabPanel({
@@ -54,6 +59,7 @@ export default function CustomFilesTabPanel({
   isPlaying,
   onPlayClick,
   setBanner,
+  musicRoot,
 }: Props) {
   const { files, total, totalPages, page, pageSize, filters, updateFilters, setPage, loading, error, refetch } =
     useAudioFiles({ statuses: tab.statuses, scores: tab.scores, tags: tab.tags });
@@ -284,6 +290,7 @@ export default function CustomFilesTabPanel({
         operation={fileOpDialog?.operation ?? "copy"}
         itemType="files"
         target={fileOpDialog?.target ?? { kind: "single", id: "", name: "" }}
+        musicRoot={musicRoot}
         onClose={() => setFileOpDialog(null)}
         onSuccess={handleFileOpSuccess}
         onError={setBanner}

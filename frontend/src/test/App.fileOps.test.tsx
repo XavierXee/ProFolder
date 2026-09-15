@@ -146,9 +146,13 @@ const PROJECTS_PAGE: PagedProjects = {
 
 const STATS: LibraryStats = { total: 1, draftCount: 0, unscoredCount: 0 };
 
-// Folder tree fixture for the destination picker used by copy/move.
-const otherFolder: FolderNode = { name: "Other", path: "/music/Other", type: "folder", children: [] };
-const tree: FolderNode = { name: "music", path: "/music", type: "folder", children: [otherFolder] };
+// Folder tree fixture for the destination picker used by copy/move. Paths match
+// `buildFolderTree`'s REAL root-relative shape (src/scanner/folderTree.ts): the root's own
+// path is "", and every other node's path is a "/"-joined path relative to that root — never
+// an absolute filesystem path (that's what mockGetConfig's musicRoot: "/music" above is for;
+// App.tsx's CopyMoveDeleteDialog joins the two before calling any API function below).
+const otherFolder: FolderNode = { name: "Other", path: "Other", type: "folder", children: [] };
+const tree: FolderNode = { name: "music", path: "", type: "folder", children: [otherFolder] };
 
 beforeEach(() => {
   mockGetFiles.mockReset().mockResolvedValue(FILES_PAGE);
@@ -297,12 +301,9 @@ describe("App - file operations (Copy/Move/Delete) wiring, Projects tab", () => 
     // never offered as a selectable destination row once the tree renders.
     const nestedTree: FolderNode = {
       name: "music",
-      path: "/music",
+      path: "",
       type: "folder",
-      children: [
-        { name: "Alpha Sessions", path: "/music/Alpha Sessions", type: "folder", children: [] },
-        otherFolder,
-      ],
+      children: [{ name: "Alpha Sessions", path: "Alpha Sessions", type: "folder", children: [] }, otherFolder],
     };
     mockGetFolderTree.mockResolvedValue(nestedTree);
     const user = userEvent.setup();

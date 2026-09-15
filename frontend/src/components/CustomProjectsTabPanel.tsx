@@ -43,6 +43,12 @@ type Props = {
   /** App-level banner setter (App.tsx's `setBanner`), used to surface a reveal failure the
    * same way App.tsx's own `handleReveal` does — see that function for the exact message. */
   setBanner: (message: string) => void;
+  /** App.tsx's own `musicRoot` state (an absolute filesystem path, or `undefined` before
+   * `api.getConfig()` resolves) — passed straight through to this panel's own
+   * `CopyMoveDeleteDialog`, which needs it to convert the destination picker's root-relative
+   * selection into the absolute path every copy/move backend route requires (and to convert
+   * `excludedPath` the other way, absolute → relative, for the picker's exclusion check). */
+  musicRoot: string | undefined;
 };
 
 export default function CustomProjectsTabPanel({
@@ -55,6 +61,7 @@ export default function CustomProjectsTabPanel({
   scanCompletionSignal,
   playerActive,
   setBanner,
+  musicRoot,
 }: Props) {
   const { projects, total, totalPages, page, pageSize, filters, updateFilters, setPage, loading, refetch } = useProjects({
     statuses: tab.statuses,
@@ -272,6 +279,7 @@ export default function CustomProjectsTabPanel({
         itemType="projects"
         target={projectOpDialog?.target ?? { kind: "single", id: "", name: "" }}
         excludedPath={projectOpDialog?.excludedPath}
+        musicRoot={musicRoot}
         onClose={() => setProjectOpDialog(null)}
         onSuccess={handleProjectOpSuccess}
         onError={setBanner}
