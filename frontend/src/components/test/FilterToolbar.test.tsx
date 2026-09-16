@@ -12,6 +12,8 @@ function Harness({
   onChangeSpy,
   locked,
   resultLabel = "10 files",
+  isProFolder = false,
+  sectionLabel,
 }: {
   initialFilters?: FilterToolbarFilters;
   allTags?: string[];
@@ -20,6 +22,8 @@ function Harness({
   onChangeSpy?: (patch: FilterToolbarPatch) => void;
   locked?: boolean;
   resultLabel?: string;
+  isProFolder?: boolean;
+  sectionLabel?: string;
 }) {
   const [filters, setFilters] = useState<FilterToolbarFilters>(initialFilters);
 
@@ -34,9 +38,11 @@ function Harness({
       onChange={handleChange}
       allTags={allTags}
       isDark={true}
+      isProFolder={isProFolder}
       resultLabel={resultLabel}
       searchPlaceholder="Search files or paths…"
       searchAriaLabel="Search by filename or path"
+      sectionLabel={sectionLabel}
       selectedCount={selectedCount}
       onOpenBatchPanel={onOpenBatchPanel}
       locked={locked}
@@ -340,5 +346,92 @@ describe("FilterToolbar - locked mode", () => {
     expect(patch).not.toHaveProperty("statuses");
     expect(patch).not.toHaveProperty("scores");
     expect(patch).not.toHaveProperty("tags");
+  });
+});
+
+describe("FilterToolbar - isProFolder styling", () => {
+  it("gives the toolbar container the surface/border treatment when isProFolder is true", () => {
+    const { container } = render(<Harness isProFolder />);
+
+    const toolbar = container.firstElementChild as HTMLElement;
+    expect(toolbar.className).toContain("bg-surface");
+    expect(toolbar.className).toContain("border-border");
+  });
+
+  it("does not give the toolbar container the surface/border treatment when isProFolder is false (default)", () => {
+    const { container } = render(<Harness />);
+
+    const toolbar = container.firstElementChild as HTMLElement;
+    expect(toolbar.className).not.toContain("bg-surface");
+    expect(toolbar.className).not.toContain("border-border");
+  });
+
+  it("gives the Batch Edit button the accent-fill treatment when isProFolder is true, and keeps disabled:opacity-30 working while disabled", () => {
+    render(<Harness isProFolder selectedCount={0} />);
+
+    const btn = screen.getByRole("button", { name: "Batch Edit" });
+    expect(btn.className).toContain("bg-accent");
+    expect(btn.className).toContain("text-accent-ink");
+    expect(btn.className).toContain("disabled:opacity-30");
+    expect(btn).toBeDisabled();
+  });
+
+  it("keeps the accent-fill treatment on the Batch Edit button once it becomes enabled under isProFolder", () => {
+    render(<Harness isProFolder selectedCount={2} />);
+
+    const btn = screen.getByRole("button", { name: "Batch Edit (2)" });
+    expect(btn).toBeEnabled();
+    expect(btn.className).toContain("bg-accent");
+    expect(btn.className).toContain("text-accent-ink");
+  });
+
+  it("does not give the Batch Edit button the accent-fill treatment when isProFolder is false (default)", () => {
+    render(<Harness selectedCount={2} />);
+
+    const btn = screen.getByRole("button", { name: "Batch Edit (2)" });
+    expect(btn.className).not.toContain("bg-accent");
+    expect(btn.className).not.toContain("text-accent-ink");
+  });
+
+  it("gives the Status/Score/Tags pickers and the Clear button the secondary treatment when isProFolder is true", () => {
+    render(<Harness isProFolder allTags={["indie"]} initialFilters={{ search: "rock" }} />);
+
+    const statusBtn = screen.getByRole("button", { name: "Status" });
+    const scoreBtn = screen.getByRole("button", { name: "Score" });
+    const tagsBtn = screen.getByRole("button", { name: "Tags" });
+    const clearBtn = screen.getByRole("button", { name: "Clear all filters" });
+
+    for (const btn of [statusBtn, scoreBtn, tagsBtn, clearBtn]) {
+      expect(btn.className).toContain("bg-surface");
+      expect(btn.className).toContain("text-ink-muted");
+      expect(btn.className).toContain("border-border");
+    }
+  });
+
+  it("does not give the pickers or Clear button the secondary treatment when isProFolder is false (default)", () => {
+    render(<Harness allTags={["indie"]} initialFilters={{ search: "rock" }} />);
+
+    const statusBtn = screen.getByRole("button", { name: "Status" });
+    const clearBtn = screen.getByRole("button", { name: "Clear all filters" });
+
+    expect(statusBtn.className).not.toContain("bg-surface");
+    expect(clearBtn.className).not.toContain("bg-surface");
+  });
+
+  it("renders sectionLabel as a mono/uppercase eyebrow label only when isProFolder is true AND sectionLabel is provided", () => {
+    const { rerender } = render(<Harness isProFolder sectionLabel="PROJECT FOLDERS" />);
+
+    const label = screen.getByText("PROJECT FOLDERS");
+    expect(label).toBeInTheDocument();
+    expect(label.className).toContain("font-mono");
+    expect(label.className).toContain("uppercase");
+
+    // isProFolder true but sectionLabel omitted -> nothing extra rendered.
+    rerender(<Harness isProFolder />);
+    expect(screen.queryByText("PROJECT FOLDERS")).not.toBeInTheDocument();
+
+    // sectionLabel provided but isProFolder false -> nothing extra rendered.
+    rerender(<Harness sectionLabel="PROJECT FOLDERS" />);
+    expect(screen.queryByText("PROJECT FOLDERS")).not.toBeInTheDocument();
   });
 });

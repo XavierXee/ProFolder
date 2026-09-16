@@ -7,6 +7,7 @@ export function MultiSelectDropdown<T extends string | number>({
   selected,
   onChange,
   isDark,
+  isProFolder = false,
   reserveLabel,
 }: {
   label: string;
@@ -14,6 +15,9 @@ export function MultiSelectDropdown<T extends string | number>({
   selected: T[];
   onChange: (values: T[]) => void;
   isDark: boolean;
+  /** ProFolder brand theme flag (Section 07 "Interface application"). Defaults to false so
+   * existing callers (CreateCustomTabModal, ThemeSelector) render byte-identically to before. */
+  isProFolder?: boolean;
   /** Widest realistic rendering of this control's label (e.g. "Status (5)"). Rendered
    * invisibly to reserve the trigger button's width so selecting/deselecting options
    * never resizes it. Falls back to `label` (no count) if omitted. */
@@ -49,14 +53,30 @@ export function MultiSelectDropdown<T extends string | number>({
     onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
   }
 
-  const triggerCls = isDark
-    ? "border-white/10 text-slate-300 hover:border-white/20"
-    : "border-slate-300 text-slate-600 hover:border-slate-400";
-  const triggerActiveCls = isDark
-    ? "border-blue-500/40 text-blue-400 bg-blue-500/10 ring-1 ring-blue-500/30"
-    : "border-blue-400/60 text-blue-700 bg-blue-50 ring-1 ring-blue-300";
-  const menuCls = isDark ? "bg-[#181b24] border-white/10" : "bg-white border-slate-200";
+  const triggerCls = isProFolder
+    ? "bg-surface text-ink-muted border-border hover:text-ink hover:bg-surface-hover"
+    : isDark
+      ? "border-white/10 text-slate-300 hover:border-white/20"
+      : "border-slate-300 text-slate-600 hover:border-slate-400";
+  const triggerActiveCls = isProFolder
+    ? "bg-surface-selected border-ink text-ink"
+    : isDark
+      ? "border-blue-500/40 text-blue-400 bg-blue-500/10 ring-1 ring-blue-500/30"
+      : "border-blue-400/60 text-blue-700 bg-blue-50 ring-1 ring-blue-300";
+  const menuCls = isProFolder ? "bg-surface border-border" : isDark ? "bg-[#181b24] border-white/10" : "bg-white border-slate-200";
   const optionHoverCls = isDark ? "hover:bg-white/5" : "hover:bg-slate-50";
+
+  /** Per-option-row classes. Under `isProFolder`, each row renders as a bordered chip (Section
+   * 07's tag-filter-row spec), with a distinct selected ("active chip") treatment; Light/Dark
+   * keep their existing plain hover-only rows. */
+  function optionRowCls(isSelected: boolean) {
+    if (isProFolder) {
+      return isSelected
+        ? "border border-ink bg-surface-selected text-ink"
+        : "border border-border bg-surface text-ink hover:bg-surface-hover";
+    }
+    return `${optionHoverCls} ${isDark ? "text-slate-300" : "text-slate-700"}`;
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -97,7 +117,7 @@ export function MultiSelectDropdown<T extends string | number>({
               return (
                 <label
                   key={String(opt.value)}
-                  className={`flex items-center gap-2 px-3 py-1.5 text-xs font-mono cursor-pointer transition-colors ${optionHoverCls} ${isDark ? "text-slate-300" : "text-slate-700"}`}
+                  className={`flex items-center gap-2 px-3 py-1.5 text-xs font-mono cursor-pointer transition-colors ${optionRowCls(isSelected)}`}
                 >
                   <input
                     type="checkbox"

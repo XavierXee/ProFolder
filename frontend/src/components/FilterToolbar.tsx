@@ -73,9 +73,11 @@ export default function FilterToolbar({
   onChange,
   allTags,
   isDark,
+  isProFolder = false,
   resultLabel,
   searchPlaceholder,
   searchAriaLabel,
+  sectionLabel,
   selectedCount,
   onOpenBatchPanel,
   locked = false,
@@ -84,9 +86,16 @@ export default function FilterToolbar({
   onChange: (patch: FilterToolbarPatch) => void;
   allTags: string[];
   isDark: boolean;
+  /** ProFolder brand theme flag (Section 07 "Interface application"). Defaults to false so
+   * existing callers render byte-identically to before. */
+  isProFolder?: boolean;
   resultLabel: string;
   searchPlaceholder: string;
   searchAriaLabel: string;
+  /** Mono/uppercase eyebrow label (e.g. "PROJECT FOLDERS") shown before the search input.
+   * Only rendered when both this prop is provided AND `isProFolder` is true — Light/Dark never
+   * render it, matching Section 07's mockup being ProFolder-specific. */
+  sectionLabel?: string;
   /** Number of currently-selected rows; drives the Batch Edit button's label and disabled state. */
   selectedCount: number;
   onOpenBatchPanel: () => void;
@@ -107,15 +116,21 @@ export default function FilterToolbar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
-  const bg = isDark ? "bg-[#0d0f14]" : "bg-[#f4f6f9]";
-  const borderOuter = isDark ? "border-white/8" : "border-black/8";
+  const bg = isProFolder ? "bg-surface" : isDark ? "bg-[#0d0f14]" : "bg-[#f4f6f9]";
+  const borderOuter = isProFolder ? "border-border" : isDark ? "border-white/8" : "border-black/8";
   const inputBg = isDark
     ? "bg-white/5 border-white/10 text-slate-300 placeholder-slate-600"
     : "bg-white border-slate-300 text-slate-800 placeholder-slate-400";
-  const clearCls = isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800";
-  const batchEditCls = isDark
-    ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20"
-    : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20";
+  const clearCls = isProFolder
+    ? "border bg-surface border-border text-ink-muted hover:text-ink hover:bg-surface-hover px-2.5 py-1 rounded-[var(--rt-radius)]"
+    : isDark
+      ? "text-slate-500 hover:text-slate-300"
+      : "text-slate-500 hover:text-slate-800";
+  const batchEditCls = isProFolder
+    ? "bg-accent text-accent-ink border-accent"
+    : isDark
+      ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20"
+      : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20";
 
   const statuses = filters.statuses ?? [];
   const scores = filters.scores ?? [];
@@ -139,6 +154,11 @@ export default function FilterToolbar({
   return (
     <div className={`border-b ${borderOuter} ${bg}`}>
       <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 px-6 py-2.5">
+        {isProFolder && sectionLabel && (
+          <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted whitespace-nowrap">
+            {sectionLabel}
+          </span>
+        )}
         <div className="relative flex-1 min-w-40">
           <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -161,6 +181,7 @@ export default function FilterToolbar({
               selected={statuses}
               onChange={(next) => onChange({ statuses: next })}
               isDark={isDark}
+              isProFolder={isProFolder}
               reserveLabel={STATUS_RESERVE_LABEL}
             />
             <MultiSelectDropdown
@@ -169,6 +190,7 @@ export default function FilterToolbar({
               selected={scores}
               onChange={(next) => onChange({ scores: next })}
               isDark={isDark}
+              isProFolder={isProFolder}
               reserveLabel={SCORE_RESERVE_LABEL}
             />
             <MultiSelectDropdown
@@ -177,6 +199,7 @@ export default function FilterToolbar({
               selected={tags}
               onChange={(next) => onChange({ tags: next })}
               isDark={isDark}
+              isProFolder={isProFolder}
               reserveLabel={TAGS_RESERVE_LABEL}
             />
           </>

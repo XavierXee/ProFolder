@@ -13,10 +13,12 @@ function Harness({
   options = OPTIONS,
   initialSelected = [],
   reserveLabel,
+  isProFolder = false,
 }: {
   options?: { value: string; label: string }[];
   initialSelected?: string[];
   reserveLabel?: string;
+  isProFolder?: boolean;
 }) {
   const [selected, setSelected] = useState<string[]>(initialSelected);
   return (
@@ -26,6 +28,7 @@ function Harness({
       selected={selected}
       onChange={setSelected}
       isDark={true}
+      isProFolder={isProFolder}
       reserveLabel={reserveLabel}
     />
   );
@@ -126,5 +129,72 @@ describe("MultiSelectDropdown", () => {
 
     expect(screen.getByText("No options")).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+});
+
+describe("MultiSelectDropdown - isProFolder styling", () => {
+  it("gives the menu panel the surface/border treatment when isProFolder is true", async () => {
+    const user = userEvent.setup();
+    render(<Harness isProFolder />);
+    await user.click(screen.getByRole("button", { name: "Status" }));
+
+    const menu = screen.getByRole("listbox");
+    expect(menu.className).toContain("bg-surface");
+    expect(menu.className).toContain("border-border");
+  });
+
+  it("does not give the menu panel the surface/border treatment when isProFolder is false (default)", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "Status" }));
+
+    const menu = screen.getByRole("listbox");
+    expect(menu.className).not.toContain("bg-surface");
+    expect(menu.className).not.toContain("border-border");
+  });
+
+  it("gives unselected option rows the surface/border/ink treatment and selected rows the surface-selected/border-ink treatment under isProFolder", async () => {
+    const user = userEvent.setup();
+    render(<Harness isProFolder initialSelected={["rock"]} />);
+    await user.click(screen.getByRole("button", { name: "Status (1)" }));
+
+    const rockRow = screen.getByRole("checkbox", { name: "Rock" }).closest("label") as HTMLElement;
+    const jazzRow = screen.getByRole("checkbox", { name: "Jazz" }).closest("label") as HTMLElement;
+
+    // Rock is selected -> the "active chip" treatment.
+    expect(rockRow.className).toContain("bg-surface-selected");
+    expect(rockRow.className).toContain("border-ink");
+
+    // Jazz is unselected -> the plain chip treatment.
+    expect(jazzRow.className).toContain("bg-surface");
+    expect(jazzRow.className).not.toContain("bg-surface-selected");
+    expect(jazzRow.className).toContain("border-border");
+    expect(jazzRow.className).not.toContain("border-ink");
+  });
+
+  it("does not give option rows the isProFolder chip treatment when isProFolder is false (default)", async () => {
+    const user = userEvent.setup();
+    render(<Harness initialSelected={["rock"]} />);
+    await user.click(screen.getByRole("button", { name: "Status (1)" }));
+
+    const rockRow = screen.getByRole("checkbox", { name: "Rock" }).closest("label") as HTMLElement;
+    expect(rockRow.className).not.toContain("bg-surface-selected");
+    expect(rockRow.className).not.toContain("border-ink");
+  });
+
+  it("gives the trigger the surface-selected/border-ink treatment when items are selected under isProFolder", () => {
+    render(<Harness isProFolder initialSelected={["rock"]} />);
+
+    const trigger = screen.getByRole("button", { name: "Status (1)" });
+    expect(trigger.className).toContain("bg-surface-selected");
+    expect(trigger.className).toContain("border-ink");
+  });
+
+  it("gives the trigger the secondary bg-surface/border-border treatment when nothing is selected under isProFolder", () => {
+    render(<Harness isProFolder />);
+
+    const trigger = screen.getByRole("button", { name: "Status" });
+    expect(trigger.className).toContain("bg-surface");
+    expect(trigger.className).toContain("border-border");
   });
 });

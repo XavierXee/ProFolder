@@ -234,6 +234,50 @@ describe("App - tab switcher styling per theme", () => {
   });
 });
 
+describe("App - FilterToolbar isProFolder wiring (ProjectsFilterBar/FilterBar)", () => {
+  it("renders the PROJECT FOLDERS sectionLabel on the Projects tab, and the AUDIO FILES sectionLabel after switching to the Files tab, under the profolder theme (the default landing theme)", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await waitForMount();
+    expect(document.documentElement.dataset.theme).toBe("profolder");
+
+    // Projects is the default landing tab; ProjectsFilterBar's isProFolder wiring must actually
+    // reach the rendered DOM here, not just work when the prop is passed manually in isolation.
+    expect(screen.getByText("PROJECT FOLDERS")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Audio Files" }));
+
+    await waitFor(() => expect(screen.getByText("AUDIO FILES")).toBeInTheDocument());
+    expect(screen.queryByText("PROJECT FOLDERS")).not.toBeInTheDocument();
+  });
+
+  it("does not render either sectionLabel under the dark theme (isProFolder is false, so ProjectsFilterBar/FilterBar must not pick up the ProFolder styling)", async () => {
+    localStorage.setItem(LEGACY_THEME_KEY, "true");
+    const user = userEvent.setup();
+    render(<App />);
+    await waitForMount();
+    expect(document.documentElement.dataset.theme).toBe("dark");
+
+    expect(screen.queryByText("PROJECT FOLDERS")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Audio Files" }));
+    expect(screen.queryByText("AUDIO FILES")).not.toBeInTheDocument();
+  });
+
+  it("does not render either sectionLabel under the light theme (isProFolder is false)", async () => {
+    localStorage.setItem(LEGACY_THEME_KEY, "false");
+    const user = userEvent.setup();
+    render(<App />);
+    await waitForMount();
+    expect(document.documentElement.dataset.theme).toBe("light");
+
+    expect(screen.queryByText("PROJECT FOLDERS")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Audio Files" }));
+    expect(screen.queryByText("AUDIO FILES")).not.toBeInTheDocument();
+  });
+});
+
 describe("App - converted chrome elements carry token classes, not the old hardcoded ternary classes", () => {
   it("gives the header the bg-chrome/90 + border-border token classes regardless of theme value (Task 1.5: header/footer/logo-tile stay Rack Black chrome even though canvas/surface are now light under profolder)", async () => {
     render(<App />);

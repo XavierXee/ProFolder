@@ -69,4 +69,37 @@ describe("FilterBar", () => {
 
     expect(onChange).toHaveBeenCalledWith({ statuses: ["draft"] });
   });
+
+  it("passes isProFolder through and renders the 'AUDIO FILES' sectionLabel when isProFolder is true", () => {
+    render(
+      <FilterBar
+        filters={{ page: 1, pageSize: PAGE_SIZE }}
+        onChange={vi.fn()}
+        allTags={[]}
+        isDark={true}
+        isProFolder={true}
+        resultLabel="3 files"
+        selectedCount={0}
+        onOpenBatchPanel={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("AUDIO FILES")).toBeInTheDocument();
+  });
+
+  it("does not render the sectionLabel when isProFolder is false (default)", () => {
+    render(
+      <FilterBar
+        filters={{ page: 1, pageSize: PAGE_SIZE }}
+        onChange={vi.fn()}
+        allTags={[]}
+        isDark={true}
+        resultLabel="3 files"
+        selectedCount={0}
+        onOpenBatchPanel={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText("AUDIO FILES")).not.toBeInTheDocument();
+  });
 });

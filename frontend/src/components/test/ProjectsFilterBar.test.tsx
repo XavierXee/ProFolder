@@ -63,4 +63,37 @@ describe("ProjectsFilterBar", () => {
 
     expect(onChange).toHaveBeenCalledWith({ statuses: ["draft"] });
   });
+
+  it("passes isProFolder through and renders the 'PROJECT FOLDERS' sectionLabel when isProFolder is true", () => {
+    render(
+      <ProjectsFilterBar
+        filters={{ page: 1, pageSize: PAGE_SIZE }}
+        onChange={vi.fn()}
+        allTags={[]}
+        isDark={true}
+        isProFolder={true}
+        resultLabel="5 projects"
+        selectedCount={0}
+        onOpenBatchPanel={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("PROJECT FOLDERS")).toBeInTheDocument();
+  });
+
+  it("does not render the sectionLabel when isProFolder is false (default)", () => {
+    render(
+      <ProjectsFilterBar
+        filters={{ page: 1, pageSize: PAGE_SIZE }}
+        onChange={vi.fn()}
+        allTags={[]}
+        isDark={true}
+        resultLabel="5 projects"
+        selectedCount={0}
+        onOpenBatchPanel={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText("PROJECT FOLDERS")).not.toBeInTheDocument();
+  });
 });
