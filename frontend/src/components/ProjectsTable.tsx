@@ -192,7 +192,7 @@ export function ProjectsTable({
                           {project.tags.map((tag) => (
                             <span
                               key={tag}
-                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono ${isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-600"}`}
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-600"}`}
                             >
                               {tag}
                             </span>

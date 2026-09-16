@@ -41,3 +41,15 @@ describe("index.css theme tokens match their pre-existing, byte-faithful source 
     expect(light).toContain("--rt-border: rgba(0, 0, 0, 0.08);"); // pre-existing App.tsx sectionBorder ("border-black/8")
   });
 });
+
+describe("index.css geometry tokens (--rt-radius-lg): dark/light match Tailwind's default `rounded-lg` scale, profolder collapses to square corners", () => {
+  it("dark/light share one combined geometry block where --rt-radius-lg resolves to 0.5rem (Tailwind's default rounded-lg)", () => {
+    const geometry = section(':root,\n[data-theme="dark"],\n[data-theme="light"] {', '[data-theme="profolder"] {\n  --rt-radius: 0;');
+    expect(geometry).toContain("--rt-radius-lg: 0.5rem;");
+  });
+
+  it("profolder theme collapses --rt-radius-lg to 0, same as --rt-radius", () => {
+    const geometry = section('[data-theme="profolder"] {\n  --rt-radius: 0;', "* {");
+    expect(geometry).toContain("--rt-radius-lg: 0;");
+  });
+});

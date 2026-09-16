@@ -86,27 +86,27 @@ export default function RootPathControl({ musicRoot, isDark, onSave }: Props) {
             }}
             placeholder="/path/to/music/folder"
             disabled={busy}
-            className={`text-xs font-mono rounded border px-2 py-1 w-56 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 transition-colors disabled:opacity-50 ${inputCls}`}
+            className={`text-xs font-mono rounded-[var(--rt-radius)] border px-2 py-1 w-56 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 transition-colors disabled:opacity-50 ${inputCls}`}
             aria-label="Production folder path"
           />
           <button
             onClick={handleBrowse}
             disabled={busy}
-            className={`px-2 py-1 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed ${secondaryBtnCls}`}
+            className={`px-2 py-1 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed ${secondaryBtnCls}`}
           >
             {browsing ? "Waiting…" : "Browse…"}
           </button>
           <button
             onClick={handleSave}
             disabled={busy}
-            className="px-2 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="px-2 py-1 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             {saving ? "Saving…" : "Save"}
           </button>
           <button
             onClick={cancelEditing}
             disabled={busy}
-            className={`px-2 py-1 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed ${secondaryBtnCls}`}
+            className={`px-2 py-1 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed ${secondaryBtnCls}`}
           >
             Cancel
           </button>
@@ -128,7 +128,7 @@ export default function RootPathControl({ musicRoot, isDark, onSave }: Props) {
         onClick={startEditing}
         aria-label="Change production folder"
         title="Change production folder"
-        className={`p-0.5 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${iconCls}`}
+        className={`p-0.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${iconCls}`}
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path

@@ -162,7 +162,7 @@ export default function BatchEditPanel({
           <button
             ref={closeRef}
             onClick={onClose}
-            className={`mt-0.5 p-1.5 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+            className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
             aria-label="Close panel"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -212,7 +212,7 @@ export default function BatchEditPanel({
               <button
                 onClick={() => handleAddTag(tagInput)}
                 disabled={tagSaving || !tagInput.trim()}
-                className="px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+                className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
               >
                 Add
               </button>
@@ -220,7 +220,7 @@ export default function BatchEditPanel({
             {appliedTags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {appliedTags.map((tag) => (
-                  <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono ${chipCls}`}>
+                  <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${chipCls}`}>
                     {tag}
                     <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -242,19 +242,19 @@ export default function BatchEditPanel({
             <div className="flex gap-2">
               <button
                 onClick={() => handleOperationClick("copy")}
-                className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
               >
                 Copy
               </button>
               <button
                 onClick={() => handleOperationClick("move")}
-                className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
               >
                 Move
               </button>
               <button
                 onClick={() => handleOperationClick("delete")}
-                className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
+                className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
               >
                 Delete
               </button>
@@ -265,7 +265,7 @@ export default function BatchEditPanel({
         <div className={`px-6 py-4 border-t ${divider}`}>
           <button
             onClick={onClose}
-            className={`w-full px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+            className={`w-full px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
           >
             Done
           </button>

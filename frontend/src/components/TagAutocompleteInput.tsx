@@ -101,12 +101,12 @@ export function TagAutocompleteInput({
         role="combobox"
         aria-expanded={open}
         aria-autocomplete="list"
-        className={`w-full border rounded text-sm px-3 py-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 transition-colors disabled:opacity-50 ${inputCls} ${className}`}
+        className={`w-full border rounded-[var(--rt-radius)] text-sm px-3 py-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 transition-colors disabled:opacity-50 ${inputCls} ${className}`}
       />
       {open && filtered.length > 0 && (
         <ul
           role="listbox"
-          className={`absolute left-0 right-0 mt-1 z-50 max-h-48 overflow-y-auto rounded border shadow-lg text-sm ${
+          className={`absolute left-0 right-0 mt-1 z-50 max-h-48 overflow-y-auto rounded-[var(--rt-radius)] border shadow-lg text-sm ${
             isDark ? "bg-[#1a1d27] border-white/10" : "bg-white border-slate-200"
           }`}
         >

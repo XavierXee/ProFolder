@@ -70,6 +70,21 @@ describe("DeleteTabConfirmDialog - open=true", () => {
     expect(props.onCancel).toHaveBeenCalledTimes(1);
     expect(props.onConfirm).not.toHaveBeenCalled();
   });
+
+  it("uses the --rt-radius-lg token class on the dialog panel and --rt-radius on its buttons, not bare rounded/rounded-lg", () => {
+    renderDialog();
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toContain("rounded-[var(--rt-radius-lg)]");
+    expect(dialog.className).not.toMatch(/(^|\s)rounded-lg(\s|$)/);
+
+    const deleteButton = screen.getByRole("button", { name: "Delete" });
+    const cancelButton = screen.getByRole("button", { name: "Cancel" });
+    expect(deleteButton.className).toContain("rounded-[var(--rt-radius)]");
+    expect(cancelButton.className).toContain("rounded-[var(--rt-radius)]");
+    expect(deleteButton.className).not.toMatch(/(^|\s)rounded(\s|$)/);
+    expect(cancelButton.className).not.toMatch(/(^|\s)rounded(\s|$)/);
+  });
 });
 
 describe("DeleteTabConfirmDialog - isDark theming", () => {

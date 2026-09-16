@@ -148,7 +148,7 @@ export default function FilterToolbar({
             placeholder={searchPlaceholder}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className={`w-full border rounded text-sm pl-8 pr-2.5 py-1 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500/50 transition-colors ${inputBg}`}
+            className={`w-full border rounded-[var(--rt-radius)] text-sm pl-8 pr-2.5 py-1 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500/50 transition-colors ${inputBg}`}
             aria-label={searchAriaLabel}
           />
         </div>
@@ -196,7 +196,7 @@ export default function FilterToolbar({
           <button
             onClick={onOpenBatchPanel}
             disabled={selectedCount < 2}
-            className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-30 disabled:cursor-not-allowed ${batchEditCls}`}
+            className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-30 disabled:cursor-not-allowed ${batchEditCls}`}
           >
             <span className="inline-grid">
               <span className="invisible whitespace-nowrap [grid-area:1/1]" aria-hidden="true">

@@ -194,4 +194,20 @@ describe("FileRow", () => {
     const cell = screen.getByLabelText("Select beat.wav").closest("td");
     expect(cell).toHaveClass("text-center");
   });
+
+  it("renders tag chips with the --rt-radius token class instead of a bare `rounded` class", () => {
+    renderRow({ file: makeFile({ tags: ["rock"] }) });
+
+    const chip = screen.getByText("rock");
+    expect(chip.className).toContain("rounded-[var(--rt-radius)]");
+    expect(chip.className).not.toMatch(/(^|\s)rounded(\s|$)/);
+  });
+
+  it("leaves the play button's rounded-full class untouched (shape primitive, not a corner-radius token)", () => {
+    renderRow({ file: makeFile({ filename: "beat.wav" }), isPlayingThis: false });
+
+    const playButton = screen.getByRole("button", { name: "Play beat.wav" });
+    expect(playButton.className).toContain("rounded-full");
+    expect(playButton.className).not.toContain("rounded-[var(--rt-radius)]");
+  });
 });

@@ -138,7 +138,7 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
               <button
                 ref={closeRef}
                 onClick={onClose}
-                className={`mt-0.5 p-1.5 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+                className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
                 aria-label="Close panel"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -158,7 +158,7 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                 </div>
               </div>
 
-              <div className={`p-4 rounded-lg border ${isDark ? "bg-white/3 border-white/8" : "bg-slate-50 border-slate-200"}`}>
+              <div className={`p-4 rounded-[var(--rt-radius-lg)] border ${isDark ? "bg-white/3 border-white/8" : "bg-slate-50 border-slate-200"}`}>
                 <p className={`text-xs font-mono uppercase tracking-wider mb-1 ${meta}`}>Size</p>
                 <p className="text-xl font-mono font-semibold tabular-nums">{formatBytes(file.size)}</p>
               </div>
@@ -170,14 +170,14 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => onReveal(file.path)}
-                    className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                    className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
                   >
                     Reveal file in Finder
                   </button>
                   {file.projectPath && (
                     <button
                       onClick={() => onReveal(file.projectPath!)}
-                      className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                      className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
                     >
                       Reveal project
                     </button>
@@ -186,19 +186,19 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => onFileOperation("copy", file)}
-                    className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                    className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
                   >
                     Copy
                   </button>
                   <button
                     onClick={() => onFileOperation("move", file)}
-                    className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                    className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
                   >
                     Move
                   </button>
                   <button
                     onClick={() => onFileOperation("delete", file)}
-                    className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
+                    className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
                   >
                     Delete
                   </button>
@@ -221,7 +221,7 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                         onClick={() => handleStatusChange(s)}
                         disabled={statusSaving}
                         aria-pressed={selected}
-                        className={`px-3 py-1.5 rounded text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed ${
+                        className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed ${
                           selected ? `ring-1 ${statusColors[s]}` : statusUnselected
                         }`}
                       >

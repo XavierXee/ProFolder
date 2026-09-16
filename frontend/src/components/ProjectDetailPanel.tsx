@@ -175,7 +175,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
               <button
                 ref={closeRef}
                 onClick={onClose}
-                className={`mt-0.5 p-1.5 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+                className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
                 aria-label="Close panel"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -187,7 +187,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
               <div className="flex items-center gap-3 flex-wrap">
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium ring-1 ${
+                  className={`inline-flex items-center px-2 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium ring-1 ${
                     project.dawType
                       ? isDark
                         ? "bg-blue-500/15 text-blue-400 ring-blue-500/30"
@@ -210,7 +210,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
 
               {duplicates && duplicates.matches.length > 0 && (
                 <div
-                  className={`rounded-lg px-3 py-2.5 ring-1 ${isDark ? "bg-amber-500/10 ring-amber-500/25" : "bg-amber-50 ring-amber-300"}`}
+                  className={`rounded-[var(--rt-radius-lg)] px-3 py-2.5 ring-1 ${isDark ? "bg-amber-500/10 ring-amber-500/25" : "bg-amber-50 ring-amber-300"}`}
                 >
                   <p className={`text-xs font-mono font-medium mb-1.5 ${isDark ? "text-amber-400" : "text-amber-800"}`}>
                     Possible duplicate of {duplicates.matches.length}{" "}
@@ -223,7 +223,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                     {duplicates.matches.map((m) => (
                       <div
                         key={m.projectId}
-                        className={`px-2.5 py-1.5 rounded ${isDark ? "bg-white/5" : "bg-white"}`}
+                        className={`px-2.5 py-1.5 rounded-[var(--rt-radius)] ${isDark ? "bg-white/5" : "bg-white"}`}
                       >
                         <p className={`text-xs font-mono truncate ${isDark ? "text-slate-200" : "text-slate-800"}`}>
                           {m.projectName}
@@ -244,25 +244,25 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
               <div className="flex gap-2">
                 <button
                   onClick={() => onReveal(project.path)}
-                  className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                  className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
                 >
                   Reveal in Finder
                 </button>
                 <button
                   onClick={() => onProjectOperation("copy", project)}
-                  className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                  className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
                 >
                   Copy
                 </button>
                 <button
                   onClick={() => onProjectOperation("move", project)}
-                  className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                  className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
                 >
                   Move
                 </button>
                 <button
                   onClick={() => onProjectOperation("delete", project)}
-                  className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
+                  className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
                 >
                   Delete
                 </button>
@@ -284,7 +284,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                         onClick={() => handleStatusChange(s)}
                         disabled={statusSaving}
                         aria-pressed={selected}
-                        className={`px-3 py-1.5 rounded text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed ${
+                        className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed ${
                           selected ? `ring-1 ${statusColors[s]}` : statusUnselected
                         }`}
                       >
@@ -322,7 +322,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                     {detail.dawProjectFiles.map((f) => (
                       <div
                         key={f.path}
-                        className={`flex items-center justify-between gap-3 px-2.5 py-1.5 rounded text-xs font-mono ${isDark ? "bg-white/3" : "bg-slate-50"}`}
+                        className={`flex items-center justify-between gap-3 px-2.5 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono ${isDark ? "bg-white/3" : "bg-slate-50"}`}
                       >
                         <span className={`truncate ${isDark ? "text-slate-300" : "text-slate-700"}`} title={f.relativePath}>
                           {f.relativePath}

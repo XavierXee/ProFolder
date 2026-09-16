@@ -65,7 +65,7 @@ export function MultiSelectDropdown<T extends string | number>({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+        className={`flex items-center gap-1 px-2.5 py-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
           selected.length > 0 ? triggerActiveCls : triggerCls
         }`}
       >
@@ -87,7 +87,7 @@ export function MultiSelectDropdown<T extends string | number>({
         <div
           role="listbox"
           aria-label={`Filter by ${label.toLowerCase()}`}
-          className={`absolute left-0 top-full mt-1 z-20 min-w-40 max-h-72 overflow-y-auto rounded border shadow-2xl py-1 ${menuCls}`}
+          className={`absolute left-0 top-full mt-1 z-20 min-w-40 max-h-72 overflow-y-auto rounded-[var(--rt-radius)] border shadow-2xl py-1 ${menuCls}`}
         >
           {options.length === 0 ? (
             <p className={`px-3 py-2 text-xs font-mono ${isDark ? "text-slate-600" : "text-slate-400"}`}>No options</p>
@@ -103,7 +103,7 @@ export function MultiSelectDropdown<T extends string | number>({
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggle(opt.value)}
-                    className="w-3.5 h-3.5 rounded cursor-pointer accent-blue-500 flex-shrink-0"
+                    className="w-3.5 h-3.5 rounded-[var(--rt-radius)] cursor-pointer accent-blue-500 flex-shrink-0"
                   />
                   <span className="truncate">{opt.label}</span>
                 </label>

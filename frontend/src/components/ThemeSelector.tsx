@@ -80,7 +80,7 @@ export function ThemeSelector({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label="Theme"
-        className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${triggerCls}`}
+        className={`flex items-center gap-1 px-2.5 py-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${triggerCls}`}
       >
         <span className="whitespace-nowrap">{current.label}</span>
         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -92,7 +92,7 @@ export function ThemeSelector({
         <div
           role="listbox"
           aria-label="Theme"
-          className={`absolute right-0 top-full mt-1 z-20 min-w-32 rounded border shadow-2xl py-1 ${menuCls}`}
+          className={`absolute right-0 top-full mt-1 z-20 min-w-32 rounded-[var(--rt-radius)] border shadow-2xl py-1 ${menuCls}`}
         >
           {OPTIONS.map((opt) => {
             const isSelected = opt.value === value;

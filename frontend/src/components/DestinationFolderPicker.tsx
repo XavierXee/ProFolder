@@ -35,7 +35,7 @@ function FolderNodeRow({
   return (
     <div>
       <div
-        className={`flex items-center gap-1.5 py-1 rounded ${selected ? (isDark ? "bg-blue-500/20" : "bg-blue-50") : ""}`}
+        className={`flex items-center gap-1.5 py-1 rounded-[var(--rt-radius)] ${selected ? (isDark ? "bg-blue-500/20" : "bg-blue-50") : ""}`}
         style={{ paddingLeft: depth * 16 }}
       >
         {hasChildren ? (

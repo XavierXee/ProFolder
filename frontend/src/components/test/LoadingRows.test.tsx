@@ -23,4 +23,21 @@ describe("LoadingRows", () => {
       });
     });
   });
+
+  it("skeleton bars use the --rt-radius token class instead of a bare `rounded` class", () => {
+    const { container } = render(
+      <table>
+        <tbody>
+          <LoadingRows />
+        </tbody>
+      </table>
+    );
+
+    const skeletons = container.querySelectorAll(".skeleton");
+    expect(skeletons.length).toBeGreaterThan(0);
+    skeletons.forEach((el) => {
+      expect(el.className).toContain("rounded-[var(--rt-radius)]");
+      expect(el.className).not.toMatch(/(^|\s)rounded(\s|$)/);
+    });
+  });
 });

@@ -253,7 +253,7 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
           role="dialog"
           aria-modal="true"
           aria-label={title}
-          className={`pointer-events-auto w-full max-w-md rounded-lg border shadow-2xl flex flex-col max-h-[85vh] ${panel}`}
+          className={`pointer-events-auto w-full max-w-md rounded-[var(--rt-radius-lg)] border shadow-2xl flex flex-col max-h-[85vh] ${panel}`}
         >
           <div className={`flex items-start justify-between gap-4 px-5 py-4 border-b ${divider}`}>
             <h2 className="text-sm font-mono font-medium text-blue-400 min-w-0 truncate">{title}</h2>
@@ -261,7 +261,7 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
               ref={closeRef}
               onClick={handleBackdropOrCancel}
               disabled={busy}
-              className={`mt-0.5 p-1.5 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+              className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
               aria-label="Close dialog"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -276,7 +276,7 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
             {error && <p className="text-sm text-red-400">{error}</p>}
 
             {needsDestination && (
-              <div className={`border rounded max-h-64 overflow-y-auto px-2 py-2 ${isDark ? "border-white/10" : "border-black/10"}`}>
+              <div className={`border rounded-[var(--rt-radius)] max-h-64 overflow-y-auto px-2 py-2 ${isDark ? "border-white/10" : "border-black/10"}`}>
                 <DestinationFolderPicker isDark={isDark} excludedPath={pickerExcludedPath} selectedPath={destinationPath} onSelect={setDestinationPath} />
               </div>
             )}
@@ -286,14 +286,14 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
             <button
               onClick={handleBackdropOrCancel}
               disabled={busy}
-              className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? "border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20" : "border-black/10 text-slate-500 hover:text-slate-700 hover:border-black/20"}`}
+              className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? "border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20" : "border-black/10 text-slate-500 hover:text-slate-700 hover:border-black/20"}`}
             >
               Cancel
             </button>
             <button
               onClick={handleApply}
               disabled={!canApply}
-              className={`px-3 py-1.5 rounded text-xs font-medium text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed ${operation === "delete" ? applyDangerCls : applyPrimaryCls}`}
+              className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed ${operation === "delete" ? applyDangerCls : applyPrimaryCls}`}
             >
               {applyButtonLabel(operation, busy)}
             </button>

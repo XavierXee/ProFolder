@@ -63,7 +63,7 @@
 /* profolder (new brand theme, default) */
 [data-theme="profolder"] {
   --rt-canvas: #1C1C1A;
-  --rt-surface: #242422;
+  --rt-surface: #CFCFCF;
   --rt-surface-hover: #2e2e2b;
   --rt-surface-selected: #D5F7FE;
   --rt-border: #B0B0B0;
@@ -82,10 +82,12 @@
 [data-theme="dark"],
 [data-theme="light"] {
   --rt-radius: 0.25rem; /* matches Tailwind's default bare `rounded` utility (border-radius: .25rem) */
+  --rt-radius-lg: 0.5rem; /* matches Tailwind's default `rounded-lg` utility (border-radius: .5rem) */
   --rt-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); /* matches Tailwind's default `shadow-2xl` */
 }
 [data-theme="profolder"] {
   --rt-radius: 0;
+  --rt-radius-lg: 0;
   --rt-shadow: none;
 }
 

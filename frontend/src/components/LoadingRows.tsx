@@ -7,7 +7,7 @@ export default function LoadingRows() {
         <tr key={i} className="border-b border-white/5">
           {COLUMN_WIDTHS.map((w, j) => (
             <td key={j} className="px-4 py-3.5">
-              <div className="skeleton h-3 rounded" style={{ width: `${w}px` }} />
+              <div className="skeleton h-3 rounded-[var(--rt-radius)]" style={{ width: `${w}px` }} />
             </td>
           ))}
         </tr>

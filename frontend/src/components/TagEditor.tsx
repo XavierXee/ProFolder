@@ -45,7 +45,7 @@ export function TagEditor({
       {tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {tags.map((tag) => (
-            <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono ${chipCls}`}>
+            <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${chipCls}`}>
               {tag}
               <button type="button" aria-label={`Remove tag ${tag}`} onClick={() => removeTag(tag)} className={`leading-none transition-colors ${removeCls}`}>
                 ×

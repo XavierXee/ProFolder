@@ -14,7 +14,7 @@ export function RowCheckbox({
       onChange={onChange}
       onClick={(e) => e.stopPropagation()}
       aria-label={ariaLabel}
-      className="w-3.5 h-3.5 rounded cursor-pointer accent-blue-500"
+      className="w-3.5 h-3.5 rounded-[var(--rt-radius)] cursor-pointer accent-blue-500"
     />
   );
 }

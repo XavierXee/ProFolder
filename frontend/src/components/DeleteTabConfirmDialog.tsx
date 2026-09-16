@@ -34,7 +34,7 @@ export default function DeleteTabConfirmDialog({ open, isDark, tabName, onConfir
           role="dialog"
           aria-modal="true"
           aria-label="Delete tab confirmation"
-          className={`pointer-events-auto w-full max-w-sm rounded-lg border shadow-2xl px-5 py-4 ${panel}`}
+          className={`pointer-events-auto w-full max-w-sm rounded-[var(--rt-radius-lg)] border shadow-2xl px-5 py-4 ${panel}`}
         >
           <p className="text-sm">
             Delete the tab &quot;{tabName}&quot;? This cannot be undone.
@@ -42,13 +42,13 @@ export default function DeleteTabConfirmDialog({ open, isDark, tabName, onConfir
           <div className="mt-4 flex justify-end gap-2">
             <button
               onClick={onCancel}
-              className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20" : "border-black/10 text-slate-500 hover:text-slate-700 hover:border-black/20"}`}
+              className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20" : "border-black/10 text-slate-500 hover:text-slate-700 hover:border-black/20"}`}
             >
               Cancel
             </button>
             <button
               onClick={onConfirm}
-              className="px-3 py-1.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
+              className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-red-600 text-white hover:bg-red-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
             >
               Delete
             </button>
