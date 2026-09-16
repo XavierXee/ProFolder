@@ -129,6 +129,20 @@ describe("App - ThemeSelector wiring", () => {
   });
 });
 
+describe("App - header branding", () => {
+  it("renders the ProFolder heading and Logo, and no longer renders the old app name", async () => {
+    render(<App />);
+    await waitForMount();
+
+    // Scoped to the heading role specifically: the ThemeSelector trigger button also displays
+    // "ProFolder" as the current theme option's label, so a plain getByText("ProFolder") would
+    // be ambiguous between the two elements.
+    expect(screen.getByRole("heading", { name: "ProFolder" })).toBeInTheDocument();
+    expect(screen.getByTestId("logo")).toBeInTheDocument();
+    expect(screen.queryByText("Music Library Manager")).not.toBeInTheDocument();
+  });
+});
+
 describe("App - converted chrome elements carry token classes, not the old hardcoded ternary classes", () => {
   it("gives the header the bg-canvas/90 + border-border token classes regardless of theme value", async () => {
     render(<App />);
