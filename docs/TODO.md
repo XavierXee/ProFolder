@@ -155,7 +155,7 @@ within the filter bar
 Extend the sorting feature, I want to be able to sort items not only by Modified date but also by name or score, all ascending
 and descending
 
-## 5. New feature: Copy/Move/Delete files and project folders
+## 5. New feature: Copy/Move/Delete files and project folders [x]
 
 - Add an option to copy/move/delete selected files or project folders
 - For copying and moving the UI should let the user select in which directory the file or project folder should be moved or copied to
