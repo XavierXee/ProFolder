@@ -168,9 +168,13 @@
 
 ## 14. Theming
 
-14.1. The UI supports dark (default) and light themes, toggled via a header button, persisted in `localStorage`, and applied without a flash by being set before first paint.
+14.1. The UI supports three themes — ProFolder (default, the app's own brand palette/typography), Light, and Dark — selected via a header dropdown (`ProFolder`/`Light`/`Dark`, in that order), persisted in `localStorage`, and applied without a flash by being set (via a `data-theme` attribute on the document root) before first paint. A one-time migration reads any pre-existing legacy dark/light preference on first load under the new mechanism.
 
-14.2. All interactive components (badges, panels, tables, inputs) have distinct dark/light color treatments rather than relying on a single palette.
+14.2. All interactive components (badges, panels, tables, inputs) have distinct dark/light color treatments rather than relying on a single palette. The ProFolder theme's own chrome (header, footer, page background, logo, theme selector, splash screen) uses the brand palette/typography via CSS custom-property tokens; content-area components (tables, panels, dialogs) currently render under the same styling as the Dark theme when ProFolder is selected, pending a separate future initiative to extend full brand-token coverage to those components.
+
+14.3. The app displays a splash screen for 1 second on every app load/refresh (a UI placeholder for a future scan-on-startup feature, not yet wired to a real scan) — a full-viewport overlay in the current theme's background color, with the ProFolder logo centered and "Syncing…" text beneath it.
+
+14.4. The app's logo mark (three sheared color slabs on a dark tile) appears in the header and as the browser favicon; the header and browser tab title read "ProFolder."
 
 ## 15. Custom Tabs
 

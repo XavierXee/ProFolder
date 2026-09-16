@@ -44,23 +44,23 @@ cycles may still carry this same blind spot — treat its NONE/PARTIAL verdict a
 to verify against the current test corpus, not as settled fact, before scoping a follow-up item
 around it.
 
-## Summary counts (85 rows)
+## Summary counts (87 rows)
 
 | Verdict | Count |
 |---|---|
-| COVERED-UNIT | 39 |
+| COVERED-UNIT | 41 |
 | COVERED-BOTH | 24 |
 | COVERED-E2E | 5 |
 | PARTIAL | 9 |
 | WRONG-LAYER (primary) | 1 (+1 more row carries it as a secondary/dual verdict — 10.6b) |
 | NONE | 5 |
 | NOT-HEADLESS-VERIFIABLE | 2 |
-| **Total rows** | **85** |
+| **Total rows** | **87** |
 
-Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 68/85 rows (80%). Rows with a real,
-actionable gap (PARTIAL + WRONG-LAYER + NONE) = 15/85 (18%). The remaining 2 rows
+Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 70/87 rows (80%). Rows with a real,
+actionable gap (PARTIAL + WRONG-LAYER + NONE) = 15/87 (17%). The remaining 2 rows
 (NOT-HEADLESS-VERIFIABLE) are a permanent environment limitation, not an actionable gap.
-(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT. Updated by item 10's cycle: §5.1-§5.4 and §6.2 moved to COVERED-UNIT/COVERED-BOTH (§5.3's requirement text also reworded per user decision); §6.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE truncation clause. Updated by item 11's cycle: §1.3b, §1.5b, §4.2, §12.3 all moved from NONE to COVERED-UNIT. Updated by item 12's cycle: §7.5 moved from PARTIAL+REQUIREMENT-SUSPECT to COVERED-BOTH (requirement text reworded per user decision). Updated by item 14's cycle: §7.6 and §11.1 moved from PARTIAL to COVERED-BOTH — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9/10/11/12/14 closure notes.)
+(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT. Updated by item 10's cycle: §5.1-§5.4 and §6.2 moved to COVERED-UNIT/COVERED-BOTH (§5.3's requirement text also reworded per user decision); §6.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE truncation clause. Updated by item 11's cycle: §1.3b, §1.5b, §4.2, §12.3 all moved from NONE to COVERED-UNIT. Updated by item 12's cycle: §7.5 moved from PARTIAL+REQUIREMENT-SUSPECT to COVERED-BOTH (requirement text reworded per user decision). Updated by item 14's cycle: §7.6 and §11.1 moved from PARTIAL to COVERED-BOTH — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9/10/11/12/14 closure notes. Updated by the ProFolder branding/theming/splash-screen cycle (item 9 in the main TODO list, not to be confused with the "Task 9 follow-ups" section): §14.1 reworded for the new 3-way dropdown mechanism (still PARTIAL, same no-flash-paint-timing gap as before); §14.2 reworded to note the chrome-vs-content-area brand-coverage boundary; new §14.3 (splash screen) and §14.4 (logo/favicon/title) added as COVERED-UNIT.)
 
 ---
 
@@ -216,8 +216,10 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 15/85 (18%). The remaining 2 row
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 14.1 | Dark/light toggle, header button, localStorage persistence, no-flash | PARTIAL | toggle+persist+reload-both-directions COVERED-E2E (`theme-toggle.feature:3-19`); no-flash-before-paint claim NOT-HEADLESS-VERIFIABLE / functionally NONE (no paint-timing test attempted) |
-| 14.2 | All interactive components have distinct dark/light color treatments | NOT-HEADLESS-VERIFIABLE | — |
+| 14.1 | ProFolder(default)/Light/Dark dropdown, localStorage persistence, no-flash, legacy migration | PARTIAL | select+persist+transition-chain+default+reload-survival COVERED-E2E (`theme-toggle.feature:19-49`); legacy-key migration COVERED-UNIT (`App.theme.test.tsx`); no-flash-before-paint claim NOT-HEADLESS-VERIFIABLE / functionally NONE (no paint-timing test attempted) |
+| 14.2 | All interactive components have distinct dark/light color treatments; ProFolder chrome uses brand tokens, content areas currently share Dark's styling | NOT-HEADLESS-VERIFIABLE (color-treatment claim); ProFolder-vs-Dark content-area scope COVERED-UNIT via `index.css.tokens.test.ts`/`App.theme.test.tsx` for the chrome-only boundary itself |
+| 14.3 | Splash screen: 1s, full-viewport, theme-aware background, logo + "Syncing…" | COVERED-UNIT | `SplashScreen.test.tsx` (timing, token-class background, logo accessible label); visual appearance NOT-HEADLESS-VERIFIABLE |
+| 14.4 | Logo mark in header + favicon; header/tab title "ProFolder" | COVERED-UNIT | `Logo.test.tsx`, `App.theme.test.tsx` (header/footer text assertions); favicon file existence/reference verified manually, not by an automated test |
 
 ## §15 Custom Tabs
 
