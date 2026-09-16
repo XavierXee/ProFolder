@@ -782,7 +782,7 @@ export default function App() {
       />
 
       <footer className={`border-t px-6 py-2 flex items-center justify-between ${isDark ? "border-white/5" : "border-black/5"}`}>
-        <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>Music Library Manager · Local, read-only scanner</span>
+        <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>ProFolder · Local, read-only scanner</span>
         <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>Score and tag your tracks · Track what's ready to release</span>
       </footer>
     </div>

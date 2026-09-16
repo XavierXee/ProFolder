@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App.js";
 
@@ -140,6 +140,19 @@ describe("App - header branding", () => {
     expect(screen.getByRole("heading", { name: "ProFolder" })).toBeInTheDocument();
     expect(screen.getByTestId("logo")).toBeInTheDocument();
     expect(screen.queryByText("Music Library Manager")).not.toBeInTheDocument();
+  });
+
+  it("renders the ProFolder name in the footer, not the old app name", async () => {
+    render(<App />);
+    await waitForMount();
+
+    // Scoped to the footer element specifically: both the <h1> heading and the ThemeSelector
+    // trigger button also render literal "ProFolder" text, so a page-wide getByText("ProFolder")
+    // would be ambiguous between multiple elements (the same collision Task 4 hit).
+    const footer = document.querySelector("footer");
+    expect(footer).not.toBeNull();
+    expect(within(footer!).queryByText(/Music Library Manager/)).not.toBeInTheDocument();
+    expect(within(footer!).getByText(/ProFolder/)).toBeInTheDocument();
   });
 });
 
