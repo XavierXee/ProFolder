@@ -213,6 +213,40 @@ describe("useAudioFiles - stale-response guard (request-sequence race)", () => {
   });
 });
 
+describe("useAudioFiles - unmount safety", () => {
+  it("resolving an in-flight fetch after unmount does not throw or log a console error/warning", async () => {
+    // NOTE: this test does NOT prove the mountedRef guard specifically is what prevents a
+    // problem -- React 18 + @testing-library/react 16 already silently discard setState calls
+    // on unmounted function components even with no guard present at all (confirmed via a
+    // throwaway probe during design: no throw, no console warning, result.current simply never
+    // reflects the post-unmount update). So this test would pass identically whether or not the
+    // mountedRef fix exists. It's included for regression/hygiene coverage of the surrounding
+    // behavior (e.g. it would still catch a "not wrapped in act()" warning, or an
+    // unhandled-promise-rejection-turned-console-error if the .catch guard were dropped
+    // entirely) -- not as a mutation-provable proof of this specific fix.
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const { promise, resolve } = deferred<PagedFiles>();
+    mockGetFiles.mockReturnValueOnce(promise);
+
+    const { unmount } = renderHook(() => useAudioFiles());
+
+    unmount();
+
+    await act(async () => {
+      resolve(makePaged());
+      await Promise.resolve();
+    });
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+});
+
 describe("useAudioFiles - page clamping", () => {
   it("clamps the current page back down when a refetch/rescan shrinks totalPages below it", async () => {
     mockGetFiles.mockResolvedValue(makePaged({ totalPages: 5 }));

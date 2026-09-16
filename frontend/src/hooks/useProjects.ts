@@ -20,6 +20,16 @@ export function useProjects(initialFilters: Partial<Omit<ProjectFilters, "page" 
   // Monotonic request counter: guards against a stale response (from a request superseded
   // by a newer one before it resolved) overwriting state with out-of-date results.
   const latestRequestId = useRef(0);
+  // Mount flag: guards against a setState call after the component has genuinely unmounted,
+  // as opposed to latestRequestId above which guards against a request merely being superseded.
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const refetch = useCallback(() => {
     const requestId = ++latestRequestId.current;
@@ -27,17 +37,17 @@ export function useProjects(initialFilters: Partial<Omit<ProjectFilters, "page" 
     setError(undefined);
     getProjects(filters)
       .then((result) => {
-        if (latestRequestId.current !== requestId) return; // superseded by a newer request
+        if (latestRequestId.current !== requestId || !mountedRef.current) return; // superseded by a newer request
         setProjects(result.projects);
         setTotal(result.total);
         setTotalPages(result.totalPages);
       })
       .catch((err) => {
-        if (latestRequestId.current !== requestId) return;
+        if (latestRequestId.current !== requestId || !mountedRef.current) return;
         setError(err.message);
       })
       .finally(() => {
-        if (latestRequestId.current !== requestId) return;
+        if (latestRequestId.current !== requestId || !mountedRef.current) return;
         setLoading(false);
       });
   }, [filters]);
