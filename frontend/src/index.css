@@ -1,10 +1,92 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import 'tailwindcss';
 
+/* Color + font tokens: routed through @theme (so bg-canvas, text-ink, font-sans, etc. become
+ * real Tailwind utility classes generated at build time) via a double-indirection — each
+ * @theme entry points at a --rt-* variable, and each [data-theme="..."] block below redefines
+ * that --rt-* variable, making the resulting utility classes runtime-switchable. */
 @theme {
-  --font-sans: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --color-canvas: var(--rt-canvas);
+  --color-surface: var(--rt-surface);
+  --color-surface-hover: var(--rt-surface-hover);
+  --color-surface-selected: var(--rt-surface-selected);
+  --color-border: var(--rt-border);
+  --color-ink: var(--rt-ink);
+  --color-ink-muted: var(--rt-ink-muted);
+  --color-accent: var(--rt-accent);
+  --color-accent-ink: var(--rt-accent-ink);
+  --color-danger: var(--rt-danger);
+  --font-sans: var(--rt-font-sans);
+  --font-mono: var(--rt-font-mono);
+}
+
+/* dark (also the unscoped :root default, matching today's default-dark behavior) */
+:root,
+[data-theme="dark"] {
+  --rt-canvas: #0d0f14;
+  --rt-surface: #181b24;
+  /* hover/selected values below are byte-faithful translations of the existing row
+     hover/selected classes (hover:bg-white/3, bg-blue-500/8) found in FileRow.tsx /
+     ProjectsTable.tsx, resolved to the literal colors those Tailwind utilities produce. */
+  --rt-surface-hover: rgb(255 255 255 / 0.03);
+  --rt-surface-selected: oklch(62.3% 0.214 259.815 / 0.08);
+  --rt-border: rgba(255, 255, 255, 0.08);
+  --rt-ink: #e2e8f0; /* matches the pre-existing dark `body { color: #e2e8f0 }` (Tailwind slate-200) */
+  --rt-ink-muted: #64748b;
+  --rt-accent: #2563eb;
+  --rt-accent-ink: #fff;
+  --rt-danger: #ef4444;
+  --rt-font-sans: 'Inter', sans-serif;
+  --rt-font-mono: 'JetBrains Mono', monospace;
+}
+
+/* light */
+[data-theme="light"] {
+  --rt-canvas: #f4f6f9;
+  --rt-surface: #ffffff;
+  /* byte-faithful translations of hover:bg-black/3 and bg-blue-50 (FileRow.tsx / ProjectsTable.tsx) */
+  --rt-surface-hover: rgb(0 0 0 / 0.03);
+  --rt-surface-selected: oklch(97% 0.014 254.604);
+  --rt-border: rgba(0, 0, 0, 0.08);
+  --rt-ink: #0f172a;
+  --rt-ink-muted: #94a3b8;
+  --rt-accent: #2563eb;
+  --rt-accent-ink: #fff;
+  --rt-danger: #dc2626;
+  --rt-font-sans: 'Inter', sans-serif;
+  --rt-font-mono: 'JetBrains Mono', monospace;
+}
+
+/* profolder (new brand theme, default) */
+[data-theme="profolder"] {
+  --rt-canvas: #1C1C1A;
+  --rt-surface: #242422;
+  --rt-surface-hover: #2e2e2b;
+  --rt-surface-selected: #D5F7FE;
+  --rt-border: #B0B0B0;
+  --rt-ink: #E9E9E9;
+  --rt-ink-muted: #6E6E6E;
+  --rt-accent: #FADF82;
+  --rt-accent-ink: #1C1C1A;
+  --rt-danger: #ef4444;
+  --rt-font-sans: 'Archivo', sans-serif;
+  --rt-font-mono: 'IBM Plex Mono', monospace;
+}
+
+/* Geometry tokens: plain CSS custom properties, not routed through @theme — consumed via
+ * Tailwind v4's arbitrary-value bracket syntax (e.g. rounded-[var(--rt-radius)]). */
+:root,
+[data-theme="dark"],
+[data-theme="light"] {
+  --rt-radius: 0.25rem; /* matches Tailwind's default bare `rounded` utility (border-radius: .25rem) */
+  --rt-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); /* matches Tailwind's default `shadow-2xl` */
+}
+[data-theme="profolder"] {
+  --rt-radius: 0;
+  --rt-shadow: none;
 }
 
 * {
@@ -20,25 +102,19 @@
 *::-webkit-scrollbar-thumb { background: #1e2433; border-radius: 2px; }
 
 body {
-  background-color: #0d0f14;
-  color: #e2e8f0;
-  font-family: 'Inter', sans-serif;
+  background-color: var(--rt-canvas);
+  color: var(--rt-ink);
+  font-family: var(--rt-font-sans);
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Light mode overrides applied when .light is on <html> */
-html.light body {
-  background-color: #f4f6f9;
-  color: #0f172a;
-}
-
-html.light * {
+[data-theme="light"] * {
   scrollbar-color: #cbd5e1 transparent;
 }
-html.light *::-webkit-scrollbar-thumb { background: #cbd5e1; }
+[data-theme="light"] *::-webkit-scrollbar-thumb { background: #cbd5e1; }
 
 /* Light-mode row flash */
-html.light .row-flash {
+[data-theme="light"] .row-flash {
   animation: flash-row-light 1.2s ease-out forwards;
 }
 
@@ -47,7 +123,7 @@ html.light .row-flash {
   100% { background-color: transparent; }
 }
 
-html.light .skeleton {
+[data-theme="light"] .skeleton {
   background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
   background-size: 800px 100%;
 }

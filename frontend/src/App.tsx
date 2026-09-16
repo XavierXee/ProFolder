@@ -26,11 +26,21 @@ import type { AudioFile, CustomTab, Project, TrackStatus } from "./types.js";
 
 type Tab = "projects" | "files" | number;
 
-const THEME_STORAGE_KEY = "musicLibraryManager.isDark";
+type Theme = "profolder" | "light" | "dark";
 
-function loadStoredIsDark(): boolean {
+const THEME_STORAGE_KEY = "musicLibraryManager.theme";
+const LEGACY_THEME_STORAGE_KEY = "musicLibraryManager.isDark";
+
+/** Reads the persisted theme, migrating the legacy boolean-based key ("musicLibraryManager.isDark")
+ * if the new key hasn't been written yet. If neither key is present, "profolder" (the new brand
+ * theme) is the default. */
+function loadStoredTheme(): Theme {
   const stored = localStorage.getItem(THEME_STORAGE_KEY);
-  return stored === null ? true : stored === "true";
+  if (stored === "profolder" || stored === "light" || stored === "dark") return stored;
+  const legacy = localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+  if (legacy === "true") return "dark";
+  if (legacy === "false") return "light";
+  return "profolder";
 }
 
 /** Banner text for a completed single-item copy/move/delete, shared by the default and
@@ -80,7 +90,8 @@ export default function App() {
   const [musicRoot, setMusicRoot] = useState<string | undefined>();
   const [lastScanChanges, setLastScanChanges] = useState<number | null>(null);
   const [banner, setBanner] = useState<string | undefined>();
-  const [isDark, setIsDark] = useState(loadStoredIsDark);
+  const [theme, setTheme] = useState<Theme>(loadStoredTheme);
+  const isDark = theme !== "light";
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -126,9 +137,9 @@ export default function App() {
   }, []);
 
   useLayoutEffect(() => {
-    document.documentElement.classList.toggle("light", !isDark);
-    localStorage.setItem(THEME_STORAGE_KEY, String(isDark));
-  }, [isDark]);
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   function handleScanComplete(stats: ScanStats) {
     setLastScanChanges(stats.newFiles + stats.modifiedFiles + stats.removedFiles);
@@ -386,15 +397,11 @@ export default function App() {
     });
   }
 
-  const sectionBorder = isDark ? "border-white/8" : "border-black/8";
+  const sectionBorder = "border-border";
 
   return (
-    <div className={`min-h-screen flex flex-col ${isDark ? "bg-[#0d0f14]" : "bg-[#f4f6f9]"}`}>
-      <header
-        className={`border-b px-6 py-4 flex items-center justify-between gap-4 sticky top-0 z-20 backdrop-blur-sm ${
-          isDark ? "border-white/8 bg-[#0d0f14]/90" : "border-black/8 bg-[#f4f6f9]/90"
-        }`}
-      >
+    <div className="min-h-screen flex flex-col bg-canvas">
+      <header className="border-b border-border bg-canvas/90 px-6 py-4 flex items-center justify-between gap-4 sticky top-0 z-20 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded bg-blue-600 flex items-center justify-center flex-shrink-0">
             <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -421,7 +428,7 @@ export default function App() {
               setShowProjectsBatchPanel(false);
               setShowScanPanel(true);
             }}
-            className="px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             Prod Folder
           </button>
@@ -431,7 +438,7 @@ export default function App() {
               onClick={() => setShowMetrics((v) => !v)}
               aria-expanded={showMetrics}
               aria-haspopup="dialog"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                 isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"
               }`}
             >
@@ -459,7 +466,7 @@ export default function App() {
               setShowProjectsBatchPanel(false);
               setShowSettings(true);
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
               isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"
             }`}
           >
@@ -476,7 +483,9 @@ export default function App() {
 
           <div className={`border-l pl-4 ${sectionBorder}`}>
             <button
-              onClick={() => setIsDark((d) => !d)}
+              // Stopgap 3-state cycle (profolder -> dark -> light -> profolder); replaced by a
+              // proper theme dropdown in a later task.
+              onClick={() => setTheme((t) => (t === "profolder" ? "dark" : t === "dark" ? "light" : "profolder"))}
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
               title={isDark ? "Switch to light mode" : "Switch to dark mode"}
               className={`flex items-center justify-center p-1 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
@@ -507,7 +516,7 @@ export default function App() {
             onClick={() => setShowCreateTabModal(true)}
             aria-label="Create custom tab"
             title="Create custom tab"
-            className={`flex items-center justify-center w-6 h-6 mr-1 rounded text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+            className={`flex items-center justify-center w-6 h-6 mr-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
               isDark
                 ? "border-white/10 text-slate-500 hover:text-slate-200 hover:bg-white/8 hover:border-white/20"
                 : "border-black/10 text-slate-400 hover:text-slate-700 hover:bg-black/5 hover:border-black/20"
@@ -557,7 +566,7 @@ export default function App() {
                 onClick={() => setDeletingTab(tab)}
                 aria-label={`Delete tab ${tab.name}`}
                 title={`Delete tab ${tab.name}`}
-                className={`flex items-center justify-center w-4 h-4 -ml-1 rounded text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                className={`flex items-center justify-center w-4 h-4 -ml-1 rounded-[var(--rt-radius)] text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   isDark ? "text-slate-600 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"
                 }`}
               >
@@ -568,7 +577,7 @@ export default function App() {
         </div>
 
         {banner && (
-          <div className={`mx-6 mt-3 px-3 py-2 rounded text-xs font-mono ${isDark ? "bg-blue-500/10 text-blue-300" : "bg-blue-50 text-blue-700"}`}>
+          <div className={`mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono ${isDark ? "bg-blue-500/10 text-blue-300" : "bg-blue-50 text-blue-700"}`}>
             {banner}
           </div>
         )}
@@ -622,7 +631,7 @@ export default function App() {
             />
 
             {error && (
-              <div className={`mx-6 mt-3 px-3 py-2 rounded text-xs font-mono ${isDark ? "bg-red-500/10 text-red-300" : "bg-red-50 text-red-700"}`}>
+              <div className={`mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono ${isDark ? "bg-red-500/10 text-red-300" : "bg-red-50 text-red-700"}`}>
                 {error}
               </div>
             )}
