@@ -26,6 +26,15 @@ function makeProject(overrides: Partial<ProjectRow> = {}): ProjectRow {
   };
 }
 
+/** The ProFolder accent-bar span is `aria-hidden`, but so is ScoreBadge's unrelated dot indicator
+ * (`w-2 h-2 rounded-full`, see ScoreBadge.tsx) — disambiguate by the accent bar's distinctive
+ * `w-[3px]` width class rather than matching on `aria-hidden` alone. */
+function getAccentBar(container: HTMLElement): HTMLElement | null {
+  return Array.from(container.querySelectorAll<HTMLElement>('span[aria-hidden="true"]')).find((el) =>
+    el.className.split(/\s+/).includes("w-[3px]")
+  ) ?? null;
+}
+
 function renderTable(overrides: Partial<Parameters<typeof ProjectsTable>[0]> = {}) {
   const props = {
     projects: [] as ProjectRow[],
@@ -406,5 +415,144 @@ describe("ProjectsTable - select-all checkbox", () => {
     renderTable({ projects, selectedIds: new Set(["p1", "p2"]) });
 
     expect(getSelectAllCheckbox()).toBeChecked();
+  });
+});
+
+describe("ProjectsTable - ProFolder theme", () => {
+  it("selected row: uses bg-surface-selected, a bg-chrome accent bar, and font-semibold on the name", () => {
+    const { container } = renderTable({
+      isProFolder: true,
+      selectedId: "p1",
+      projects: [makeProject({ id: "p1", name: "Song One" })],
+    });
+
+    const row = container.querySelector("tbody tr");
+    expect(row).toHaveClass("bg-surface-selected");
+    expect(row).not.toHaveClass("bg-surface");
+
+    const name = screen.getByText("Song One");
+    expect(name).toHaveClass("font-semibold");
+    expect(name).not.toHaveClass("font-medium");
+
+    const accentBar = getAccentBar(container);
+    expect(accentBar).not.toBeNull();
+    expect(accentBar).toHaveClass("bg-chrome");
+    expect(accentBar).not.toHaveClass("bg-border");
+  });
+
+  it("unselected row: uses bg-surface, a bg-border accent bar, and font-medium on the name", () => {
+    const { container } = renderTable({
+      isProFolder: true,
+      selectedId: null,
+      projects: [makeProject({ id: "p1", name: "Song One" })],
+    });
+
+    const row = container.querySelector("tbody tr");
+    expect(row).toHaveClass("bg-surface");
+    expect(row).not.toHaveClass("bg-surface-selected");
+
+    const name = screen.getByText("Song One");
+    expect(name).toHaveClass("font-medium");
+    expect(name).not.toHaveClass("font-semibold");
+
+    const accentBar = getAccentBar(container);
+    expect(accentBar).not.toBeNull();
+    expect(accentBar).toHaveClass("bg-border");
+    expect(accentBar).not.toHaveClass("bg-chrome");
+  });
+
+  it("does not render an accent bar element when isProFolder is false", () => {
+    const { container } = renderTable({
+      isProFolder: false,
+      selectedId: "p1",
+      projects: [makeProject({ id: "p1", name: "Song One" })],
+    });
+
+    expect(getAccentBar(container)).toBeNull();
+  });
+
+  it("renders tag chips with the display-chip treatment (bg-surface/border-border/text-ink-muted)", () => {
+    renderTable({ isProFolder: true, projects: [makeProject({ id: "p1", tags: ["rock"] })] });
+
+    const chip = screen.getByText("rock");
+    expect(chip).toHaveClass("bg-surface");
+    expect(chip).toHaveClass("border-border");
+    expect(chip).toHaveClass("text-ink-muted");
+    expect(chip).not.toHaveClass("bg-chrome");
+  });
+
+  it("applies the same display-chip tag treatment regardless of whether the row is selected", () => {
+    renderTable({
+      isProFolder: true,
+      selectedId: "p1",
+      projects: [makeProject({ id: "p1", tags: ["rock"] })],
+    });
+
+    const chip = screen.getByText("rock");
+    expect(chip).toHaveClass("bg-surface");
+    expect(chip).toHaveClass("border-border");
+    expect(chip).toHaveClass("text-ink-muted");
+  });
+
+  it("uses bg-chrome only on the selected-row accent bar, nowhere else in the row", () => {
+    const { container } = renderTable({
+      isProFolder: true,
+      selectedId: "p1",
+      projects: [makeProject({ id: "p1", tags: ["rock"] })],
+    });
+
+    const chromeEls = Array.from(container.querySelectorAll<HTMLElement>("*")).filter((el) => el.classList.contains("bg-chrome"));
+    expect(chromeEls).toHaveLength(1);
+    expect(chromeEls[0]).toHaveAttribute("aria-hidden", "true");
+  });
+});
+
+describe("ProjectsTable - Light/Dark regression guard (isProFolder omitted)", () => {
+  it("selected row still uses the pre-existing blue-highlight classes for dark theme, with no ProFolder tokens", () => {
+    const { container } = renderTable({
+      isDark: true,
+      selectedId: "p1",
+      projects: [makeProject({ id: "p1", name: "Song One" })],
+    });
+
+    const row = container.querySelector("tbody tr");
+    expect(row).toHaveClass("bg-blue-500/8");
+    expect(row).not.toHaveClass("bg-surface-selected");
+
+    const name = screen.getByText("Song One");
+    expect(name).toHaveClass("font-medium");
+    expect(name).not.toHaveClass("font-semibold");
+
+    expect(getAccentBar(container)).toBeNull();
+  });
+
+  it("selected row still uses the pre-existing blue-highlight classes for light theme, with no ProFolder tokens", () => {
+    const { container } = renderTable({
+      isDark: false,
+      selectedId: "p1",
+      projects: [makeProject({ id: "p1", name: "Song One" })],
+    });
+
+    const row = container.querySelector("tbody tr");
+    expect(row).toHaveClass("bg-blue-50");
+    expect(row).not.toHaveClass("bg-surface-selected");
+  });
+
+  it("unselected row tag chips still use the pre-existing dark-theme classes", () => {
+    renderTable({ isDark: true, projects: [makeProject({ id: "p1", tags: ["rock"] })] });
+
+    const chip = screen.getByText("rock");
+    expect(chip).toHaveClass("bg-white/5");
+    expect(chip).toHaveClass("text-slate-400");
+    expect(chip).not.toHaveClass("bg-surface");
+  });
+
+  it("unselected row tag chips still use the pre-existing light-theme classes", () => {
+    renderTable({ isDark: false, projects: [makeProject({ id: "p1", tags: ["rock"] })] });
+
+    const chip = screen.getByText("rock");
+    expect(chip).toHaveClass("bg-slate-100");
+    expect(chip).toHaveClass("text-slate-600");
+    expect(chip).not.toHaveClass("bg-surface");
   });
 });

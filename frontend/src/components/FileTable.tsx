@@ -51,6 +51,7 @@ export function FileTable({
   loading,
   flashId,
   isDark,
+  isProFolder = false,
   selectedId,
   selectedIds,
   playingFileId,
@@ -67,6 +68,7 @@ export function FileTable({
   loading: boolean;
   flashId: string | null;
   isDark: boolean;
+  isProFolder?: boolean;
   selectedId: string | null;
   selectedIds: Set<string>;
   playingFileId: string | null;
@@ -126,6 +128,7 @@ export function FileTable({
               key={file.id}
               file={file}
               isDark={isDark}
+              isProFolder={isProFolder}
               isSelected={file.id === selectedId}
               isFlash={file.id === flashId}
               flashRef={flashRef}

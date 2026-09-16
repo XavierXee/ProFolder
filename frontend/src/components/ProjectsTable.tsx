@@ -65,6 +65,7 @@ export function ProjectsTable({
   pageSize,
   loading,
   isDark,
+  isProFolder = false,
   selectedId,
   selectedIds,
   filters,
@@ -82,6 +83,7 @@ export function ProjectsTable({
   pageSize: number;
   loading: boolean;
   isDark: boolean;
+  isProFolder?: boolean;
   selectedId?: string | null;
   selectedIds: Set<string>;
   filters: ProjectFilters;
@@ -155,22 +157,37 @@ export function ProjectsTable({
                     onClick={() => onRowClick(project.id)}
                     aria-selected={isSelected}
                     className={`border-b cursor-pointer transition-colors ${
-                      isSelected
-                        ? isDark
-                          ? "border-white/5 bg-blue-500/8"
-                          : "border-black/5 bg-blue-50"
-                        : isDark
-                          ? "border-white/5 hover:bg-white/3"
-                          : "border-black/5 hover:bg-black/3"
+                      isProFolder
+                        ? isSelected
+                          ? "border-border bg-surface-selected"
+                          : "border-border bg-surface hover:bg-surface-hover"
+                        : isSelected
+                          ? isDark
+                            ? "border-white/5 bg-blue-500/8"
+                            : "border-black/5 bg-blue-50"
+                          : isDark
+                            ? "border-white/5 hover:bg-white/3"
+                            : "border-black/5 hover:bg-black/3"
                     }`}
                   >
                     <td className="px-4 py-3.5 text-center">
                       <RowCheckbox checked={selectedIds.has(project.id)} onChange={() => onToggleSelect(project.id)} ariaLabel={`Select ${project.name}`} />
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className={`text-sm font-medium truncate ${isDark ? "text-slate-200" : "text-slate-800"}`}>{project.name}</div>
-                      <div className={`text-xs font-mono mt-0.5 truncate max-w-xs ${meta}`} title={project.path}>
-                        {project.id}
+                      <div className="flex items-center gap-2">
+                        {isProFolder && (
+                          <span aria-hidden="true" className={`w-[3px] h-[22px] flex-none ${isSelected ? "bg-chrome" : "bg-border"}`} />
+                        )}
+                        <div className="min-w-0">
+                          <div
+                            className={`text-sm truncate ${isProFolder ? (isSelected ? "font-semibold" : "font-medium") : "font-medium"} ${isDark ? "text-slate-200" : "text-slate-800"}`}
+                          >
+                            {project.name}
+                          </div>
+                          <div className={`text-xs font-mono mt-0.5 truncate max-w-xs ${meta}`} title={project.path}>
+                            {project.id}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-center">
@@ -192,7 +209,9 @@ export function ProjectsTable({
                           {project.tags.map((tag) => (
                             <span
                               key={tag}
-                              className={`inline-flex items-center px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-600"}`}
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${
+                                isProFolder ? "bg-surface border border-border text-ink-muted" : isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-600"
+                              }`}
                             >
                               {tag}
                             </span>

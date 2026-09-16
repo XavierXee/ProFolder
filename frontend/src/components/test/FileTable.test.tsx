@@ -25,6 +25,15 @@ function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   };
 }
 
+/** The ProFolder accent-bar span is `aria-hidden`, but so is ScoreBadge's unrelated dot indicator
+ * (`w-2 h-2 rounded-full`, see ScoreBadge.tsx) — disambiguate by the accent bar's distinctive
+ * `w-[3px]` width class rather than matching on `aria-hidden` alone. */
+function getAccentBar(container: HTMLElement): HTMLElement | null {
+  return Array.from(container.querySelectorAll<HTMLElement>('span[aria-hidden="true"]')).find((el) =>
+    el.className.split(/\s+/).includes("w-[3px]")
+  ) ?? null;
+}
+
 function renderTable(overrides: Partial<Parameters<typeof FileTable>[0]> = {}) {
   const props = {
     files: [],
@@ -282,5 +291,21 @@ describe("FileTable - select-all checkbox", () => {
 
     const header = getSelectAllCheckbox().closest("th");
     expect(header).toHaveClass("text-center");
+  });
+});
+
+describe("FileTable - isProFolder pass-through to FileRow", () => {
+  it("threads isProFolder through to rows, rendering the ProFolder accent-bar element", () => {
+    const files = [makeFile({ id: "f1", filename: "one.wav" })];
+    const { container } = renderTable({ loading: false, files, isProFolder: true });
+
+    expect(getAccentBar(container)).not.toBeNull();
+  });
+
+  it("does not render the ProFolder accent-bar element when isProFolder is omitted (defaults to false)", () => {
+    const files = [makeFile({ id: "f1", filename: "one.wav" })];
+    const { container } = renderTable({ loading: false, files });
+
+    expect(getAccentBar(container)).toBeNull();
   });
 });

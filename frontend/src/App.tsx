@@ -606,6 +606,7 @@ export default function App() {
               pageSize={projectsPageSize}
               loading={projectsLoading}
               isDark={isDark}
+              isProFolder={isProFolder}
               selectedId={selectedProjectId}
               selectedIds={selectedProjectIds}
               filters={projectFilters}
@@ -646,6 +647,7 @@ export default function App() {
                 loading={loading}
                 flashId={flashId}
                 isDark={isDark}
+                isProFolder={isProFolder}
                 selectedId={selectedId}
                 selectedIds={selectedFileIds}
                 playingFileId={playingFile?.id ?? null}

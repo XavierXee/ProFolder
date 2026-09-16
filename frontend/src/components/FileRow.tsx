@@ -24,6 +24,7 @@ export function computeLocation(relativePath: string): string {
 export function FileRow({
   file,
   isDark,
+  isProFolder = false,
   isSelected,
   isFlash,
   flashRef,
@@ -35,6 +36,7 @@ export function FileRow({
 }: {
   file: AudioFile;
   isDark: boolean;
+  isProFolder?: boolean;
   isSelected: boolean;
   isFlash: boolean;
   flashRef: RefObject<HTMLTableRowElement> | null;
@@ -52,13 +54,17 @@ export function FileRow({
       onClick={onClick}
       aria-selected={isSelected}
       className={`border-b cursor-pointer transition-colors ${
-        isSelected
-          ? isDark
-            ? "border-white/5 bg-blue-500/8"
-            : "border-black/5 bg-blue-50"
-          : isDark
-            ? "border-white/5 hover:bg-white/3"
-            : "border-black/5 hover:bg-black/3"
+        isProFolder
+          ? isSelected
+            ? "border-border bg-surface-selected"
+            : "border-border bg-surface hover:bg-surface-hover"
+          : isSelected
+            ? isDark
+              ? "border-white/5 bg-blue-500/8"
+              : "border-black/5 bg-blue-50"
+            : isDark
+              ? "border-white/5 hover:bg-white/3"
+              : "border-black/5 hover:bg-black/3"
       }`}
     >
       <td className="px-4 py-3.5 text-center">
@@ -92,8 +98,15 @@ export function FileRow({
               </svg>
             )}
           </button>
+          {isProFolder && (
+            <span aria-hidden="true" className={`w-[3px] h-[22px] flex-none ${isSelected ? "bg-chrome" : "bg-border"}`} />
+          )}
           <div className="min-w-0">
-            <div className={`text-sm font-medium truncate ${isDark ? "text-slate-200" : "text-slate-800"}`}>{file.filename}</div>
+            <div
+              className={`text-sm truncate ${isProFolder ? (isSelected ? "font-semibold" : "font-medium") : "font-medium"} ${isDark ? "text-slate-200" : "text-slate-800"}`}
+            >
+              {file.filename}
+            </div>
             <div className={`text-xs font-mono mt-0.5 ${isDark ? "text-slate-600" : "text-slate-400"}`}>{file.extension}</div>
           </div>
         </div>
@@ -109,7 +122,9 @@ export function FileRow({
             {file.tags.map((tag) => (
               <span
                 key={tag}
-                className={`inline-flex items-center px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-600"}`}
+                className={`inline-flex items-center px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${
+                  isProFolder ? "bg-surface border border-border text-ink-muted" : isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-600"
+                }`}
               >
                 {tag}
               </span>
