@@ -95,6 +95,7 @@ export default function App() {
   const [banner, setBanner] = useState<string | undefined>();
   const [theme, setTheme] = useState<Theme>(loadStoredTheme);
   const isDark = theme !== "light";
+  const isProFolder = theme === "profolder";
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -406,7 +407,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-canvas">
       <SplashScreen />
 
-      <header className="border-b border-border bg-canvas/90 px-6 py-4 flex items-center justify-between gap-4 sticky top-0 z-20 backdrop-blur-sm">
+      <header className="border-b border-border bg-chrome/90 px-6 py-4 flex items-center justify-between gap-4 sticky top-0 z-20 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <Logo size={28} />
           <div>
@@ -495,9 +496,11 @@ export default function App() {
             aria-label="Create custom tab"
             title="Create custom tab"
             className={`flex items-center justify-center w-6 h-6 mr-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-              isDark
-                ? "border-white/10 text-slate-500 hover:text-slate-200 hover:bg-white/8 hover:border-white/20"
-                : "border-black/10 text-slate-400 hover:text-slate-700 hover:bg-black/5 hover:border-black/20"
+              isProFolder
+                ? "bg-surface border-border text-ink-muted hover:text-ink hover:bg-surface-hover"
+                : isDark
+                  ? "border-white/10 text-slate-500 hover:text-slate-200 hover:bg-white/8 hover:border-white/20"
+                  : "border-black/10 text-slate-400 hover:text-slate-700 hover:bg-black/5 hover:border-black/20"
             }`}
           >
             +
@@ -513,13 +516,21 @@ export default function App() {
               key={tab}
               onClick={() => handleTabChange(tab)}
               aria-current={activeTab === tab}
-              className={`px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                activeTab === tab
-                  ? "border-blue-500 text-blue-400"
-                  : isDark
-                    ? "border-transparent text-slate-500 hover:text-slate-300"
-                    : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
+              className={
+                isProFolder
+                  ? `px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-[var(--rt-radius)] border ${
+                      activeTab === tab
+                        ? "bg-accent text-accent-ink border-accent"
+                        : "bg-surface text-ink-muted border-border hover:text-ink"
+                    }`
+                  : `px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      activeTab === tab
+                        ? "border-blue-500 text-blue-400"
+                        : isDark
+                          ? "border-transparent text-slate-500 hover:text-slate-300"
+                          : "border-transparent text-slate-500 hover:text-slate-800"
+                    }`
+              }
             >
               {label}
             </button>
@@ -530,13 +541,21 @@ export default function App() {
               <button
                 onClick={() => handleTabChange(tab.id)}
                 aria-current={activeTab === tab.id}
-                className={`px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                  activeTab === tab.id
-                    ? "border-blue-500 text-blue-400"
-                    : isDark
-                      ? "border-transparent text-slate-500 hover:text-slate-300"
-                      : "border-transparent text-slate-500 hover:text-slate-800"
-                }`}
+                className={
+                  isProFolder
+                    ? `px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-[var(--rt-radius)] border ${
+                        activeTab === tab.id
+                          ? "bg-accent text-accent-ink border-accent"
+                          : "bg-surface text-ink-muted border-border hover:text-ink"
+                      }`
+                    : `px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                        activeTab === tab.id
+                          ? "border-blue-500 text-blue-400"
+                          : isDark
+                            ? "border-transparent text-slate-500 hover:text-slate-300"
+                            : "border-transparent text-slate-500 hover:text-slate-800"
+                      }`
+                }
               >
                 {tab.name}
               </button>
@@ -545,7 +564,11 @@ export default function App() {
                 aria-label={`Delete tab ${tab.name}`}
                 title={`Delete tab ${tab.name}`}
                 className={`flex items-center justify-center w-4 h-4 -ml-1 rounded-[var(--rt-radius)] text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                  isDark ? "text-slate-600 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"
+                  isProFolder
+                    ? "text-ink-muted hover:text-ink hover:bg-surface-hover"
+                    : isDark
+                      ? "text-slate-600 hover:text-slate-300 hover:bg-white/8"
+                      : "text-slate-400 hover:text-slate-700 hover:bg-black/5"
                 }`}
               >
                 ×
@@ -784,7 +807,7 @@ export default function App() {
         onCancel={() => setDeletingTab(null)}
       />
 
-      <footer className={`border-t px-6 py-2 flex items-center justify-between ${isDark ? "border-white/5" : "border-black/5"}`}>
+      <footer className={`border-t bg-chrome px-6 py-2 flex items-center justify-between ${isDark ? "border-white/5" : "border-black/5"}`}>
         <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>ProFolder · Local, read-only scanner</span>
         <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>Score and tag your tracks · Track what's ready to release</span>
       </footer>

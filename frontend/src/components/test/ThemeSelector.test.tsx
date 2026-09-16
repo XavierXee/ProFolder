@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeSelector } from "../ThemeSelector.js";
 
@@ -167,12 +167,13 @@ describe("ThemeSelector", () => {
 
   // Regression guard for a real WCAG 1.4.3 finding: --color-accent resolves to #2563eb (raw
   // blue) under the dark theme, which is only ~3.33:1 against --color-surface's #181b24 — below
-  // the 4.5:1 AA threshold for normal text. profolder (#FADF82 on #242422, ~11.8:1) and light
-  // (#2563eb on #ffffff, ~5.17:1) both clear AA using text-accent directly, so only dark needs
-  // the swap to the lighter text-blue-400 (~6.77:1 against #181b24) that the rest of this
-  // codebase already uses for readable text on the dark surface (see
-  // MultiSelectDropdown.tsx's triggerActiveCls).
-  it("uses the higher-contrast text-blue-400 (not text-accent) for the selected option under the dark theme specifically, while profolder/light keep text-accent", async () => {
+  // the 4.5:1 AA threshold for normal text. light (#2563eb on #ffffff, ~5.17:1) clears AA using
+  // text-accent directly on the label, so only dark needs the swap to the lighter text-blue-400
+  // (~6.77:1 against #181b24) that the rest of this codebase already uses for readable text on
+  // the dark surface (see MultiSelectDropdown.tsx's triggerActiveCls). profolder is covered
+  // separately below (it never used text-accent as a label color at all, even before this fix,
+  // since #FADF82 on #E9E9E9 measures ~1.1:1 regardless of surface lightness/darkness).
+  it("uses the higher-contrast text-blue-400 (not text-accent) for the selected option under the dark theme specifically, while light keeps text-accent", async () => {
     const user = userEvent.setup();
 
     const { unmount: unmountDark } = render(<ThemeSelector value="dark" onChange={vi.fn()} />);
@@ -182,17 +183,59 @@ describe("ThemeSelector", () => {
     expect(darkSelected.className).not.toContain("text-accent");
     unmountDark();
 
-    const { unmount: unmountProfolder } = render(<ThemeSelector value="profolder" onChange={vi.fn()} />);
-    await user.click(screen.getByRole("button", { name: "Theme" }));
-    const profolderSelected = screen.getByRole("option", { name: "ProFolder" });
-    expect(profolderSelected.className).toContain("text-accent");
-    expect(profolderSelected.className).not.toContain("text-blue-400");
-    unmountProfolder();
-
     render(<ThemeSelector value="light" onChange={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: "Theme" }));
     const lightSelected = screen.getByRole("option", { name: "Light" });
     expect(lightSelected.className).toContain("text-accent");
     expect(lightSelected.className).not.toContain("text-blue-400");
+  });
+
+  // Task 1.5 Fix A: the trigger sits on the still-dark --rt-chrome header background under all 3
+  // themes (canvas/surface flipped to light under profolder, chrome did not), so the plain
+  // ink/ink-muted tokens (dark-on-light text colors under profolder) would be nearly invisible
+  // there. profolder gets its own legible-on-black classes; dark/light are unaffected.
+  it("uses profolder-specific legible-on-chrome trigger classes (text-border, not text-ink-muted) under value='profolder'", () => {
+    render(<ThemeSelector value="profolder" onChange={vi.fn()} />);
+    const trigger = screen.getByRole("button", { name: "Theme" });
+    expect(trigger.className).toContain("text-border");
+    expect(trigger.className).toContain("hover:text-slate-100");
+    expect(trigger.className).not.toContain("text-ink-muted");
+    expect(trigger.className).not.toContain("hover:text-ink");
+  });
+
+  it("keeps the original text-ink-muted trigger classes for dark and light (regression guard)", () => {
+    const { unmount: unmountDark } = render(<ThemeSelector value="dark" onChange={vi.fn()} />);
+    const darkTrigger = screen.getByRole("button", { name: "Theme" });
+    expect(darkTrigger.className).toContain("text-ink-muted");
+    expect(darkTrigger.className).toContain("hover:text-ink");
+    expect(darkTrigger.className).not.toContain("text-border");
+    unmountDark();
+
+    render(<ThemeSelector value="light" onChange={vi.fn()} />);
+    const lightTrigger = screen.getByRole("button", { name: "Theme" });
+    expect(lightTrigger.className).toContain("text-ink-muted");
+    expect(lightTrigger.className).toContain("hover:text-ink");
+    expect(lightTrigger.className).not.toContain("text-border");
+  });
+
+  // Task 1.5 Fix B: a real, pre-existing bug — plain text-accent (#FADF82, yellow) as TEXT color
+  // on profolder's bg-surface (#E9E9E9) measures ~1.1:1, catastrophically low regardless of
+  // surface lightness. Fixed by not tinting the label at all under profolder (falls through to
+  // plain text-ink, same as any unselected option) and instead marking selection via a small
+  // bg-accent + text-accent-ink chip around the checkmark, mirroring the tab-switcher's own
+  // accent-chip pairing (bg-accent + text-accent-ink, never plain text-accent for readable text).
+  it("renders the selected option under profolder without plain text-accent on the label, using a bg-accent/text-accent-ink chip on the checkmark instead", async () => {
+    const user = userEvent.setup();
+    render(<ThemeSelector value="profolder" onChange={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Theme" }));
+
+    const profolderSelected = screen.getByRole("option", { name: "ProFolder" });
+    // The old broken pattern (plain text-accent on the whole option, i.e. on the label) is gone.
+    expect(profolderSelected.className).not.toContain("text-accent");
+
+    // The chip fix is present: the checkmark itself carries bg-accent + text-accent-ink.
+    const checkmark = within(profolderSelected).getByText("✓");
+    expect(checkmark.className).toContain("bg-accent");
+    expect(checkmark.className).toContain("text-accent-ink");
   });
 });

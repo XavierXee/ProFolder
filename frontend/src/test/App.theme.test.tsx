@@ -161,19 +161,94 @@ describe("App - header branding", () => {
   });
 });
 
+describe("App - tab switcher styling per theme", () => {
+  it("gives the profolder theme's active tab the accent-fill treatment and the inactive tab the secondary/grey treatment", async () => {
+    render(<App />);
+    await waitForMount();
+    expect(document.documentElement.dataset.theme).toBe("profolder");
+
+    const activeTab = screen.getByRole("button", { name: "Project Folders" });
+    const inactiveTab = screen.getByRole("button", { name: "Audio Files" });
+
+    expect(activeTab.className).toContain("bg-accent");
+    expect(activeTab.className).toContain("text-accent-ink");
+    expect(inactiveTab.className).toContain("bg-surface");
+    expect(inactiveTab.className).toContain("text-ink-muted");
+    expect(inactiveTab.className).toContain("border-border");
+
+    // The old underline-tab treatment must be gone under profolder.
+    expect(activeTab.className).not.toContain("border-blue-500");
+    expect(activeTab.className).not.toContain("-mb-px");
+  });
+
+  it("swaps the active/inactive accent classes when switching tabs under the profolder theme", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await waitForMount();
+    expect(document.documentElement.dataset.theme).toBe("profolder");
+
+    const projectsTab = screen.getByRole("button", { name: "Project Folders" });
+    const filesTab = screen.getByRole("button", { name: "Audio Files" });
+
+    expect(projectsTab.className).toContain("bg-accent");
+    expect(filesTab.className).toContain("bg-surface");
+
+    await user.click(filesTab);
+
+    await waitFor(() => expect(filesTab.className).toContain("bg-accent"));
+    expect(filesTab.className).toContain("text-accent-ink");
+    expect(projectsTab.className).toContain("bg-surface");
+    expect(projectsTab.className).toContain("text-ink-muted");
+  });
+
+  // Regression guard: the pre-existing Light/Dark underline-tab styling must remain byte-for-byte
+  // unchanged by this task. These exact class strings were copied from the source before this
+  // task's edit.
+  const BASE = "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
+  const ACTIVE_UNDERLINE = "border-blue-500 text-blue-400";
+
+  it("keeps the dark theme's active/inactive tab classNames byte-identical to the pre-existing underline treatment", async () => {
+    localStorage.setItem(LEGACY_THEME_KEY, "true");
+    render(<App />);
+    await waitForMount();
+    expect(document.documentElement.dataset.theme).toBe("dark");
+
+    const activeTab = screen.getByRole("button", { name: "Project Folders" });
+    const inactiveTab = screen.getByRole("button", { name: "Audio Files" });
+
+    expect(activeTab.className).toBe(`${BASE} ${ACTIVE_UNDERLINE}`);
+    expect(inactiveTab.className).toBe(`${BASE} border-transparent text-slate-500 hover:text-slate-300`);
+  });
+
+  it("keeps the light theme's active/inactive tab classNames byte-identical to the pre-existing underline treatment", async () => {
+    localStorage.setItem(LEGACY_THEME_KEY, "false");
+    render(<App />);
+    await waitForMount();
+    expect(document.documentElement.dataset.theme).toBe("light");
+
+    const activeTab = screen.getByRole("button", { name: "Project Folders" });
+    const inactiveTab = screen.getByRole("button", { name: "Audio Files" });
+
+    expect(activeTab.className).toBe(`${BASE} ${ACTIVE_UNDERLINE}`);
+    expect(inactiveTab.className).toBe(`${BASE} border-transparent text-slate-500 hover:text-slate-800`);
+  });
+});
+
 describe("App - converted chrome elements carry token classes, not the old hardcoded ternary classes", () => {
-  it("gives the header the bg-canvas/90 + border-border token classes regardless of theme value", async () => {
+  it("gives the header the bg-chrome/90 + border-border token classes regardless of theme value (Task 1.5: header/footer/logo-tile stay Rack Black chrome even though canvas/surface are now light under profolder)", async () => {
     render(<App />);
     await waitForMount();
 
     const header = document.querySelector("header");
     expect(header).not.toBeNull();
     // Token classes present...
-    expect(header!.className).toContain("bg-canvas/90");
+    expect(header!.className).toContain("bg-chrome/90");
     expect(header!.className).toContain("border-border");
-    // ...and the old hardcoded-hex ternary output is gone for good, regardless of theme.
+    // ...and neither the old hardcoded-hex ternary output nor the pre-Task-1.5 bg-canvas/90
+    // class is present, regardless of theme.
     expect(header!.className).not.toContain("bg-[#0d0f14]");
     expect(header!.className).not.toContain("bg-[#f4f6f9]");
+    expect(header!.className).not.toContain("bg-canvas/90");
 
     // Same check holds after switching themes — the class itself never changes, only the
     // CSS custom property it resolves through does (confirmed separately via a real browser
@@ -182,11 +257,32 @@ describe("App - converted chrome elements carry token classes, not the old hardc
     await user.click(screen.getByRole("button", { name: "Theme" }));
     await user.click(screen.getByRole("option", { name: /Dark/ })); // profolder -> dark
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
-    expect(header!.className).toContain("bg-canvas/90");
+    expect(header!.className).toContain("bg-chrome/90");
 
     await user.click(screen.getByRole("button", { name: "Theme" }));
     await user.click(screen.getByRole("option", { name: "Light" })); // dark -> light
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
-    expect(header!.className).toContain("bg-canvas/90");
+    expect(header!.className).toContain("bg-chrome/90");
+  });
+
+  it("gives the footer an explicit bg-chrome class regardless of theme value (it used to inherit bg-canvas from the page wrapper, which is now light under profolder and would otherwise turn the footer light too)", async () => {
+    render(<App />);
+    await waitForMount();
+
+    const footer = document.querySelector("footer");
+    expect(footer).not.toBeNull();
+    expect(footer!.className).toContain("bg-chrome");
+    expect(document.documentElement.dataset.theme).toBe("profolder");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Theme" }));
+    await user.click(screen.getByRole("option", { name: /Dark/ })); // profolder -> dark
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+    expect(footer!.className).toContain("bg-chrome");
+
+    await user.click(screen.getByRole("button", { name: "Theme" }));
+    await user.click(screen.getByRole("option", { name: "Light" })); // dark -> light
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
+    expect(footer!.className).toContain("bg-chrome");
   });
 });

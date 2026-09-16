@@ -42,6 +42,39 @@ describe("index.css theme tokens match their pre-existing, byte-faithful source 
   });
 });
 
+// Task 1.5: the profolder canvas moved from an all-dark scheme to a light Desk Grey/Panel
+// scheme (matching the actual brand charter), with a NEW --rt-chrome token carrying the Rack
+// Black value forward for header/footer/logo-tile contexts specifically (which stay dark in all
+// 3 themes). dark/light's --rt-chrome is asserted byte-identical to their own pre-existing
+// --rt-canvas values (confirmed against the actual current source at the time of this task, not
+// assumed) so bg-chrome renders with zero visual change for those two themes.
+describe("index.css profolder theme: Task 1.5 light-canvas correction + --rt-chrome token", () => {
+  it("profolder: canvas/surface/ink/ink-muted/danger match the corrected light-scheme values", () => {
+    const profolder = section('[data-theme="profolder"] {', "/* Geometry tokens");
+    expect(profolder).toContain("--rt-canvas: #CFCFCF;"); // Desk Grey
+    expect(profolder).toContain("--rt-surface: #E9E9E9;"); // Panel
+    expect(profolder).toContain("--rt-ink: #1C1C1A;"); // Rack Black
+    expect(profolder).toContain("--rt-ink-muted: #585858;"); // darkened from the old #6E6E6E
+    expect(profolder).toContain("--rt-danger: #991b1b;"); // darkened from the old #ef4444
+  });
+
+  it("--rt-chrome resolves correctly in all 3 theme blocks", () => {
+    const dark = section('[data-theme="dark"] {', '[data-theme="light"]');
+    expect(dark).toContain("--rt-chrome: #0d0f14;"); // byte-identical to dark's own --rt-canvas
+
+    const light = section('[data-theme="light"] {', '[data-theme="profolder"]');
+    expect(light).toContain("--rt-chrome: #f4f6f9;"); // byte-identical to light's own --rt-canvas
+
+    const profolder = section('[data-theme="profolder"] {', "/* Geometry tokens");
+    expect(profolder).toContain("--rt-chrome: #1C1C1A;"); // Rack Black
+  });
+
+  it("wires --rt-chrome through the @theme block so bg-chrome/text-chrome become real Tailwind utilities", () => {
+    const themeBlock = section("@theme {", "}");
+    expect(themeBlock).toContain("--color-chrome: var(--rt-chrome);");
+  });
+});
+
 describe("index.css geometry tokens (--rt-radius-lg): dark/light match Tailwind's default `rounded-lg` scale, profolder collapses to square corners", () => {
   it("dark/light share one combined geometry block where --rt-radius-lg resolves to 0.5rem (Tailwind's default rounded-lg)", () => {
     const geometry = section(':root,\n[data-theme="dark"],\n[data-theme="light"] {', '[data-theme="profolder"] {\n  --rt-radius: 0;');
