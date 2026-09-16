@@ -4,7 +4,7 @@ import { runScan } from "../../scanner/scanner.js";
 import { getLastScanRun } from "../../database/repositories/scanRunRepository.js";
 import { getExcludedPaths, setExcludedPaths } from "../../database/repositories/scanExclusionRepository.js";
 import { config } from "../../config/config.js";
-import { getEffectiveMusicRoot } from "../../config/musicRoot.js";
+import { getEffectiveMusicRoot, isWithinRoot } from "../../config/musicRoot.js";
 import { asyncHandler } from "../asyncHandler.js";
 
 export function createScanRouter(db: Database.Database): Router {
@@ -13,7 +13,19 @@ export function createScanRouter(db: Database.Database): Router {
   router.post(
     "/",
     asyncHandler(async (req, res) => {
-      const rootPath = (req.body as { rootPath?: string })?.rootPath ?? getEffectiveMusicRoot(db);
+      const body = req.body as { rootPath?: string };
+      const effectiveRoot = getEffectiveMusicRoot(db);
+      // Only validate when the client explicitly supplies rootPath — the default (omitted
+      // rootPath) path is deliberately left unvalidated so the existing graceful degraded-scan
+      // behavior for a transiently-unreachable configured root (see scanner.ts) is preserved
+      // unchanged.
+      if (body?.rootPath !== undefined) {
+        if (typeof body.rootPath !== "string" || !isWithinRoot(body.rootPath, effectiveRoot)) {
+          res.status(400).json({ error: "rootPath must be within the configured music root" });
+          return;
+        }
+      }
+      const rootPath = body?.rootPath ?? effectiveRoot;
       const stats = await runScan({ rootPath, audioExtensions: config.audioExtensions }, db);
       res.json(stats);
     })

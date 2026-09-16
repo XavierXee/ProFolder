@@ -97,4 +97,65 @@ describe("scan routes", () => {
       expect(res.body.rootPath).toBe(path.resolve(root));
     });
   });
+
+  describe("POST /api/scan rootPath containment", () => {
+    it("accepts an explicit rootPath that matches the configured root (positive control)", async () => {
+      const res = await request(app).post("/api/scan").send({ rootPath: root });
+
+      expect(res.status).toBe(200);
+      expect(res.body.rootPath).toBe(path.resolve(root));
+    });
+
+    it("accepts an explicit rootPath that is a subdirectory of the configured root", async () => {
+      const sub = path.join(root, "subdir");
+      fs.mkdirSync(sub);
+
+      const res = await request(app).post("/api/scan").send({ rootPath: sub });
+
+      expect(res.status).toBe(200);
+      expect(res.body.rootPath).toBe(path.resolve(sub));
+    });
+
+    it("rejects a rootPath outside the configured root and never indexes it (security proof)", async () => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), "scan-routes-outside-"));
+      try {
+        fs.writeFileSync(path.join(outside, "secret.wav"), "audio-bytes");
+
+        const res = await request(app).post("/api/scan").send({ rootPath: outside });
+
+        expect(res.status).toBe(400);
+        expect(res.body).toEqual({ error: "rootPath must be within the configured music root" });
+
+        // Nothing from the out-of-root scan should have been persisted.
+        const lastRes = await request(app).get("/api/scan/last");
+        expect(lastRes.status).toBe(404);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
+
+    it("still runs a degraded scan with no rootPath when the configured root is unreadable (default-path regression guard)", async () => {
+      fs.rmSync(root, { recursive: true, force: true });
+
+      const res = await request(app).post("/api/scan").send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body.foldersScanned).toBe(0);
+      expect(res.body.errors.length).toBeGreaterThan(0);
+    });
+
+    it("rejects a non-string rootPath (number)", async () => {
+      const res = await request(app).post("/api/scan").send({ rootPath: 123 });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: "rootPath must be within the configured music root" });
+    });
+
+    it("rejects a non-string rootPath (array)", async () => {
+      const res = await request(app).post("/api/scan").send({ rootPath: ["x"] });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: "rootPath must be within the configured music root" });
+    });
+  });
 });
