@@ -87,12 +87,31 @@ describe("BatchEditPanel - handleScoreChange", () => {
     await waitFor(() => expect(screen.queryByText("Applying…")).not.toBeInTheDocument());
   });
 
-  // Note: unlike FileDetailPanel/ProjectDetailPanel's status/tag/score handlers,
-  // handleScoreChange has no .catch/rollback path — a rejected onApplyScore call
-  // propagates out of the async handler as a genuine unhandled promise rejection
-  // (confirmed via a scratch run), not a caught error state. There is no
-  // observable, catchable failure behavior to assert on here, so no test is
-  // added for the rejection path; flagged in the task report instead.
+  it("shows a static error and leaves the displayed score unchanged when onApplyScore rejects", async () => {
+    const onApplyScore = vi.fn().mockRejectedValue(new Error("boom"));
+    const user = userEvent.setup();
+    renderPanel({ onApplyScore });
+
+    await user.click(screen.getByRole("radio", { name: "4 of 5" }));
+
+    await waitFor(() => expect(screen.queryByText("Applying…")).not.toBeInTheDocument());
+    expect(screen.getByText("Failed to apply score")).toBeInTheDocument();
+    expect(screen.queryByText("4/5")).not.toBeInTheDocument();
+  });
+
+  it("clears a stale score error once a subsequent save succeeds", async () => {
+    const onApplyScore = vi.fn().mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce(undefined);
+    const user = userEvent.setup();
+    renderPanel({ onApplyScore });
+
+    await user.click(screen.getByRole("radio", { name: "4 of 5" }));
+    await waitFor(() => expect(screen.getByText("Failed to apply score")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("radio", { name: "3 of 5" }));
+
+    await waitFor(() => expect(screen.getByText("3/5")).toBeInTheDocument());
+    expect(screen.queryByText("Failed to apply score")).not.toBeInTheDocument();
+  });
 });
 
 describe("BatchEditPanel - handleAddTag", () => {
@@ -176,6 +195,38 @@ describe("BatchEditPanel - handleAddTag", () => {
     expect(onApplyTag).toHaveBeenCalledWith("ambient");
     await waitFor(() => expect(screen.getByText("ambient")).toBeInTheDocument());
   });
+
+  it("shows a static error, adds no chip, and does not clear the input when onApplyTag rejects", async () => {
+    const onApplyTag = vi.fn().mockRejectedValue(new Error("boom"));
+    const user = userEvent.setup({ delay: null });
+    renderPanel({ onApplyTag });
+
+    const input = screen.getByRole("combobox");
+    await user.type(input, "jazz{Enter}");
+
+    await waitFor(() => expect(screen.queryByText("Applying…")).not.toBeInTheDocument());
+    expect(screen.getByText("Failed to add tag")).toBeInTheDocument();
+    expect(screen.queryByText("jazz")).not.toBeInTheDocument();
+    expect(input).toHaveValue("jazz");
+  });
+
+  it("clears a stale tag error once a subsequent add succeeds", async () => {
+    const onApplyTag = vi.fn().mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce(undefined);
+    const user = userEvent.setup({ delay: null });
+    renderPanel({ onApplyTag });
+
+    const input = screen.getByRole("combobox");
+    await user.type(input, "jazz{Enter}");
+    await waitFor(() => expect(screen.getByText("Failed to add tag")).toBeInTheDocument());
+
+    // Rejection leaves the input un-cleared (asserted above), so clear it explicitly
+    // before retyping — otherwise this would submit "jazzjazz" instead of "jazz".
+    await user.clear(input);
+    await user.type(input, "jazz{Enter}");
+
+    await waitFor(() => expect(screen.getByText("jazz")).toBeInTheDocument());
+    expect(screen.queryByText("Failed to add tag")).not.toBeInTheDocument();
+  });
 });
 
 describe("BatchEditPanel - reset on open", () => {
@@ -228,6 +279,55 @@ describe("BatchEditPanel - reset on open", () => {
     expect(screen.queryByText("4/5")).not.toBeInTheDocument();
     expect(screen.getByRole("combobox")).toHaveValue("");
     screen.getAllByRole("radio").forEach((radio) => expect(radio).toHaveAttribute("aria-checked", "false"));
+  });
+
+  it("discards a stale score/tag error from a previous session when the panel is reopened", async () => {
+    const onApplyScore = vi.fn().mockRejectedValue(new Error("boom"));
+    const onApplyTag = vi.fn().mockRejectedValue(new Error("boom"));
+    const user = userEvent.setup({ delay: null });
+    const { rerender } = renderPanel({ open: true, onApplyScore, onApplyTag });
+
+    await user.click(screen.getByRole("radio", { name: "4 of 5" }));
+    await waitFor(() => expect(screen.getByText("Failed to apply score")).toBeInTheDocument());
+
+    const input = screen.getByRole("combobox");
+    await user.type(input, "jazz{Enter}");
+    await waitFor(() => expect(screen.getByText("Failed to add tag")).toBeInTheDocument());
+
+    // Close, then reopen — simulates a fresh batch-edit session.
+    rerender(
+      <BatchEditPanel
+        open={false}
+        count={3}
+        itemLabel="audio file"
+        isDark={true}
+        allTags={[]}
+        itemType="files"
+        selectedIds={["file-1", "file-2", "file-3"]}
+        onClose={() => {}}
+        onApplyScore={onApplyScore}
+        onApplyTag={onApplyTag}
+        onBatchOperation={() => {}}
+      />
+    );
+    rerender(
+      <BatchEditPanel
+        open={true}
+        count={3}
+        itemLabel="audio file"
+        isDark={true}
+        allTags={[]}
+        itemType="files"
+        selectedIds={["file-1", "file-2", "file-3"]}
+        onClose={() => {}}
+        onApplyScore={onApplyScore}
+        onApplyTag={onApplyTag}
+        onBatchOperation={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.queryByText("Failed to apply score")).not.toBeInTheDocument());
+    expect(screen.queryByText("Failed to add tag")).not.toBeInTheDocument();
   });
 });
 

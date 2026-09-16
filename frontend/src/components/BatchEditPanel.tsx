@@ -72,9 +72,11 @@ export default function BatchEditPanel({
 }: Props) {
   const [lastScore, setLastScore] = useState<number | null>(null);
   const [scoreSaving, setScoreSaving] = useState(false);
+  const [scoreError, setScoreError] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [appliedTags, setAppliedTags] = useState<string[]>([]);
   const [tagSaving, setTagSaving] = useState(false);
+  const [tagError, setTagError] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -82,6 +84,8 @@ export default function BatchEditPanel({
       setLastScore(null);
       setTagInput("");
       setAppliedTags([]);
+      setScoreError(false);
+      setTagError(false);
       setTimeout(() => closeRef.current?.focus(), 50);
     }
   }, [open]);
@@ -96,10 +100,13 @@ export default function BatchEditPanel({
 
   async function handleScoreChange(score: number | null) {
     if (scoreSaving) return;
+    setScoreError(false);
     setScoreSaving(true);
     try {
       await onApplyScore(score);
       setLastScore(score);
+    } catch {
+      setScoreError(true);
     } finally {
       setScoreSaving(false);
     }
@@ -113,11 +120,14 @@ export default function BatchEditPanel({
   async function handleAddTag(raw: string) {
     const trimmed = raw.trim();
     if (!trimmed || tagSaving) return;
+    setTagError(false);
     setTagSaving(true);
     try {
       await onApplyTag(trimmed);
       setAppliedTags((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
       setTagInput("");
+    } catch {
+      setTagError(true);
     } finally {
       setTagSaving(false);
     }
@@ -166,6 +176,7 @@ export default function BatchEditPanel({
             <p className={`text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 ${meta}`}>
               Set Score
               {scoreSaving && <span className="normal-case tracking-normal">Applying…</span>}
+              {scoreError && <span className="normal-case tracking-normal text-red-400">Failed to apply score</span>}
             </p>
             <p className={`text-xs mb-3 ${meta}`}>
               Applies immediately to all {count} selected {itemLabel}
@@ -180,6 +191,7 @@ export default function BatchEditPanel({
             <p className={`text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 ${meta}`}>
               Add Tags
               {tagSaving && <span className="normal-case tracking-normal">Applying…</span>}
+              {tagError && <span className="normal-case tracking-normal text-red-400">Failed to add tag</span>}
             </p>
             <p className={`text-xs mb-3 ${meta}`}>
               Each tag is added to all {count} selected {itemLabel}
