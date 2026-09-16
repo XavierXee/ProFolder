@@ -43,6 +43,20 @@ describe("Logo", () => {
     expect(logo).toHaveAttribute("aria-hidden", "true");
   });
 
+  it("defaults to aria-hidden (no ariaLabel prop passed), matching the header's existing Task 4 usage unaffected by this change", () => {
+    render(<Logo size={28} />);
+    const logo = screen.getByTestId("logo");
+    expect(logo).toHaveAttribute("aria-hidden", "true");
+    expect(logo).not.toHaveAttribute("aria-label");
+  });
+
+  it("renders aria-label instead of aria-hidden when ariaLabel is provided, for usages with no adjacent identifying text (e.g. the splash screen)", () => {
+    render(<Logo ariaLabel="ProFolder" />);
+    const logo = screen.getByTestId("logo");
+    expect(logo).toHaveAttribute("aria-label", "ProFolder");
+    expect(logo).not.toHaveAttribute("aria-hidden");
+  });
+
   it("positions each slab with the spec's percentage-based geometry and shear clip-path", () => {
     render(<Logo />);
     const [top, middle, bottom] = screen.getAllByTestId("logo-slab");

@@ -21,6 +21,7 @@ import CustomProjectsTabPanel from "./components/CustomProjectsTabPanel.js";
 import CopyMoveDeleteDialog from "./components/CopyMoveDeleteDialog.js";
 import { ThemeSelector } from "./components/ThemeSelector.js";
 import Logo from "./components/Logo.js";
+import SplashScreen from "./components/SplashScreen.js";
 import type { CopyMoveDeleteOperation, CopyMoveDeleteOutcome, CopyMoveDeleteTarget } from "./components/CopyMoveDeleteDialog.js";
 import * as api from "./api/client.js";
 import type { FileFilters, LibraryStats, ProjectFilters, ScanStats } from "./api/client.js";
@@ -403,6 +404,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-canvas">
+      <SplashScreen />
+
       <header className="border-b border-border bg-canvas/90 px-6 py-4 flex items-center justify-between gap-4 sticky top-0 z-20 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <Logo size={28} />

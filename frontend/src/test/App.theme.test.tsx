@@ -138,7 +138,12 @@ describe("App - header branding", () => {
     // "ProFolder" as the current theme option's label, so a plain getByText("ProFolder") would
     // be ambiguous between the two elements.
     expect(screen.getByRole("heading", { name: "ProFolder" })).toBeInTheDocument();
-    expect(screen.getByTestId("logo")).toBeInTheDocument();
+    // Scoped to the header specifically: SplashScreen (mounted as a sibling overlay, per this
+    // cycle's Task 5) also renders its own logo (data-testid="logo") for its ~1s lifetime, so a
+    // page-wide getByTestId("logo") would be ambiguous between the header's and the splash's.
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+    expect(within(header!).getByTestId("logo")).toBeInTheDocument();
     expect(screen.queryByText("Music Library Manager")).not.toBeInTheDocument();
   });
 

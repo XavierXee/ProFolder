@@ -11,13 +11,19 @@ const SLABS = [
  * stacked on a near-black square tile. Purely presentational/static — no
  * theme-awareness, no conditional rendering. Scales proportionally via the
  * `size` prop using percentage-based absolute positioning.
+ *
+ * By default the mark is treated as decorative (`aria-hidden="true"`), which is correct
+ * whenever it renders directly next to visible "ProFolder" text (e.g. the app header) — the
+ * adjacent text already conveys the app identity to assistive tech. When the logo is the ONLY
+ * thing conveying "ProFolder" on screen (e.g. the splash screen, which only otherwise shows
+ * "Syncing..."), pass `ariaLabel` to give it a real accessible name instead.
  */
-export default function Logo({ size = 28 }: { size?: number }) {
+export default function Logo({ size = 28, ariaLabel }: { size?: number; ariaLabel?: string }) {
   return (
     <div
       className="relative shrink-0 overflow-hidden"
       style={{ width: size, height: size, backgroundColor: "#1C1C1A" }}
-      aria-hidden="true"
+      {...(ariaLabel ? { "aria-label": ariaLabel } : { "aria-hidden": "true" })}
       data-testid="logo"
     >
       {SLABS.map((slab, i) => (
