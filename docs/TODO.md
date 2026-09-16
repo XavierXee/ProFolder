@@ -193,7 +193,15 @@ and descending
 - Keep each feature explanation short and concise
 - This README.md will be 
 
-## 9. Extra theming and splash-screen
+## 9. Branding, Extra theming and splash-screen
+
+- add new theming from design/ProFolder Brand Charter.html
+- Make the light dark theme a dropdown to select between each theme, the new one being the default then Light and Dark
+- add the logo in the header and as a favicon
+- change header name and title to ProFolder
+- add a splash screen component which is show only one app refresh (that will later be used to scan on startup, 
+for now just do the component showing with 1 second)
+- the splash screen should be just a background color with the logo in the middle and text saying Syncing...
 
 ## 10. I now want to share this repository, making it open source, public and usable by others
 
