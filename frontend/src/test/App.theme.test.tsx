@@ -89,18 +89,43 @@ describe("App - legacy theme migration", () => {
 });
 
 describe("App - theme changes update the document attribute and persist to localStorage", () => {
-  it("updates document.documentElement.dataset.theme and writes the new value to the new localStorage key when the toggle is clicked", async () => {
+  it("updates document.documentElement.dataset.theme and writes the new value to the new localStorage key when a ThemeSelector option is picked", async () => {
     const user = userEvent.setup();
     render(<App />);
     await waitForMount();
     expect(document.documentElement.dataset.theme).toBe("profolder");
 
-    // Stopgap toggle cycles profolder -> dark -> light -> profolder (a proper dropdown lands in
-    // a later task); starting from the profolder default, one click lands on "dark".
-    await user.click(screen.getByRole("button", { name: "Switch to light mode" }));
+    await user.click(screen.getByRole("button", { name: "Theme" }));
+    await user.click(screen.getByRole("option", { name: /Dark/ }));
 
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
     expect(localStorage.getItem(THEME_KEY)).toBe("dark");
+  });
+});
+
+describe("App - ThemeSelector wiring", () => {
+  it("renders ThemeSelector in the header (replacing the old cycling toggle button), and selecting an option changes the real app state end-to-end", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await waitForMount();
+
+    // The old stopgap toggle button is gone.
+    expect(screen.queryByRole("button", { name: "Switch to light mode" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Switch to dark mode" })).not.toBeInTheDocument();
+
+    const trigger = screen.getByRole("button", { name: "Theme" });
+    expect(trigger).toBeInTheDocument();
+    expect(trigger).toHaveTextContent("ProFolder");
+    expect(document.documentElement.dataset.theme).toBe("profolder");
+
+    await user.click(trigger);
+    await user.click(screen.getByRole("option", { name: "Light" }));
+
+    // Real App state (not a mocked onChange) drove the document attribute and the trigger's
+    // own displayed label.
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
+    expect(screen.getByRole("button", { name: "Theme" })).toHaveTextContent("Light");
+    expect(localStorage.getItem(THEME_KEY)).toBe("light");
   });
 });
 
@@ -121,15 +146,14 @@ describe("App - converted chrome elements carry token classes, not the old hardc
     // Same check holds after switching themes — the class itself never changes, only the
     // CSS custom property it resolves through does (confirmed separately via a real browser
     // check described in this task's report; jsdom can't confirm the resulting color here).
-    // The stopgap toggle cycles profolder -> dark -> light -> profolder; isDark (theme !==
-    // "light") stays true across both profolder and dark, so the button's aria-label only
-    // flips to "Switch to dark mode" once the theme actually reaches "light".
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Switch to light mode" })); // profolder -> dark
+    await user.click(screen.getByRole("button", { name: "Theme" }));
+    await user.click(screen.getByRole("option", { name: /Dark/ })); // profolder -> dark
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
     expect(header!.className).toContain("bg-canvas/90");
 
-    await user.click(screen.getByRole("button", { name: "Switch to light mode" })); // dark -> light
+    await user.click(screen.getByRole("button", { name: "Theme" }));
+    await user.click(screen.getByRole("option", { name: "Light" })); // dark -> light
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
     expect(header!.className).toContain("bg-canvas/90");
   });

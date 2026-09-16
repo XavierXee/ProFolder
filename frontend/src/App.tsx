@@ -19,6 +19,7 @@ import DeleteTabConfirmDialog from "./components/DeleteTabConfirmDialog.js";
 import CustomFilesTabPanel from "./components/CustomFilesTabPanel.js";
 import CustomProjectsTabPanel from "./components/CustomProjectsTabPanel.js";
 import CopyMoveDeleteDialog from "./components/CopyMoveDeleteDialog.js";
+import { ThemeSelector } from "./components/ThemeSelector.js";
 import type { CopyMoveDeleteOperation, CopyMoveDeleteOutcome, CopyMoveDeleteTarget } from "./components/CopyMoveDeleteDialog.js";
 import * as api from "./api/client.js";
 import type { FileFilters, LibraryStats, ProjectFilters, ScanStats } from "./api/client.js";
@@ -482,30 +483,7 @@ export default function App() {
           </button>
 
           <div className={`border-l pl-4 ${sectionBorder}`}>
-            <button
-              // Stopgap 3-state cycle (profolder -> dark -> light -> profolder); replaced by a
-              // proper theme dropdown in a later task.
-              onClick={() => setTheme((t) => (t === "profolder" ? "dark" : t === "dark" ? "light" : "profolder"))}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              className={`flex items-center justify-center p-1 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                isDark ? "text-slate-600 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"
-              }`}
-            >
-              {isDark ? (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
-                  />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" />
-                </svg>
-              )}
-            </button>
+            <ThemeSelector value={theme} onChange={setTheme} />
           </div>
         </div>
       </header>
