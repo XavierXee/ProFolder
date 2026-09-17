@@ -63,7 +63,7 @@ function tabButtonClassName(active: boolean, theme?: string): string {
   const base =
     `px-3 ${py} text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)]`;
   return active
-    ? `${base} border-blue-500 text-blue-400 profolder:bg-accent profolder:text-accent-ink profolder:border-accent`
+    ? `${base} border-blue-500 text-blue-400 profolder:bg-accent profolder:text-accent-ink profolder:border-border`
     : `${base} border-transparent text-slate-500 hover:text-ink profolder:bg-surface profolder:text-ink-muted profolder:border-border`;
 }
 
@@ -448,14 +448,23 @@ export default function App() {
               setShowProjectsBatchPanel(false);
               setShowScanPanel(true);
             }}
-            className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            Prod Folder
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Scan Library
           </button>
 
           <div className="relative">
             <button
               onClick={() => setShowMetrics((v) => !v)}
+              aria-label="Metrics"
               aria-expanded={showMetrics}
               aria-haspopup="dialog"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
@@ -463,12 +472,6 @@ export default function App() {
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5h3v6H3v-6zM10.5 7.5h3v12h-3v-12zM18 10.5h3v9h-3v-9z" />
               </svg>
-              Metrics
-              {stats && stats.unscoredCount > 0 && (
-                <span className="px-1.5 rounded-full text-[10px] bg-notice-surface text-notice">
-                  {stats.unscoredCount}
-                </span>
-              )}
             </button>
             {showMetrics && (
               <MetricsPanel stats={stats} lastScanChanges={lastScanChanges} onClose={() => setShowMetrics(false)} />
@@ -494,7 +497,6 @@ export default function App() {
               />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Settings
           </button>
         </div>
       </header>

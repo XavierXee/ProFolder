@@ -181,7 +181,7 @@ export default function ScanFolderPanel({ open, musicRoot, onClose, onScanComple
       >
         <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
           <div className="min-w-0">
-            <p className={`text-xs font-mono mb-1 ${meta}`}>Prod Folder</p>
+            <p className={`text-xs font-mono mb-1 ${meta}`}>Library Directory</p>
             <h2 className="text-base font-mono font-medium text-blue-400 truncate">{musicRoot ?? "…"}</h2>
             <p className={`text-xs mt-1 ${meta}`}>Choose which subfolders to include in the scan</p>
           </div>

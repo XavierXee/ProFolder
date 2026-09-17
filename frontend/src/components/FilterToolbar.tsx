@@ -118,7 +118,7 @@ export default function FilterToolbar({
   const inputBg = "bg-canvas border-border text-ink placeholder-ink-muted";
   const clearCls =
     "border bg-surface border-border text-ink-muted hover:text-ink hover:bg-surface-hover px-2.5 py-1 rounded-[var(--rt-radius)]";
-  const batchEditCls = "bg-accent text-accent-ink border-accent";
+  const batchEditCls = "bg-accent text-accent-ink border-accent profolder:border-border";
 
   const statuses = filters.statuses ?? [];
   const scores = filters.scores ?? [];

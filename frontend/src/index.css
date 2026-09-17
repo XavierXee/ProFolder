@@ -198,6 +198,8 @@
      emerald-400 sites in the codebase are already theme-invariant today and are out of scope. */
   --rt-success: oklch(76.5% 0.177 163.223);
   --rt-chrome: #0d0f14;
+  --rt-chrome-light: #0d0f14;   /* dark theme has no distinct light/lighter chrome variant — matches the same value */
+  --rt-chrome-lighter: #0d0f14; /* same */
   --rt-font-sans: 'Inter', sans-serif;
   --rt-font-mono: 'JetBrains Mono', monospace;
 
@@ -319,6 +321,8 @@
      (`isDark ? ... : "text-emerald-700"`) — see dark block's comment on scope. */
   --rt-success: oklch(50.8% 0.118 165.612);
   --rt-chrome: #f4f6f9;
+  --rt-chrome-light: #f4f6f9;   /* light theme has no distinct light/lighter chrome variant — matches the same value */
+  --rt-chrome-lighter: #f4f6f9; /* same */
   --rt-font-sans: 'Inter', sans-serif;
   --rt-font-mono: 'JetBrains Mono', monospace;
 
@@ -407,9 +411,9 @@
 
 /* profolder (new brand theme, default) */
 [data-theme="profolder"] {
-  --rt-canvas: #CFCFCF;         /* Desk Grey — page background */
-  --rt-surface: #E9E9E9;        /* Panel — content tile background */
-  --rt-surface-hover: #DCDCDC;  /* between Desk Grey/Panel, visible hover affordance on Panel */
+  --rt-canvas: #f4f6f9;         /* matches Light theme's canvas, per user decision — main-element background only, not buttons/accents */
+  --rt-surface: #ffffff;        /* matches Light theme's surface */
+  --rt-surface-hover: rgb(0 0 0 / 0.03); /* matches Light theme's surface-hover */
   --rt-surface-selected: #D5F7FE; /* Ice Blue — unchanged */
   --rt-border: #B0B0B0;         /* hairline — unchanged */
   --rt-ink: #1C1C1A;            /* Rack Black — main text on light backgrounds */
@@ -430,9 +434,10 @@
   --rt-success: oklch(50.8% 0.118 165.612);
   /*--rt-chrome: #1C1C1A;*/         /* NEW token — Rack Black chrome background for header/footer/logo-tile contexts, distinct from the now-light canvas/surface */
   /*--rt-chrome: #b0b0b0;*/
-  --rt-chrome: #47c5a8;
-  --rt-chrome-light: #aad8cd;
-  --rt-chrome-lighter: #cadad6;
+  /*--rt-chrome: #47c5a8;*/
+  --rt-chrome: #f4f6f9;         /* matches Light theme's chrome (== Light's canvas, since Light has no dark header/footer), per user decision */
+  --rt-chrome-light: #f4f6f9;   /* Light theme has no distinct light/lighter chrome variant — matches the same value */
+  --rt-chrome-lighter: #f4f6f9; /* same */
   --rt-font-sans: 'Archivo', sans-serif;
   --rt-font-mono: 'IBM Plex Mono', monospace;
 
@@ -507,16 +512,17 @@
   --rt-warning-surface: #fffbeb;
   --rt-warning-ring: #fcd34d;
 
-  /* Chrome-context tokens: profolder's chrome background stays Rack Black (same dark family as
-     the dark theme's chrome), so these match the dark block's values exactly — see dark block's
-     comment. */
-  --rt-chrome-ink: #f1f5f9;
-  --rt-chrome-ink-secondary: #cbd5e1;
-  --rt-chrome-ink-faint: #475569;
-  --rt-chrome-border: rgb(255 255 255 / 0.1);
-  --rt-chrome-border-hover: rgb(255 255 255 / 0.2);
-  --rt-chrome-border-faint: rgb(255 255 255 / 0.05);
-  --rt-chrome-surface: rgb(255 255 255 / 0.05);
+  /* Chrome-context tokens: now that profolder's chrome background matches Light's (near-white,
+     per user decision above), these must be dark-on-light like Light's own chrome-ink family,
+     not the near-white values from the old dark-chrome design — otherwise header/footer text
+     renders invisible (near-white on near-white). Matches the light block's values exactly. */
+  --rt-chrome-ink: #0f172a;
+  --rt-chrome-ink-secondary: #334155;
+  --rt-chrome-ink-faint: #94a3b8;
+  --rt-chrome-border: rgb(0 0 0 / 0.1);
+  --rt-chrome-border-hover: rgb(0 0 0 / 0.2);
+  --rt-chrome-border-faint: rgb(0 0 0 / 0.05);
+  --rt-chrome-surface: #ffffff;
 }
 
 /* Geometry tokens: plain CSS custom properties, not routed through @theme — consumed via

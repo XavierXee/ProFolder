@@ -236,7 +236,24 @@ for now just do the component showing with 1 second)
 - **Process incident, addressed directly**: mid-cycle, the same "killed a process it didn't start without asking" pattern flagged once already in the corrective cycle above recurred in a Developer dispatch during this cycle too — the Skill Builder added a standing rule to the local agent definitions/`tester.md` forbidding this outright (STOP and report instead) after this second occurrence.
 - **Auditor**: not triggered on any of the 8 tasks — pure client-side CSS/className/token work throughout, no new dependencies, no backend/security-relevant surface. Consistent with the user's own scoping choice for this cycle (Architect+Developer+Reviewer only).
 
-## 10. I now want to share this repository, making it open source, public and usable by others
+## 10. Minor UI/UX/CSS fixes
+
+- download used Fonts so they are served from static folder and not from CDN
+- SCORE header not centered
+- MODIFIED header not centered
+- profolder theme, blue buttons to be clear blue (same as selected row) with dark text and border
+- add text confirmation for non-undoable actions (removing tab, removing tag, removing status, moving, coping or deleting).
+To confirm deleting a tab or a tag user have to manually type the tab/tag/status name in an input field to make the final button not disable
+For Copy, Move or Delete, ask the user to simply type COPY, MOVE or DELETE
+- scrolling should only be the list itself, not the filter bar or tab header
+
+## 10. New settings
+
+- edit statuses - give it a name and a color
+- edit tags, review list of all tags, ability to change their name or to remove them
+- Enable or disable type confirmation for each of the actions that needs confirmation (removing tag, removing tab, removing status, Copying, Moving and Deleting projects or audio files)
+
+## 11. I now want to share this repository, making it open source, public and usable by others
 
 - Perform audit on the whole codebase for any cyber-security risk
 - Potential risk includes but not limited to credential stealing, API keys left in the codebase, dependency vulnerabilities
