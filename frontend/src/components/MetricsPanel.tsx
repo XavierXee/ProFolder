@@ -1,10 +1,17 @@
 import { useEffect, useRef } from "react";
 import type { LibraryStats } from "../api/client.js";
+import type { EntityStats } from "../types.js";
+import { ALL_STATUSES, STATUS_LABELS } from "../statusStyles.js";
 
 type Props = {
   stats: LibraryStats | undefined;
   lastScanChanges: number | null;
   onClose: () => void;
+};
+
+const EMPTY_ENTITY_STATS: EntityStats = {
+  total: 0,
+  byStatus: { unknown: 0, draft: 0, needs_mixing: 0, done: 0, released: 0 },
 };
 
 export default function MetricsPanel({ stats, lastScanChanges, onClose }: Props) {
@@ -25,23 +32,38 @@ export default function MetricsPanel({ stats, lastScanChanges, onClose }: Props)
     };
   }, [onClose]);
 
-  const s = stats ?? { total: 0, draftCount: 0, unscoredCount: 0 };
-
-  const tiles = [
-    { label: "Total Files", value: s.total, highlight: null as string | null },
-    { label: "Draft", value: s.draftCount, highlight: null },
-    {
-      label: "Unscored",
-      value: s.unscoredCount,
-      highlight: s.unscoredCount > 0 ? "text-notice" : null,
-    },
-  ];
+  const projects = stats?.projects ?? EMPTY_ENTITY_STATS;
+  const files = stats?.files ?? EMPTY_ENTITY_STATS;
 
   // Popover-panel token pattern (same bg-surface/border-border/text-ink combination as
   // ThemeSelector.tsx's menuCls and MultiSelectDropdown.tsx's menuCls).
   const panelCls = "bg-surface border-border text-ink";
   const meta = "text-ink-muted";
   const divider = "border-border";
+
+  function EntitySection({ title, entity }: { title: string; entity: EntityStats }) {
+    return (
+      <div className={`border-b ${divider}`}>
+        <div className="px-4 pt-3 pb-1">
+          <span className={`text-xs font-mono uppercase tracking-wider ${meta}`}>{title}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-px p-px">
+          <div className="flex flex-col justify-center px-4 py-3">
+            <span className={`text-xs font-mono uppercase tracking-wider mb-0.5 ${meta}`}>Total</span>
+            <span className="text-xl font-semibold tabular-nums font-mono text-ink">{entity.total}</span>
+          </div>
+          {ALL_STATUSES.map((status) => (
+            <div key={status} className="flex flex-col justify-center px-4 py-3">
+              <span className={`text-xs font-mono uppercase tracking-wider mb-0.5 ${meta}`}>
+                {STATUS_LABELS[status]}
+              </span>
+              <span className="text-xl font-semibold tabular-nums font-mono text-ink">{entity.byStatus[status]}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -63,18 +85,10 @@ export default function MetricsPanel({ stats, lastScanChanges, onClose }: Props)
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-px p-px">
-        {tiles.map((t) => (
-          <div key={t.label} className="flex flex-col justify-center px-4 py-3">
-            <span className={`text-xs font-mono uppercase tracking-wider mb-0.5 ${meta}`}>{t.label}</span>
-            <span className={`text-xl font-semibold tabular-nums font-mono ${t.highlight ?? "text-ink"}`}>
-              {t.value}
-            </span>
-          </div>
-        ))}
-      </div>
+      <EntitySection title="Projects" entity={projects} />
+      <EntitySection title="Audio Files" entity={files} />
 
-      <div className={`px-4 py-3 border-t ${divider}`}>
+      <div className="px-4 py-3">
         <span className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Last Scan</span>
         <p className="text-sm font-mono mt-1 text-ink">
           {lastScanChanges === null ? "No scans yet" : lastScanChanges === 0 ? "No changes" : `+${lastScanChanges} changed`}

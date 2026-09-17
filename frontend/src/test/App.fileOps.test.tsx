@@ -144,7 +144,10 @@ const PROJECTS_PAGE: PagedProjects = {
   totalPages: 1,
 };
 
-const STATS: LibraryStats = { total: 1, draftCount: 0, unscoredCount: 0 };
+const STATS: LibraryStats = {
+  files: { total: 1, byStatus: { unknown: 1, draft: 0, needs_mixing: 0, done: 0, released: 0 } },
+  projects: { total: 0, byStatus: { unknown: 0, draft: 0, needs_mixing: 0, done: 0, released: 0 } },
+};
 
 // Folder tree fixture for the destination picker used by copy/move. Paths match
 // `buildFolderTree`'s REAL root-relative shape (src/scanner/folderTree.ts): the root's own

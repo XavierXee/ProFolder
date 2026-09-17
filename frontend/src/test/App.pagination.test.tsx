@@ -96,7 +96,10 @@ const PROJECTS_PAGE: PagedProjects = {
   totalPages: 3,
 };
 
-const STATS: LibraryStats = { total: 120, draftCount: 0, unscoredCount: 0 };
+const STATS: LibraryStats = {
+  files: { total: 120, byStatus: { unknown: 120, draft: 0, needs_mixing: 0, done: 0, released: 0 } },
+  projects: { total: 0, byStatus: { unknown: 0, draft: 0, needs_mixing: 0, done: 0, released: 0 } },
+};
 
 beforeEach(() => {
   mockGetFiles.mockReset().mockResolvedValue(FILES_PAGE);

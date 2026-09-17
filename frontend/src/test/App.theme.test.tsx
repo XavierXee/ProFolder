@@ -47,7 +47,10 @@ beforeEach(() => {
   mockGetProjects.mockReset().mockResolvedValue({ projects: [], total: 0, page: 1, pageSize: 50, totalPages: 1 });
   mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music" });
   mockGetLastScan.mockReset().mockResolvedValue(undefined);
-  mockGetStats.mockReset().mockResolvedValue({ total: 0, draftCount: 0, unscoredCount: 0 });
+  mockGetStats.mockReset().mockResolvedValue({
+    files: { total: 0, byStatus: { unknown: 0, draft: 0, needs_mixing: 0, done: 0, released: 0 } },
+    projects: { total: 0, byStatus: { unknown: 0, draft: 0, needs_mixing: 0, done: 0, released: 0 } },
+  });
   mockGetAllTags.mockReset().mockResolvedValue([]);
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
   mockSetMusicRoot.mockReset();
@@ -315,16 +318,6 @@ describe("App - Task 4 token-converted elements", () => {
     const footer = document.querySelector("footer")!;
     expect(footer.className).toContain("border-chrome-border-faint");
     within(footer).getAllByText(/ProFolder|Score and tag/).forEach((el) => expect(el).toHaveClass("text-chrome-ink-faint"));
-  });
-
-  it("gives the metrics unscored-count badge the notice token classes", async () => {
-    mockGetStats.mockReset().mockResolvedValue({ total: 5, draftCount: 1, unscoredCount: 2 });
-    render(<App />);
-    await waitForMount();
-
-    const badge = await screen.findByText("2");
-    expect(badge).toHaveClass("bg-notice-surface");
-    expect(badge).toHaveClass("text-notice");
   });
 
   it("gives the create-custom-tab '+' button the border-border/text-ink-muted token classes plus the profolder:bg-surface variant", async () => {

@@ -3,6 +3,7 @@ import type {
   CustomTab,
   CustomTabType,
   DawType,
+  EntityStats,
   Project,
   ProjectDuplicateMatch,
   TrackStatus,
@@ -34,9 +35,8 @@ export type PagedFiles = {
 };
 
 export type LibraryStats = {
-  total: number;
-  draftCount: number;
-  unscoredCount: number;
+  files: EntityStats;
+  projects: EntityStats;
 };
 
 export type ScanStats = {

@@ -4,9 +4,22 @@ import userEvent from "@testing-library/user-event";
 import MetricsPanel from "../MetricsPanel.js";
 import type { LibraryStats } from "../../api/client.js";
 
+// Values are deliberately all distinct across both entities/every status so each can be
+// asserted on unambiguously via getByText without needing to scope into a section container.
+const STATS: LibraryStats = {
+  projects: {
+    total: 100,
+    byStatus: { unknown: 1, draft: 2, needs_mixing: 3, done: 4, released: 5 },
+  },
+  files: {
+    total: 200,
+    byStatus: { unknown: 6, draft: 7, needs_mixing: 8, done: 9, released: 10 },
+  },
+};
+
 function renderPanel(overrides: Partial<Parameters<typeof MetricsPanel>[0]> = {}) {
   const props = {
-    stats: { total: 42, draftCount: 10, unscoredCount: 3 } as LibraryStats | undefined,
+    stats: STATS as LibraryStats | undefined,
     lastScanChanges: null as number | null,
     onClose: vi.fn(),
     ...overrides,
@@ -15,42 +28,63 @@ function renderPanel(overrides: Partial<Parameters<typeof MetricsPanel>[0]> = {}
 }
 
 describe("MetricsPanel - stats fallback", () => {
-  it("renders zeroed tiles when stats is undefined (not yet loaded)", () => {
+  it("renders zeroed tiles for both sections when stats is undefined (not yet loaded)", () => {
     renderPanel({ stats: undefined });
 
-    expect(screen.getByText("Total Files")).toBeInTheDocument();
-    expect(screen.getByText("Draft")).toBeInTheDocument();
-    expect(screen.getByText("Unscored")).toBeInTheDocument();
-    const zeros = screen.getAllByText("0");
-    expect(zeros).toHaveLength(3);
-  });
-
-  it("renders the real values when stats is provided", () => {
-    renderPanel({ stats: { total: 42, draftCount: 10, unscoredCount: 3 } });
-
-    expect(screen.getByText("42")).toBeInTheDocument();
-    expect(screen.getByText("10")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getAllByText("Projects")).toHaveLength(1);
+    expect(screen.getAllByText("Audio Files")).toHaveLength(1);
+    expect(screen.getAllByText("Total")).toHaveLength(2);
+    // 2 sections x (Total + 5 statuses) = 12 zeroed tiles.
+    expect(screen.getAllByText("0")).toHaveLength(12);
   });
 });
 
-// Task 4 of the theming rework removed isDark entirely: the highlight/panel/meta/divider/close
-// classes now render unconditionally through tokens (text-notice for the Unscored highlight,
-// bg-surface/border-border/text-ink for the popover panel, matching the same pattern already
-// established by ThemeSelector.tsx/MultiSelectDropdown.tsx's own popover menus).
-describe("MetricsPanel - unscoredCount highlight", () => {
-  it("applies the text-notice token class to the Unscored tile value when unscoredCount > 0", () => {
-    renderPanel({ stats: { total: 42, draftCount: 10, unscoredCount: 3 } });
+describe("MetricsPanel - two-section per-status breakdown", () => {
+  it("renders a Projects section before an Audio Files section", () => {
+    const { container } = renderPanel();
 
-    expect(screen.getByText("3")).toHaveClass("text-notice");
+    const projectsIdx = container.textContent!.indexOf("Projects");
+    const filesIdx = container.textContent!.indexOf("Audio Files");
+    expect(projectsIdx).toBeGreaterThanOrEqual(0);
+    expect(filesIdx).toBeGreaterThan(projectsIdx);
   });
 
-  it("does not apply highlight styling when unscoredCount is 0", () => {
-    renderPanel({ stats: { total: 42, draftCount: 10, unscoredCount: 0 } });
+  it("renders the Projects total and per-status counts", () => {
+    renderPanel();
 
-    const value = screen.getByText("0");
-    expect(value).not.toHaveClass("text-notice");
-    expect(value).toHaveClass("text-ink");
+    expect(screen.getByText("100")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByText("5")).toBeInTheDocument();
+  });
+
+  it("renders the Audio Files total and per-status counts", () => {
+    renderPanel();
+
+    expect(screen.getByText("200")).toBeInTheDocument();
+    expect(screen.getByText("6")).toBeInTheDocument();
+    expect(screen.getByText("7")).toBeInTheDocument();
+    expect(screen.getByText("8")).toBeInTheDocument();
+    expect(screen.getByText("9")).toBeInTheDocument();
+    expect(screen.getByText("10")).toBeInTheDocument();
+  });
+
+  it("uses STATUS_LABELS display text for each status row, once per section", () => {
+    renderPanel();
+
+    expect(screen.getAllByText("Unknown")).toHaveLength(2);
+    expect(screen.getAllByText("Draft")).toHaveLength(2);
+    expect(screen.getAllByText("Need Mixing")).toHaveLength(2);
+    expect(screen.getAllByText("Done")).toHaveLength(2);
+    expect(screen.getAllByText("Released")).toHaveLength(2);
+  });
+
+  it("does not render any unscored tile or label", () => {
+    renderPanel();
+
+    expect(screen.queryByText(/unscored/i)).not.toBeInTheDocument();
   });
 });
 
