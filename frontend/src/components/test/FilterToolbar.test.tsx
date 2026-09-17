@@ -38,7 +38,6 @@ function Harness({
       resultLabel={resultLabel}
       searchPlaceholder="Search files or paths…"
       searchAriaLabel="Search by filename or path"
-      sectionLabel={sectionLabel}
       selectedCount={selectedCount}
       onOpenBatchPanel={onOpenBatchPanel}
       locked={locked}
@@ -386,22 +385,5 @@ describe("FilterToolbar - token-driven styling", () => {
       expect(btn.className).toContain("text-ink-muted");
       expect(btn.className).toContain("border-border");
     }
-  });
-
-  it("renders sectionLabel unconditionally (present in the DOM regardless of theme), gated purely by the profolder CSS variant", () => {
-    const { rerender } = render(<Harness sectionLabel="PROJECT FOLDERS" />);
-
-    const label = screen.getByText("PROJECT FOLDERS");
-    expect(label).toBeInTheDocument();
-    expect(label.className).toContain("font-mono");
-    expect(label.className).toContain("uppercase");
-    // Base "hidden" + "profolder:inline" variant pair is what gates visibility per-theme via
-    // CSS alone, not a JS isProFolder conditional -- the element itself is always in the DOM.
-    expect(label.className).toContain("hidden");
-    expect(label.className).toContain("profolder:inline");
-
-    // sectionLabel omitted -> nothing extra rendered (data-driven, not theme-driven).
-    rerender(<Harness />);
-    expect(screen.queryByText("PROJECT FOLDERS")).not.toBeInTheDocument();
   });
 });

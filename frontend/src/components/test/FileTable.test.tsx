@@ -292,18 +292,6 @@ describe("FileTable - select-all checkbox", () => {
   });
 });
 
-describe("FileTable - accent-bar rendering (CSS-driven via profolder: variant, no isProFolder prop)", () => {
-  it("renders the ProFolder accent-bar element in every row unconditionally (visibility handled purely by CSS)", () => {
-    const files = [makeFile({ id: "f1", filename: "one.wav" })];
-    const { container } = renderTable({ loading: false, files });
-
-    const accentBar = getAccentBar(container);
-    expect(accentBar).not.toBeNull();
-    expect(accentBar).toHaveClass("hidden");
-    expect(accentBar).toHaveClass("profolder:flex");
-  });
-});
-
 describe("FileTable - header token classes", () => {
   it("gives the sticky header row the bg-canvas/border-border tokens", () => {
     const { container } = renderTable();

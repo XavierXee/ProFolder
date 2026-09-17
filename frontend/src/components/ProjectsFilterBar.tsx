@@ -26,7 +26,6 @@ export default function ProjectsFilterBar({
       resultLabel={resultLabel}
       searchPlaceholder="Search project folders…"
       searchAriaLabel="Search project folders"
-      sectionLabel="PROJECT FOLDERS"
       selectedCount={selectedCount}
       onOpenBatchPanel={onOpenBatchPanel}
     />

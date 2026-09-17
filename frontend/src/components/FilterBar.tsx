@@ -29,7 +29,6 @@ export default function FilterBar({
       resultLabel={resultLabel}
       searchPlaceholder="Search files or paths…"
       searchAriaLabel="Search by filename or path"
-      sectionLabel="AUDIO FILES"
       selectedCount={selectedCount}
       onOpenBatchPanel={onOpenBatchPanel}
     />

@@ -88,7 +88,7 @@ export function MultiSelectDropdown<T extends string | number>({
         <div
           role="listbox"
           aria-label={`Filter by ${label.toLowerCase()}`}
-          className={`absolute left-0 top-full mt-1 z-20 min-w-40 max-h-72 overflow-y-auto rounded-[var(--rt-radius)] border shadow-2xl py-1 ${menuCls}`}
+          className={`absolute left-0 top-full mt-1 z-20 min-w-40 max-h-72 overflow-y-auto rounded-[var(--rt-radius)] border shadow-2xl ${menuCls}`}
         >
           {options.length === 0 ? (
             <p className="px-3 py-2 text-xs font-mono text-ink-muted">No options</p>

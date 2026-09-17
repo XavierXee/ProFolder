@@ -248,28 +248,6 @@ describe("FileRow - token-driven styling (no isDark/isProFolder props)", () => {
     expect(name).not.toHaveClass("profolder:font-semibold");
   });
 
-  it("always renders the ProFolder accent-bar element (visibility is CSS-driven via `hidden profolder:flex`, not a JS conditional)", () => {
-    const { container } = renderRow({ isSelected: true, file: makeFile({ filename: "beat.wav" }) });
-
-    const accentBar = getAccentBar(container);
-    expect(accentBar).not.toBeNull();
-    expect(accentBar).toHaveClass("hidden");
-    expect(accentBar).toHaveClass("profolder:flex");
-    expect(accentBar).toHaveClass("bg-chrome");
-    expect(accentBar).not.toHaveClass("bg-border");
-  });
-
-  it("accent-bar uses bg-border (not bg-chrome) when the row is unselected, and still renders unconditionally", () => {
-    const { container } = renderRow({ isSelected: false });
-
-    const accentBar = getAccentBar(container);
-    expect(accentBar).not.toBeNull();
-    expect(accentBar).toHaveClass("hidden");
-    expect(accentBar).toHaveClass("profolder:flex");
-    expect(accentBar).toHaveClass("bg-border");
-    expect(accentBar).not.toHaveClass("bg-chrome");
-  });
-
   it("renders tag chips with the display-chip treatment (bg-surface/border-border/text-ink-muted)", () => {
     renderRow({ file: makeFile({ tags: ["rock"] }) });
 
@@ -287,17 +265,6 @@ describe("FileRow - token-driven styling (no isDark/isProFolder props)", () => {
     expect(chip).toHaveClass("bg-surface");
     expect(chip).toHaveClass("border-border");
     expect(chip).toHaveClass("text-ink-muted");
-  });
-
-  it("uses bg-chrome only on the selected-row accent bar, nowhere else in the row", () => {
-    const { container } = renderRow({
-      isSelected: true,
-      file: makeFile({ tags: ["rock"], projectId: "proj-1" }),
-    });
-
-    const chromeEls = Array.from(container.querySelectorAll<HTMLElement>("*")).filter((el) => el.classList.contains("bg-chrome"));
-    expect(chromeEls).toHaveLength(1);
-    expect(chromeEls[0]).toHaveAttribute("aria-hidden", "true");
   });
 
   it("gives the filename text-ink and the empty-tags placeholder text-ink-faint", () => {

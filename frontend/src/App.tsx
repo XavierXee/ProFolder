@@ -44,6 +44,12 @@ function loadStoredTheme(): Theme {
   return "profolder";
 }
 
+function tabRowClassName(sectionBorder: string, theme?: string): string {
+  return `flex items-center gap-1 h-10 px-6 border-b ${sectionBorder}`;
+  // return `flex items-center gap-1 ${theme === 'profolder' ? "py-1.5" : ""} px-6 border-b ${sectionBorder}`;
+  // return `flex items-center gap-1 ${theme === 'profolder' ? "px-6" : ""} py-1.5 border-b ${sectionBorder}`;
+}
+
 /** Tab button classes for the default ("Project Folders"/"Audio Files") and custom tabs. Base
  * classes render an underline-style tab (border-b-2, -mb-px to sit flush against the row's own
  * border-b); `profolder:` variant classes override the structural bits (no underline offset, a
@@ -52,9 +58,11 @@ function loadStoredTheme(): Theme {
  * higher-specificity `[data-theme="profolder"] &` selector always wins for that theme with no JS
  * branching needed — see `frontend/src/index.css`'s `@custom-variant profolder` and the "+" button
  * above for the same established pattern. */
-function tabButtonClassName(active: boolean): string {
+function tabButtonClassName(active: boolean, theme?: string): string {
+  // const py = "py-1";
+  const py = theme === "profolder" ? "py-1" : "py-2.5";
   const base =
-    "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)]";
+    `px-3 ${py} text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)]`;
   return active
     ? `${base} border-blue-500 text-blue-400 profolder:bg-accent profolder:text-accent-ink profolder:border-accent`
     : `${base} border-transparent text-slate-500 hover:text-ink profolder:bg-surface profolder:text-ink-muted profolder:border-border`;
@@ -497,8 +505,9 @@ export default function App() {
         </div>
       </header>
 
-      <div className="flex flex-col flex-1 min-h-0">
-        <div className={`flex items-center gap-1 px-6 border-b ${sectionBorder}`}>
+      <div className="flex flex-col flex-1 min-h-39">
+        <div className={tabRowClassName(sectionBorder, theme)}>
+        {/*<div className={`flex items-center gap-1 ${theme === 'profolder' ? "px-6" : ""} py-1.5 border-b ${sectionBorder}`}>*/}
           <button
             onClick={() => setShowCreateTabModal(true)}
             aria-label="Create custom tab"
@@ -518,18 +527,17 @@ export default function App() {
               key={tab}
               onClick={() => handleTabChange(tab)}
               aria-current={activeTab === tab}
-              className={tabButtonClassName(activeTab === tab)}
+              className={tabButtonClassName(activeTab === tab, theme)}
             >
               {label}
             </button>
           ))}
 
           {customTabs.map((tab) => (
-            <div key={tab.id} className="flex items-center">
+            <div key={tab.id} className={`flex items-center ${tabButtonClassName(activeTab === tab.id, theme)}`}>
               <button
                 onClick={() => handleTabChange(tab.id)}
                 aria-current={activeTab === tab.id}
-                className={tabButtonClassName(activeTab === tab.id)}
               >
                 {tab.name}
               </button>
@@ -537,7 +545,7 @@ export default function App() {
                 onClick={() => setDeletingTab(tab)}
                 aria-label={`Delete tab ${tab.name}`}
                 title={`Delete tab ${tab.name}`}
-                className="flex items-center justify-center w-4 h-4 -ml-1 rounded-[var(--rt-radius)] text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover"
+                className="flex items-center justify-center w-4 h-4 ml-1 rounded-[var(--rt-radius)] text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover"
               >
                 ×
               </button>

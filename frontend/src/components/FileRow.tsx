@@ -78,7 +78,6 @@ export function FileRow({
               </svg>
             )}
           </button>
-          <span aria-hidden="true" className={`hidden profolder:flex w-[3px] h-[22px] flex-none ${isSelected ? "bg-chrome" : "bg-border"}`} />
           <div className="min-w-0">
             <div className={`text-sm truncate font-medium ${isSelected ? "profolder:font-semibold" : ""} text-ink`}>{file.filename}</div>
             <div className="text-xs font-mono mt-0.5 text-ink-muted">{file.extension}</div>

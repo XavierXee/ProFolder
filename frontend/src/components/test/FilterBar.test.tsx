@@ -66,22 +66,4 @@ describe("FilterBar", () => {
 
     expect(onChange).toHaveBeenCalledWith({ statuses: ["draft"] });
   });
-
-  it("renders the 'AUDIO FILES' sectionLabel unconditionally, gated purely by the profolder CSS variant", () => {
-    render(
-      <FilterBar
-        filters={{ page: 1, pageSize: PAGE_SIZE }}
-        onChange={vi.fn()}
-        allTags={[]}
-        resultLabel="3 files"
-        selectedCount={0}
-        onOpenBatchPanel={vi.fn()}
-      />
-    );
-
-    const label = screen.getByText("AUDIO FILES");
-    expect(label).toBeInTheDocument();
-    expect(label.className).toContain("hidden");
-    expect(label.className).toContain("profolder:inline");
-  });
 });

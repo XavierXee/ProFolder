@@ -157,7 +157,6 @@ export function ProjectsTable({
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">
-                        <span aria-hidden="true" className={`hidden profolder:flex w-[3px] h-[22px] flex-none ${isSelected ? "bg-chrome" : "bg-border"}`} />
                         <div className="min-w-0">
                           <div className={`text-sm truncate font-medium ${isSelected ? "profolder:font-semibold" : ""} text-ink`}>
                             {project.name}

@@ -432,11 +432,6 @@ describe("ProjectsTable - token-driven row styling (no isProFolder prop)", () =>
     const name = screen.getByText("Song One");
     expect(name).toHaveClass("font-medium");
     expect(name).toHaveClass("profolder:font-semibold");
-
-    const accentBar = getAccentBar(container);
-    expect(accentBar).not.toBeNull();
-    expect(accentBar).toHaveClass("bg-chrome");
-    expect(accentBar).not.toHaveClass("bg-border");
   });
 
   it("unselected row: uses bg-surface, hover:bg-surface-hover, a bg-border accent bar, and plain font-medium (no profolder: variant) on the name", () => {
@@ -453,23 +448,6 @@ describe("ProjectsTable - token-driven row styling (no isProFolder prop)", () =>
     const name = screen.getByText("Song One");
     expect(name).toHaveClass("font-medium");
     expect(name).not.toHaveClass("profolder:font-semibold");
-
-    const accentBar = getAccentBar(container);
-    expect(accentBar).not.toBeNull();
-    expect(accentBar).toHaveClass("bg-border");
-    expect(accentBar).not.toHaveClass("bg-chrome");
-  });
-
-  it("always renders the ProFolder accent-bar element (visibility is CSS-driven via `hidden profolder:flex`, not a JS conditional)", () => {
-    const { container } = renderTable({
-      selectedId: "p1",
-      projects: [makeProject({ id: "p1", name: "Song One" })],
-    });
-
-    const accentBar = getAccentBar(container);
-    expect(accentBar).not.toBeNull();
-    expect(accentBar).toHaveClass("hidden");
-    expect(accentBar).toHaveClass("profolder:flex");
   });
 
   it("renders tag chips with the display-chip treatment (bg-surface/border-border/text-ink-muted)", () => {
@@ -492,17 +470,6 @@ describe("ProjectsTable - token-driven row styling (no isProFolder prop)", () =>
     expect(chip).toHaveClass("bg-surface");
     expect(chip).toHaveClass("border-border");
     expect(chip).toHaveClass("text-ink-muted");
-  });
-
-  it("uses bg-chrome only on the selected-row accent bar, nowhere else in the row", () => {
-    const { container } = renderTable({
-      selectedId: "p1",
-      projects: [makeProject({ id: "p1", tags: ["rock"] })],
-    });
-
-    const chromeEls = Array.from(container.querySelectorAll<HTMLElement>("*")).filter((el) => el.classList.contains("bg-chrome"));
-    expect(chromeEls).toHaveLength(1);
-    expect(chromeEls[0]).toHaveAttribute("aria-hidden", "true");
   });
 
   it("colors the dawType label with text-ink when detected, and text-ink-muted for a plain folder", () => {

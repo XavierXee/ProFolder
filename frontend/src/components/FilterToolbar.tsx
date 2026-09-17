@@ -75,7 +75,6 @@ export default function FilterToolbar({
   resultLabel,
   searchPlaceholder,
   searchAriaLabel,
-  sectionLabel,
   selectedCount,
   onOpenBatchPanel,
   locked = false,
@@ -143,11 +142,6 @@ export default function FilterToolbar({
   return (
     <div className={`border-b ${borderOuter} ${bg}`}>
       <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 px-6 py-2.5">
-        {sectionLabel && (
-          <span className="hidden profolder:inline font-mono text-[11px] uppercase tracking-wider text-ink-muted whitespace-nowrap">
-            {sectionLabel}
-          </span>
-        )}
         <div className="relative flex-1 min-w-40">
           <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -157,7 +151,7 @@ export default function FilterToolbar({
             placeholder={searchPlaceholder}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className={`w-full border rounded-[var(--rt-radius)] text-sm pl-8 pr-2.5 py-1 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500/50 transition-colors ${inputBg}`}
+            className={`w-full border rounded-[var(--rt-radius)] text-sm pl-8 pr-2.5 py-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500/50 transition-colors ${inputBg}`}
             aria-label={searchAriaLabel}
           />
         </div>
