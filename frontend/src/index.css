@@ -75,6 +75,38 @@
   --color-status-pill-unselected-ink: var(--rt-status-pill-unselected-ink);
   --color-status-pill-unselected-border-hover: var(--rt-status-pill-unselected-border-hover);
   --color-status-pill-unselected-ink-hover: var(--rt-status-pill-unselected-ink-hover);
+
+  /* Info tokens (Task 4, NEW color role): the scan-complete/root-path-updated banner in App.tsx
+     used a plain blue isDark ternary with no equivalent existing token (danger/notice/success
+     all cover different roles) — see the per-theme blocks below for the value derivations.
+     FLAGGED for Reviewer sign-off: this is a new role, not a byte-faithful transcription reusing
+     an already-decided token. */
+  --color-info: var(--rt-info);
+  --color-info-surface: var(--rt-info-surface);
+
+  /* Chrome-ink/border/surface tokens (Task 4, NEW color role): text/borders/inputs rendered
+     directly on the always-dark-under-dark-and-profolder (light-only-under-light)
+     `--color-chrome` header/footer background (App.tsx's <header>/<footer>, and
+     RootPathControl.tsx which only ever renders inside that header). The general
+     ink/ink-muted/ink-faint/border/surface tokens are calibrated for the canvas/surface
+     background instead, which under profolder is LIGHT — using them here would render
+     dark-on-dark (near-invisible) text/borders against profolder's still-dark chrome (this
+     exact hazard is already called out in ThemeSelector.tsx's doc comment, the first consumer
+     of this same background). Values below consolidate several near-duplicate
+     Tailwind-slate-shade ternaries that existed independently per call site (h1 vs subtitle vs
+     button vs footer, etc., each hand-picked slightly differently pre-token) into 3 ink levels
+     and a border/surface pair — FLAGGED for Reviewer sign-off: unlike the byte-faithful
+     status/danger/notice tokens, several of these merges shift the resolved shade by one
+     Tailwind step (e.g. slate-800→900, slate-600→700) at individual call sites; every shift was
+     chosen to move in the higher-contrast direction, never lower, so this is a legibility-safe
+     interim consolidation, not a byte-exact one. */
+  --color-chrome-ink: var(--rt-chrome-ink);
+  --color-chrome-ink-secondary: var(--rt-chrome-ink-secondary);
+  --color-chrome-ink-faint: var(--rt-chrome-ink-faint);
+  --color-chrome-border: var(--rt-chrome-border);
+  --color-chrome-border-hover: var(--rt-chrome-border-hover);
+  --color-chrome-border-faint: var(--rt-chrome-border-faint);
+  --color-chrome-surface: var(--rt-chrome-surface);
 }
 
 /* Tailwind v4 custom variant: lets components write `profolder:block` (paired with a plain
@@ -172,6 +204,21 @@
   --rt-status-pill-unselected-ink: oklch(55.4% 0.046 257.417);
   --rt-status-pill-unselected-border-hover: rgb(255 255 255 / 0.20);
   --rt-status-pill-unselected-ink-hover: oklch(86.9% 0.022 252.894);
+
+  /* byte-faithful transcription of the info-banner role (App.tsx's isDark ? "bg-blue-500/10
+     text-blue-300" : ...) — see @theme block's comment on this being a new role. */
+  --rt-info: #93c5fd; /* blue-300 */
+  --rt-info-surface: rgb(37 99 235 / 0.1); /* blue-500/10 */
+
+  /* Chrome-context tokens — see @theme block's comment. Dark and profolder share these literal
+     values (both keep the Rack Black-family chrome background); only light differs. */
+  --rt-chrome-ink: #f1f5f9; /* slate-100 */
+  --rt-chrome-ink-secondary: #cbd5e1; /* slate-300 */
+  --rt-chrome-ink-faint: #475569; /* slate-600 */
+  --rt-chrome-border: rgb(255 255 255 / 0.1);
+  --rt-chrome-border-hover: rgb(255 255 255 / 0.2);
+  --rt-chrome-border-faint: rgb(255 255 255 / 0.05);
+  --rt-chrome-surface: rgb(255 255 255 / 0.05);
 }
 
 /* light */
@@ -257,6 +304,21 @@
   --rt-status-pill-unselected-ink: oklch(44.6% 0.043 257.281);
   --rt-status-pill-unselected-border-hover: oklch(70.4% 0.04 256.788);
   --rt-status-pill-unselected-ink-hover: oklch(27.9% 0.041 260.031);
+
+  /* byte-faithful transcription of the info-banner role (App.tsx's isDark ? ... : "bg-blue-50
+     text-blue-700") — see dark block's comment. */
+  --rt-info: #1d4ed8; /* blue-700 */
+  --rt-info-surface: #eff6ff; /* blue-50 */
+
+  /* Chrome-context tokens — see dark block's comment. Light is the one theme where chrome is a
+     light background, so ink is dark-on-light and border/surface use black-based opacity. */
+  --rt-chrome-ink: #0f172a; /* slate-900 */
+  --rt-chrome-ink-secondary: #334155; /* slate-700 */
+  --rt-chrome-ink-faint: #94a3b8; /* slate-400 */
+  --rt-chrome-border: rgb(0 0 0 / 0.1);
+  --rt-chrome-border-hover: rgb(0 0 0 / 0.2);
+  --rt-chrome-border-faint: rgb(0 0 0 / 0.05);
+  --rt-chrome-surface: #ffffff;
 }
 
 /* profolder (new brand theme, default) */
@@ -332,6 +394,23 @@
   --rt-status-pill-unselected-ink: oklch(44.6% 0.043 257.281);
   --rt-status-pill-unselected-border-hover: oklch(70.4% 0.04 256.788);
   --rt-status-pill-unselected-ink-hover: oklch(27.9% 0.041 260.031);
+
+  /* INTERIM PLACEHOLDER (Developer-proposed, needs visual sign-off later): reuses Light theme's
+     resolved info/info-surface values, same placeholder discipline as the danger/notice/success
+     tokens above. */
+  --rt-info: #1d4ed8;
+  --rt-info-surface: #eff6ff;
+
+  /* Chrome-context tokens: profolder's chrome background stays Rack Black (same dark family as
+     the dark theme's chrome), so these match the dark block's values exactly — see dark block's
+     comment. */
+  --rt-chrome-ink: #f1f5f9;
+  --rt-chrome-ink-secondary: #cbd5e1;
+  --rt-chrome-ink-faint: #475569;
+  --rt-chrome-border: rgb(255 255 255 / 0.1);
+  --rt-chrome-border-hover: rgb(255 255 255 / 0.2);
+  --rt-chrome-border-faint: rgb(255 255 255 / 0.05);
+  --rt-chrome-surface: rgb(255 255 255 / 0.05);
 }
 
 /* Geometry tokens: plain CSS custom properties, not routed through @theme — consumed via

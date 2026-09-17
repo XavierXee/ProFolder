@@ -60,7 +60,6 @@ export function ProjectsTable({
   page,
   pageSize,
   loading,
-  isDark,
   selectedId,
   selectedIds,
   filters,
@@ -77,7 +76,6 @@ export function ProjectsTable({
   page: number;
   pageSize: number;
   loading: boolean;
-  isDark: boolean;
   selectedId?: string | null;
   selectedIds: Set<string>;
   filters: ProjectFilters;
@@ -257,7 +255,7 @@ export function ProjectsTable({
         </table>
       </main>
 
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} isDark={isDark} onPageChange={onPageChange} />
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={onPageChange} />
     </div>
   );
 }

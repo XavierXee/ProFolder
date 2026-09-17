@@ -409,12 +409,12 @@ export default function App() {
         <div className="flex items-center gap-3">
           <Logo size={28} />
           <div>
-            <h1 className={`text-sm font-semibold ${isDark ? "text-slate-100" : "text-slate-800"}`}>ProFolder</h1>
-            <p className={`text-xs font-mono ${isDark ? "text-slate-600" : "text-slate-400"}`}>Local Scan Console</p>
+            <h1 className="text-sm font-semibold text-chrome-ink">ProFolder</h1>
+            <p className="text-xs font-mono text-chrome-ink-faint">Local Scan Console</p>
           </div>
 
           <div className={`border-l pl-3 ${sectionBorder}`}>
-            <RootPathControl musicRoot={musicRoot} isDark={isDark} onSave={handleRootPathSave} />
+            <RootPathControl musicRoot={musicRoot} onSave={handleRootPathSave} />
           </div>
         </div>
 
@@ -438,22 +438,20 @@ export default function App() {
               onClick={() => setShowMetrics((v) => !v)}
               aria-expanded={showMetrics}
               aria-haspopup="dialog"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"
-              }`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5h3v6H3v-6zM10.5 7.5h3v12h-3v-12zM18 10.5h3v9h-3v-9z" />
               </svg>
               Metrics
               {stats && stats.unscoredCount > 0 && (
-                <span className={`px-1.5 rounded-full text-[10px] ${isDark ? "bg-purple-500/20 text-purple-300" : "bg-purple-100 text-purple-700"}`}>
+                <span className="px-1.5 rounded-full text-[10px] bg-notice-surface text-notice">
                   {stats.unscoredCount}
                 </span>
               )}
             </button>
             {showMetrics && (
-              <MetricsPanel stats={stats} lastScanChanges={lastScanChanges} isDark={isDark} onClose={() => setShowMetrics(false)} />
+              <MetricsPanel stats={stats} lastScanChanges={lastScanChanges} onClose={() => setShowMetrics(false)} />
             )}
           </div>
 
@@ -466,9 +464,7 @@ export default function App() {
               setShowProjectsBatchPanel(false);
               setShowSettings(true);
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-              isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"
-            }`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path
@@ -493,13 +489,7 @@ export default function App() {
             onClick={() => setShowCreateTabModal(true)}
             aria-label="Create custom tab"
             title="Create custom tab"
-            className={`flex items-center justify-center w-6 h-6 mr-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-              isProFolder
-                ? "bg-surface border-border text-ink-muted hover:text-ink hover:bg-surface-hover"
-                : isDark
-                  ? "border-white/10 text-slate-500 hover:text-slate-200 hover:bg-white/8 hover:border-white/20"
-                  : "border-black/10 text-slate-400 hover:text-slate-700 hover:bg-black/5 hover:border-black/20"
-            }`}
+            className="flex items-center justify-center w-6 h-6 mr-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover profolder:bg-surface"
           >
             +
           </button>
@@ -524,9 +514,7 @@ export default function App() {
                   : `px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                       activeTab === tab
                         ? "border-blue-500 text-blue-400"
-                        : isDark
-                          ? "border-transparent text-slate-500 hover:text-slate-300"
-                          : "border-transparent text-slate-500 hover:text-slate-800"
+                        : "border-transparent text-slate-500 hover:text-ink"
                     }`
               }
             >
@@ -549,9 +537,7 @@ export default function App() {
                     : `px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                         activeTab === tab.id
                           ? "border-blue-500 text-blue-400"
-                          : isDark
-                            ? "border-transparent text-slate-500 hover:text-slate-300"
-                            : "border-transparent text-slate-500 hover:text-slate-800"
+                          : "border-transparent text-slate-500 hover:text-ink"
                       }`
                 }
               >
@@ -561,13 +547,7 @@ export default function App() {
                 onClick={() => setDeletingTab(tab)}
                 aria-label={`Delete tab ${tab.name}`}
                 title={`Delete tab ${tab.name}`}
-                className={`flex items-center justify-center w-4 h-4 -ml-1 rounded-[var(--rt-radius)] text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                  isProFolder
-                    ? "text-ink-muted hover:text-ink hover:bg-surface-hover"
-                    : isDark
-                      ? "text-slate-600 hover:text-slate-300 hover:bg-white/8"
-                      : "text-slate-400 hover:text-slate-700 hover:bg-black/5"
-                }`}
+                className="flex items-center justify-center w-4 h-4 -ml-1 rounded-[var(--rt-radius)] text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover"
               >
                 ×
               </button>
@@ -576,7 +556,7 @@ export default function App() {
         </div>
 
         {banner && (
-          <div className={`mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono ${isDark ? "bg-blue-500/10 text-blue-300" : "bg-blue-50 text-blue-700"}`}>
+          <div className="mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono bg-info-surface text-info">
             {banner}
           </div>
         )}
@@ -601,7 +581,6 @@ export default function App() {
               page={projectsPage}
               pageSize={projectsPageSize}
               loading={projectsLoading}
-              isDark={isDark}
               selectedId={selectedProjectId}
               selectedIds={selectedProjectIds}
               filters={projectFilters}
@@ -628,7 +607,7 @@ export default function App() {
             />
 
             {error && (
-              <div className={`mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono ${isDark ? "bg-red-500/10 text-red-300" : "bg-red-50 text-red-700"}`}>
+              <div className="mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono bg-danger-surface text-danger">
                 {error}
               </div>
             )}
@@ -652,7 +631,7 @@ export default function App() {
               />
             </main>
 
-            <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} isDark={isDark} onPageChange={handleFilesPageChange} />
+            <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={handleFilesPageChange} />
           </>
         ) : (
           activeCustomTab &&
@@ -802,9 +781,9 @@ export default function App() {
         onCancel={() => setDeletingTab(null)}
       />
 
-      <footer className={`border-t bg-chrome px-6 py-2 flex items-center justify-between ${isDark ? "border-white/5" : "border-black/5"}`}>
-        <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>ProFolder · Local, read-only scanner</span>
-        <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>Score and tag your tracks · Track what's ready to release</span>
+      <footer className="border-t bg-chrome px-6 py-2 flex items-center justify-between border-chrome-border-faint">
+        <span className="text-xs font-mono text-chrome-ink-faint">ProFolder · Local, read-only scanner</span>
+        <span className="text-xs font-mono text-chrome-ink-faint">Score and tag your tracks · Track what's ready to release</span>
       </footer>
     </div>
   );

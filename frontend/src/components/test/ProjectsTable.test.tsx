@@ -43,7 +43,6 @@ function renderTable(overrides: Partial<Parameters<typeof ProjectsTable>[0]> = {
     page: 1,
     pageSize: 20,
     loading: false,
-    isDark: true,
     selectedId: null,
     selectedIds: new Set<string>(),
     filters: {} as ProjectFilters,

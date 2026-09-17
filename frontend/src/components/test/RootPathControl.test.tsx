@@ -14,7 +14,6 @@ const mockChooseMusicRoot = vi.mocked(api.chooseMusicRoot);
 function renderControl(overrides: Partial<Parameters<typeof RootPathControl>[0]> = {}) {
   const props = {
     musicRoot: "/music/root" as string | undefined,
-    isDark: true,
     onSave: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -41,6 +40,40 @@ describe("RootPathControl - collapsed state", () => {
     renderControl({ musicRoot: undefined });
 
     expect(screen.getByText("…")).toBeInTheDocument();
+  });
+});
+
+// Task 4 of the theming rework removed isDark entirely from this component: the icon
+// button/input/secondary buttons now render unconditionally through the chrome-context tokens
+// (see index.css's @theme comment on why this component specifically needs the chrome-* tokens
+// rather than the generic ink/border ones — it only ever renders inside App.tsx's <header>).
+describe("RootPathControl - token classes", () => {
+  it("gives the edit icon button the chrome-ink-faint/chrome-ink-secondary token classes", () => {
+    renderControl();
+
+    const editButton = screen.getByRole("button", { name: "Change production folder" });
+    expect(editButton.className).toContain("text-chrome-ink-faint");
+    expect(editButton.className).toContain("hover:text-chrome-ink-secondary");
+  });
+
+  it("gives the editing-mode input and secondary buttons the chrome-context token classes", async () => {
+    const user = userEvent.setup();
+    renderControl();
+
+    await user.click(screen.getByRole("button", { name: "Change production folder" }));
+
+    const input = screen.getByRole("textbox", { name: "Production folder path" });
+    expect(input.className).toContain("bg-chrome-surface");
+    expect(input.className).toContain("border-chrome-border");
+    // Primary ink tier (not the secondary/muted tier used for buttons): typed content gets the
+    // higher-contrast token, matching FilterToolbar.tsx's established input-text convention.
+    expect(input.className).toContain("text-chrome-ink");
+    expect(input.className).not.toContain("text-chrome-ink-secondary");
+
+    const browseButton = screen.getByRole("button", { name: "Browse…" });
+    expect(browseButton.className).toContain("border-chrome-border");
+    expect(browseButton.className).toContain("text-chrome-ink-secondary");
+    expect(browseButton.className).toContain("hover:text-chrome-ink");
   });
 });
 

@@ -232,7 +232,6 @@ export default function CustomProjectsTabPanel({
         page={page}
         pageSize={pageSize}
         loading={loading}
-        isDark={isDark}
         selectedId={selectedProjectId}
         selectedIds={selectedProjectIds}
         filters={filters}

@@ -24,6 +24,7 @@ vi.mock("../api/client.js", () => ({
   getStats: vi.fn(),
   getAllTags: vi.fn(),
   getCustomTabs: vi.fn(),
+  setMusicRoot: vi.fn(),
 }));
 
 import * as api from "../api/client.js";
@@ -35,6 +36,7 @@ const mockGetLastScan = vi.mocked(api.getLastScan);
 const mockGetStats = vi.mocked(api.getStats);
 const mockGetAllTags = vi.mocked(api.getAllTags);
 const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
+const mockSetMusicRoot = vi.mocked(api.setMusicRoot);
 
 const THEME_KEY = "musicLibraryManager.theme";
 const LEGACY_THEME_KEY = "musicLibraryManager.isDark";
@@ -48,6 +50,7 @@ beforeEach(() => {
   mockGetStats.mockReset().mockResolvedValue({ total: 0, draftCount: 0, unscoredCount: 0 });
   mockGetAllTags.mockReset().mockResolvedValue([]);
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
+  mockSetMusicRoot.mockReset();
 });
 
 async function waitForMount() {
@@ -201,13 +204,18 @@ describe("App - tab switcher styling per theme", () => {
     expect(projectsTab.className).toContain("text-ink-muted");
   });
 
-  // Regression guard: the pre-existing Light/Dark underline-tab styling must remain byte-for-byte
-  // unchanged by this task. These exact class strings were copied from the source before this
-  // task's edit.
+  // Regression guard, updated for Task 4 of the theming rework: the outer isProFolder structural
+  // split (pill vs underline tab treatment) is unchanged, but the inner isDark ternary that used
+  // to pick between hover:text-slate-300 (dark) and hover:text-slate-800 (light) was collapsed to
+  // the single already-theme-aware hover:text-ink token — so the dark/light class strings are now
+  // byte-identical to each other (not just to their own pre-task value), which is the point of
+  // this task: no JS branching left on this class string, only a CSS custom property that resolves
+  // differently per theme.
   const BASE = "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
   const ACTIVE_UNDERLINE = "border-blue-500 text-blue-400";
+  const INACTIVE_UNDERLINE = "border-transparent text-slate-500 hover:text-ink";
 
-  it("keeps the dark theme's active/inactive tab classNames byte-identical to the pre-existing underline treatment", async () => {
+  it("keeps the dark theme's active/inactive tab classNames using the token-driven underline treatment", async () => {
     localStorage.setItem(LEGACY_THEME_KEY, "true");
     render(<App />);
     await waitForMount();
@@ -217,10 +225,10 @@ describe("App - tab switcher styling per theme", () => {
     const inactiveTab = screen.getByRole("button", { name: "Audio Files" });
 
     expect(activeTab.className).toBe(`${BASE} ${ACTIVE_UNDERLINE}`);
-    expect(inactiveTab.className).toBe(`${BASE} border-transparent text-slate-500 hover:text-slate-300`);
+    expect(inactiveTab.className).toBe(`${BASE} ${INACTIVE_UNDERLINE}`);
   });
 
-  it("keeps the light theme's active/inactive tab classNames byte-identical to the pre-existing underline treatment", async () => {
+  it("keeps the light theme's active/inactive tab classNames using the token-driven underline treatment", async () => {
     localStorage.setItem(LEGACY_THEME_KEY, "false");
     render(<App />);
     await waitForMount();
@@ -230,7 +238,7 @@ describe("App - tab switcher styling per theme", () => {
     const inactiveTab = screen.getByRole("button", { name: "Audio Files" });
 
     expect(activeTab.className).toBe(`${BASE} ${ACTIVE_UNDERLINE}`);
-    expect(inactiveTab.className).toBe(`${BASE} border-transparent text-slate-500 hover:text-slate-800`);
+    expect(inactiveTab.className).toBe(`${BASE} ${INACTIVE_UNDERLINE}`);
   });
 });
 
@@ -350,5 +358,79 @@ describe("App - converted chrome elements carry token classes, not the old hardc
     await user.click(screen.getByRole("option", { name: "Light" })); // dark -> light
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
     expect(footer!.className).toContain("bg-chrome");
+  });
+});
+
+// Task 4 of the theming rework: App.tsx's own remaining direct isDark/isProFolder JSX usages
+// (header title/subtitle, metrics-button unscored badge, info/error banners, footer, "+"
+// create-tab button) were converted to token classes. These assertions prove the token class is
+// present, not the resulting rendered color (see file-level NOTE on the jsdom limitation).
+describe("App - Task 4 token-converted elements", () => {
+  it("gives the header title/subtitle the chrome-ink/chrome-ink-faint token classes", async () => {
+    render(<App />);
+    await waitForMount();
+
+    expect(screen.getByRole("heading", { name: "ProFolder" })).toHaveClass("text-chrome-ink");
+    expect(screen.getByText("Local Scan Console")).toHaveClass("text-chrome-ink-faint");
+  });
+
+  it("gives the footer the chrome-ink-faint/border-chrome-border-faint token classes", async () => {
+    render(<App />);
+    await waitForMount();
+
+    const footer = document.querySelector("footer")!;
+    expect(footer.className).toContain("border-chrome-border-faint");
+    within(footer).getAllByText(/ProFolder|Score and tag/).forEach((el) => expect(el).toHaveClass("text-chrome-ink-faint"));
+  });
+
+  it("gives the metrics unscored-count badge the notice token classes", async () => {
+    mockGetStats.mockReset().mockResolvedValue({ total: 5, draftCount: 1, unscoredCount: 2 });
+    render(<App />);
+    await waitForMount();
+
+    const badge = await screen.findByText("2");
+    expect(badge).toHaveClass("bg-notice-surface");
+    expect(badge).toHaveClass("text-notice");
+  });
+
+  it("gives the create-custom-tab '+' button the border-border/text-ink-muted token classes plus the profolder:bg-surface variant", async () => {
+    render(<App />);
+    await waitForMount();
+
+    const createButton = screen.getByRole("button", { name: "Create custom tab" });
+    expect(createButton.className).toContain("border-border");
+    expect(createButton.className).toContain("text-ink-muted");
+    expect(createButton.className).toContain("hover:text-ink");
+    expect(createButton.className).toContain("hover:bg-surface-hover");
+    expect(createButton.className).toContain("profolder:bg-surface");
+  });
+
+  it("gives the Files-tab error banner the danger token classes when getFiles rejects", async () => {
+    mockGetFiles.mockReset().mockRejectedValue(new Error("boom"));
+    const user = userEvent.setup();
+    render(<App />);
+    await waitForMount();
+
+    await user.click(screen.getByRole("button", { name: "Audio Files" }));
+
+    const errorBanner = await screen.findByText("boom");
+    expect(errorBanner).toHaveClass("bg-danger-surface");
+    expect(errorBanner).toHaveClass("text-danger");
+  });
+
+  it("gives the production-folder-updated banner the info token classes", async () => {
+    mockSetMusicRoot.mockResolvedValue({ musicRoot: "/new/music/root" });
+    const user = userEvent.setup();
+    render(<App />);
+    await waitForMount();
+
+    await user.click(screen.getByRole("button", { name: "Change production folder" }));
+    const input = screen.getByRole("textbox", { name: "Production folder path" });
+    await user.clear(input);
+    await user.type(input, "/new/music/root{Enter}");
+
+    const banner = await screen.findByText(/Production folder updated/);
+    expect(banner).toHaveClass("bg-info-surface");
+    expect(banner).toHaveClass("text-info");
   });
 });

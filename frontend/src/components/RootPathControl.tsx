@@ -3,11 +3,10 @@ import * as api from "../api/client.js";
 
 type Props = {
   musicRoot: string | undefined;
-  isDark: boolean;
   onSave: (newPath: string) => Promise<void>;
 };
 
-export default function RootPathControl({ musicRoot, isDark, onSave }: Props) {
+export default function RootPathControl({ musicRoot, onSave }: Props) {
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -62,13 +61,14 @@ export default function RootPathControl({ musicRoot, isDark, onSave }: Props) {
     }
   }
 
-  const inputCls = isDark
-    ? "bg-white/5 border-white/10 text-slate-300 placeholder-slate-600"
-    : "bg-white border-slate-300 text-slate-800 placeholder-slate-400";
-  const iconCls = isDark ? "text-slate-600 hover:text-slate-300" : "text-slate-400 hover:text-slate-700";
-  const secondaryBtnCls = isDark
-    ? "border-white/10 text-slate-400 hover:text-slate-200"
-    : "border-black/10 text-slate-500 hover:text-slate-800";
+  // Chrome-context tokens (see index.css's @theme comment): this control only ever renders
+  // inside App.tsx's <header>, which stays on the always-dark --color-chrome background under
+  // both the dark and profolder themes — the generic ink/border tokens are calibrated for the
+  // canvas/surface background instead and would render near-invisible dark-on-dark under
+  // profolder specifically.
+  const inputCls = "bg-chrome-surface border-chrome-border text-chrome-ink placeholder:text-chrome-ink-faint";
+  const iconCls = "text-chrome-ink-faint hover:text-chrome-ink-secondary";
+  const secondaryBtnCls = "border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover";
   const busy = saving || browsing;
 
   if (editing) {
@@ -119,7 +119,7 @@ export default function RootPathControl({ musicRoot, isDark, onSave }: Props) {
   return (
     <div className="flex items-center gap-1.5 min-w-0">
       <span
-        className={`text-xs font-mono truncate max-w-[220px] ${isDark ? "text-slate-500" : "text-slate-500"}`}
+        className="text-xs font-mono truncate max-w-[220px] text-slate-500"
         title={musicRoot}
       >
         {musicRoot ?? "…"}

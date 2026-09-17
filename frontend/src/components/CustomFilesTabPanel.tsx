@@ -254,7 +254,7 @@ export default function CustomFilesTabPanel({
         />
       </main>
 
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} isDark={isDark} onPageChange={handlePageChange} />
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={handlePageChange} />
 
       <FileDetailPanel
         file={selectedFile}

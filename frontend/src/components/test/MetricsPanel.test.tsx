@@ -8,7 +8,6 @@ function renderPanel(overrides: Partial<Parameters<typeof MetricsPanel>[0]> = {}
   const props = {
     stats: { total: 42, draftCount: 10, unscoredCount: 3 } as LibraryStats | undefined,
     lastScanChanges: null as number | null,
-    isDark: true,
     onClose: vi.fn(),
     ...overrides,
   };
@@ -35,26 +34,23 @@ describe("MetricsPanel - stats fallback", () => {
   });
 });
 
+// Task 4 of the theming rework removed isDark entirely: the highlight/panel/meta/divider/close
+// classes now render unconditionally through tokens (text-notice for the Unscored highlight,
+// bg-surface/border-border/text-ink for the popover panel, matching the same pattern already
+// established by ThemeSelector.tsx/MultiSelectDropdown.tsx's own popover menus).
 describe("MetricsPanel - unscoredCount highlight", () => {
-  it("applies highlight styling to the Unscored tile value when unscoredCount > 0", () => {
-    renderPanel({ stats: { total: 42, draftCount: 10, unscoredCount: 3 }, isDark: true });
+  it("applies the text-notice token class to the Unscored tile value when unscoredCount > 0", () => {
+    renderPanel({ stats: { total: 42, draftCount: 10, unscoredCount: 3 } });
 
-    expect(screen.getByText("3")).toHaveClass("text-purple-400");
-  });
-
-  it("uses the light-mode highlight class when isDark is false", () => {
-    renderPanel({ stats: { total: 42, draftCount: 10, unscoredCount: 3 }, isDark: false });
-
-    expect(screen.getByText("3")).toHaveClass("text-purple-700");
+    expect(screen.getByText("3")).toHaveClass("text-notice");
   });
 
   it("does not apply highlight styling when unscoredCount is 0", () => {
-    renderPanel({ stats: { total: 42, draftCount: 10, unscoredCount: 0 }, isDark: true });
+    renderPanel({ stats: { total: 42, draftCount: 10, unscoredCount: 0 } });
 
     const value = screen.getByText("0");
-    expect(value).not.toHaveClass("text-purple-400");
-    expect(value).not.toHaveClass("text-purple-700");
-    expect(value).toHaveClass("text-slate-200");
+    expect(value).not.toHaveClass("text-notice");
+    expect(value).toHaveClass("text-ink");
   });
 });
 
