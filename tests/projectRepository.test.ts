@@ -367,4 +367,17 @@ describe("projectRepository.getProjectStats", () => {
     expect(stats.total).toBe(23); // 22 base fixtures + PlainFolder
     expect(stats.byStatus.done).toBe(1);
   });
+
+  it("counts a DAW-classified project (daw_type set, e.g. 'ableton') in the total and its status bucket", () => {
+    // Complements the plain-folder test above: proves the other half of the "no daw_type
+    // filter" decision — a project with a real, non-null daw_type is counted too, not just
+    // NULL ones. This test would fail if a future change added a `daw_type IS NULL` filter.
+    upsertProject(db, makeProject({ id: "AbletonProject", name: "AbletonProject", dawType: "ableton" }));
+    updateStatus(db, "AbletonProject", "done");
+
+    const stats = getProjectStats(db);
+
+    expect(stats.total).toBe(23); // 22 base fixtures + AbletonProject
+    expect(stats.byStatus.done).toBe(1);
+  });
 });
