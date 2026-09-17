@@ -12,8 +12,10 @@ import {
   upsertProject,
   markRemoved,
   loadActiveProjectIds,
+  getProjectStats,
 } from "../src/database/repositories/projectRepository.js";
 import type { Project } from "../src/models/Project.js";
+import { ALL_TRACK_STATUSES } from "../src/models/AudioFile.js";
 
 let db: Database.Database;
 
@@ -301,5 +303,68 @@ describe("reactivating a soft-removed project (upsertProject)", () => {
     expect(reactivated.tags.sort()).toEqual(["favorite", "mix-ready"]);
     expect(reactivated.lastSeenAt).toBe(newLastSeenAt); // filesystem-derived fields do refresh
     expect(reactivated.contentModifiedAt).toBe("2026-05-01T00:00:00.000Z");
+  });
+});
+
+describe("projectRepository.getProjectStats", () => {
+  it("computes unfiltered, library-wide per-status counts", () => {
+    // Base fixture: 22 projects, all "unknown" status, none DAW-classified.
+    updateStatus(db, "Project 00", "draft");
+    updateStatus(db, "Project 01", "draft");
+    updateStatus(db, "Project 02", "needs_mixing");
+    updateStatus(db, "Project 03", "done");
+    updateStatus(db, "Project 04", "released");
+
+    const stats = getProjectStats(db);
+
+    expect(stats.total).toBe(22);
+    expect(stats.byStatus).toEqual({
+      unknown: 17,
+      draft: 2,
+      needs_mixing: 1,
+      done: 1,
+      released: 1,
+    });
+  });
+
+  it("includes every status key with an explicit 0 when no rows match it, not omitted (zero-fill guarantee)", () => {
+    // Base fixture is 22 "unknown"-status projects; no draft/needs_mixing/done/released rows
+    // exist at all. A GROUP BY-based implementation would silently omit those keys instead
+    // of returning an explicit 0 for them.
+    const stats = getProjectStats(db);
+
+    expect(Object.keys(stats.byStatus).sort()).toEqual([...ALL_TRACK_STATUSES].sort());
+    expect(stats.byStatus.draft).toBe(0);
+    expect(stats.byStatus.needs_mixing).toBe(0);
+    expect(stats.byStatus.done).toBe(0);
+    expect(stats.byStatus.released).toBe(0);
+    expect(stats.byStatus.unknown).toBe(22);
+  });
+
+  it("excludes removed projects from the total and their status bucket", () => {
+    updateStatus(db, "Project 00", "draft");
+    const before = getProjectStats(db);
+    expect(before.total).toBe(22);
+    expect(before.byStatus.draft).toBe(1);
+
+    markRemoved(db, ["Project 00"], new Date().toISOString());
+
+    const after = getProjectStats(db);
+    expect(after.total).toBe(21);
+    expect(after.byStatus.draft).toBe(0);
+  });
+
+  it("counts a plain, non-DAW-classified project folder (daw_type IS NULL) in the total and its status bucket", () => {
+    // All 22 base fixtures are already plain (non-DAW) folders (makeProject defaults
+    // dawType to undefined) — this asserts that inclusion explicitly, confirming the
+    // product decision that every active project folder counts, regardless of daw_type.
+    // This test would fail if a future change added a `daw_type IS NOT NULL` filter.
+    upsertProject(db, makeProject({ id: "PlainFolder", name: "PlainFolder" }));
+    updateStatus(db, "PlainFolder", "done");
+
+    const stats = getProjectStats(db);
+
+    expect(stats.total).toBe(23); // 22 base fixtures + PlainFolder
+    expect(stats.byStatus.done).toBe(1);
   });
 });

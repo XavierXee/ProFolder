@@ -1,6 +1,6 @@
 import path from "node:path";
 import type Database from "better-sqlite3";
-import type { AudioFile, TrackStatus } from "../../models/AudioFile.js";
+import { ALL_TRACK_STATUSES, type AudioFile, type EntityStats, type TrackStatus } from "../../models/AudioFile.js";
 import { loadActiveDawProjectIds } from "./projectRepository.js";
 import { syncProjectFromFiles } from "./linkSync.js";
 
@@ -248,34 +248,31 @@ export function findAllActive(db: Database.Database, filters: AudioFileFilters =
   return findAllActivePaged(db, filters).items;
 }
 
-export type LibraryStats = {
-  total: number;
-  draftCount: number;
-  unscoredCount: number;
-};
+/** Library-wide aggregate counts (unfiltered, ignores pagination) for the Metrics panel.
+ * Deliberately a single aggregate query with no GROUP BY, so it always returns exactly one
+ * row (even over an empty table) with every status present — a GROUP BY-based approach
+ * would silently omit any status with zero matching rows. */
+export function getFileStats(db: Database.Database): EntityStats {
+  const statusClauses = ALL_TRACK_STATUSES.map(
+    (status) => `SUM(CASE WHEN status = '${status}' THEN 1 ELSE 0 END) AS ${status}`
+  ).join(",\n        ");
 
-/** Library-wide aggregate counts (unfiltered, ignores pagination) for the stat bar. */
-export function getLibraryStats(db: Database.Database): LibraryStats {
   const row = db
     .prepare(
       `SELECT
         COUNT(*) AS total,
-        SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) AS draftCount,
-        SUM(CASE WHEN score IS NULL THEN 1 ELSE 0 END) AS unscoredCount
+        ${statusClauses}
       FROM audio_files
       WHERE is_removed = 0`
     )
-    .get() as {
-    total: number;
-    draftCount: number | null;
-    unscoredCount: number | null;
-  };
+    .get() as { total: number } & Record<TrackStatus, number | null>;
 
-  return {
-    total: row.total,
-    draftCount: row.draftCount ?? 0,
-    unscoredCount: row.unscoredCount ?? 0,
-  };
+  const byStatus = {} as Record<TrackStatus, number>;
+  for (const status of ALL_TRACK_STATUSES) {
+    byStatus[status] = row[status] ?? 0;
+  }
+
+  return { total: row.total, byStatus };
 }
 
 /** Active file counts per project in a single aggregate query, avoiding a full-table load just to count. */

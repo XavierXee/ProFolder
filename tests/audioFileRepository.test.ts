@@ -11,7 +11,7 @@ import {
   setScoreForFiles,
   addTagsToFiles,
   findById,
-  getLibraryStats,
+  getFileStats,
   markRemoved,
   moveFile,
   cloneFile,
@@ -20,9 +20,12 @@ import {
 import {
   upsertProject,
   findById as findProjectById,
+  updateStatus as updateProjectStatus,
+  getProjectStats,
 } from "../src/database/repositories/projectRepository.js";
 import { syncProjectFromFiles } from "../src/database/repositories/linkSync.js";
 import type { DawType } from "../src/scanner/dawDetector.js";
+import { ALL_TRACK_STATUSES } from "../src/models/AudioFile.js";
 
 let db: Database.Database;
 
@@ -177,30 +180,72 @@ describe("findAllActivePaged", () => {
   });
 });
 
-describe("getLibraryStats", () => {
-  it("computes unfiltered, library-wide aggregate counts", () => {
-    // Base fixture: 25 files, all unknown status and unscored.
-    insertAudioFile(db, makeFile({ id: "scored.wav" }));
-    insertAudioFile(db, makeFile({ id: "draft.wav", status: "draft" }));
-    insertAudioFile(db, makeFile({ id: "draft-scored.wav", status: "draft" }));
-    setScore(db, "scored.wav", 4);
-    setScore(db, "draft-scored.wav", 2);
+describe("getFileStats", () => {
+  it("computes unfiltered, library-wide per-status counts", () => {
+    // Base fixture: 25 files, all "unknown" status.
+    insertAudioFile(db, makeFile({ id: "draft1.wav", status: "draft" }));
+    insertAudioFile(db, makeFile({ id: "draft2.wav", status: "draft" }));
+    insertAudioFile(db, makeFile({ id: "mixing.wav", status: "needs_mixing" }));
+    insertAudioFile(db, makeFile({ id: "done.wav", status: "done" }));
+    insertAudioFile(db, makeFile({ id: "released.wav", status: "released" }));
 
-    const stats = getLibraryStats(db);
+    const stats = getFileStats(db);
 
-    expect(stats.total).toBe(28);
-    expect(stats.draftCount).toBe(2); // draft.wav + draft-scored.wav
-    expect(stats.unscoredCount).toBe(26); // everything except scored.wav and draft-scored.wav
+    expect(stats.total).toBe(30); // 25 base fixtures + 5 added here
+    expect(stats.byStatus).toEqual({
+      unknown: 25,
+      draft: 2,
+      needs_mixing: 1,
+      done: 1,
+      released: 1,
+    });
   });
 
-  it("excludes removed files from every bucket", () => {
-    const before = getLibraryStats(db);
+  it("includes every status key with an explicit 0 when no rows match it, not omitted (zero-fill guarantee)", () => {
+    // Base fixture is 25 "unknown"-status files; no draft/needs_mixing/done/released rows
+    // exist at all. A GROUP BY-based implementation would silently omit those keys instead
+    // of returning an explicit 0 for them.
+    const stats = getFileStats(db);
+
+    expect(Object.keys(stats.byStatus).sort()).toEqual([...ALL_TRACK_STATUSES].sort());
+    expect(stats.byStatus.draft).toBe(0);
+    expect(stats.byStatus.needs_mixing).toBe(0);
+    expect(stats.byStatus.done).toBe(0);
+    expect(stats.byStatus.released).toBe(0);
+    expect(stats.byStatus.unknown).toBe(25);
+  });
+
+  it("excludes removed files from the total and their status bucket", () => {
+    updateStatus(db, "file-00.wav", "draft");
+    const before = getFileStats(db);
     expect(before.total).toBe(25);
+    expect(before.byStatus.draft).toBe(1);
 
     markRemoved(db, ["file-00.wav"], new Date().toISOString());
 
-    const after = getLibraryStats(db);
+    const after = getFileStats(db);
     expect(after.total).toBe(24);
+    expect(after.byStatus.draft).toBe(0);
+  });
+
+  it("is unaffected by rows in the projects table (no cross-table contamination)", () => {
+    // Seed a DIFFERENT count of draft rows in each table and confirm each function's
+    // numbers reflect only its own table, not a mix of both.
+    updateStatus(db, "file-00.wav", "draft");
+    updateStatus(db, "file-01.wav", "draft");
+    updateStatus(db, "file-02.wav", "draft"); // 3 draft files total
+
+    for (let i = 0; i < 7; i++) {
+      const id = `cross-project-${i}`;
+      upsertProject(db, makeProject(id));
+      updateProjectStatus(db, id, "draft"); // 7 draft projects total
+    }
+
+    const fileStats = getFileStats(db);
+    const projectStats = getProjectStats(db);
+
+    expect(fileStats.byStatus.draft).toBe(3);
+    expect(projectStats.byStatus.draft).toBe(7);
   });
 });
 
