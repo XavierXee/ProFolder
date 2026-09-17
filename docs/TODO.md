@@ -252,6 +252,7 @@ For Copy, Move or Delete, ask the user to simply type COPY, MOVE or DELETE
 - edit statuses - give it a name and a color
 - edit tags, review list of all tags, ability to change their name or to remove them
 - Enable or disable type confirmation for each of the actions that needs confirmation (removing tag, removing tab, removing status, Copying, Moving and Deleting projects or audio files)
+- Number of items per page
 
 ## 11. I now want to share this repository, making it open source, public and usable by others
 
