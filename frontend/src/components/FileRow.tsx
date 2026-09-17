@@ -112,7 +112,7 @@ export function FileRow({
         </div>
       </td>
       <td className="px-4 py-3.5 w-32">
-        <StatusBadge status={file.status} isDark={isDark} />
+        <StatusBadge status={file.status} />
       </td>
       <td className="px-4 py-3.5 max-w-40">
         {file.tags.length === 0 ? (
@@ -136,7 +136,7 @@ export function FileRow({
         <span className={`block truncate text-xs font-mono ${isDark ? "text-slate-400" : "text-slate-600"}`}>{file.projectId ?? "—"}</span>
       </td>
       <td className="px-4 py-3.5 min-w-28">
-        <ScoreBadge score={file.score} isDark={isDark} />
+        <ScoreBadge score={file.score} />
       </td>
       <td className="px-4 py-3.5 max-w-xs">
         <p className={`text-xs leading-relaxed truncate ${isDark ? "text-slate-500" : "text-slate-400"}`} title={file.path}>

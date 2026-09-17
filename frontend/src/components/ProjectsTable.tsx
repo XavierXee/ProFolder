@@ -199,7 +199,7 @@ export function ProjectsTable({
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-center w-32">
-                      <StatusBadge status={project.status} isDark={isDark} />
+                      <StatusBadge status={project.status} />
                     </td>
                     <td className="px-4 py-3.5 max-w-40">
                       {project.tags.length === 0 ? (
@@ -220,7 +220,7 @@ export function ProjectsTable({
                       )}
                     </td>
                     <td className="px-4 py-3.5 text-center">
-                      <ScoreBadge score={project.score} isDark={isDark} />
+                      <ScoreBadge score={project.score} />
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       <span className={`text-sm font-mono tabular-nums ${isDark ? "text-slate-300" : "text-slate-700"}`}>{project.audioFileCount}</span>

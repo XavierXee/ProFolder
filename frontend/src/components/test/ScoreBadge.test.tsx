@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ScoreBadge from "../ScoreBadge.js";
-import { SCORE_DOT_COLORS } from "../../scoreStyles.js";
+import { EMPTY_DOT, SCORE_DOT_COLORS } from "../../scoreStyles.js";
 
 function getDots(container: HTMLElement) {
   return Array.from(container.querySelectorAll('span[aria-hidden="true"]'));
@@ -25,7 +25,7 @@ describe("ScoreBadge", () => {
       if (value <= 3) {
         expect(dot.className).toContain(SCORE_DOT_COLORS[value]);
       } else {
-        expect(dot.className).toContain("bg-slate-700");
+        expect(dot.className).toContain(EMPTY_DOT);
       }
     });
   });
@@ -39,16 +39,7 @@ describe("ScoreBadge", () => {
     const dots = getDots(container);
     expect(dots).toHaveLength(5);
     dots.forEach((dot) => {
-      expect(dot.className).toContain("bg-slate-700");
-    });
-  });
-
-  it("uses the light empty-dot color when isDark is false", () => {
-    const { container } = render(<ScoreBadge score={null} isDark={false} />);
-
-    const dots = getDots(container);
-    dots.forEach((dot) => {
-      expect(dot.className).toContain("bg-slate-300");
+      expect(dot.className).toContain(EMPTY_DOT);
     });
   });
 });

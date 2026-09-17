@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import StatusBadge from "../StatusBadge.js";
+import { STATUS_BADGE } from "../../statusStyles.js";
+import type { TrackStatus } from "../../types.js";
 
 describe("StatusBadge", () => {
   it("renders the label and aria-label for a given status", () => {
@@ -11,17 +13,12 @@ describe("StatusBadge", () => {
     expect(badge).toHaveTextContent("Need Mixing");
   });
 
-  it("applies the dark badge styling by default", () => {
-    render(<StatusBadge status="done" />);
+  const statuses: TrackStatus[] = ["unknown", "draft", "needs_mixing", "done", "released"];
 
-    const badge = screen.getByLabelText("Status: Done");
-    expect(badge.className).toContain("bg-emerald-500/15");
-  });
+  it.each(statuses)("applies the STATUS_BADGE token class for status '%s'", (status) => {
+    render(<StatusBadge status={status} />);
 
-  it("applies the light badge styling when isDark is false", () => {
-    render(<StatusBadge status="done" isDark={false} />);
-
-    const badge = screen.getByLabelText("Status: Done");
-    expect(badge.className).toContain("bg-emerald-100");
+    const badge = screen.getByLabelText(new RegExp(`^Status: `));
+    expect(badge.className).toContain(STATUS_BADGE[status]);
   });
 });

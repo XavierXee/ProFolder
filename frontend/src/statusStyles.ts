@@ -43,24 +43,14 @@ export const STATUS_PILL_UNSELECTED =
  * TEMPORARY back-compat aliases, unchanged from the pre-token literal-class maps they replace.
  * Vite/Rollup's ESM import resolution fails the build (not just a tsc type error) on an
  * unresolved named import, so removing these outright breaks `npm run build:frontend` until
- * StatusBadge.tsx/FileDetailPanel.tsx/ProjectDetailPanel.tsx are migrated to STATUS_BADGE/
- * STATUS_PILL/STATUS_PILL_UNSELECTED above — that migration is Task 1's job, not this task's.
- * Delete these once those 3 consumers no longer import them.
+ * FileDetailPanel.tsx/ProjectDetailPanel.tsx are migrated to STATUS_PILL/STATUS_PILL_UNSELECTED
+ * above — that migration is a later task, not Task 1's (StatusBadge.tsx/ScoreBadge.tsx were the
+ * only consumers of STATUS_BADGE_DARK/STATUS_BADGE_LIGHT, and both are migrated as of Task 1, so
+ * those two maps have been deleted; STATUS_PILL_DARK/STATUS_PILL_LIGHT/
+ * STATUS_PILL_UNSELECTED_DARK/STATUS_PILL_UNSELECTED_LIGHT remain since FileDetailPanel.tsx/
+ * ProjectDetailPanel.tsx still import them directly).
+ * Delete these once those 2 consumers no longer import them.
  */
-export const STATUS_BADGE_DARK: Record<TrackStatus, string> = {
-  unknown: "bg-slate-500/15 text-slate-400 ring-slate-500/30",
-  draft: "bg-amber-500/15 text-amber-400 ring-amber-500/30",
-  needs_mixing: "bg-orange-500/15 text-orange-400 ring-orange-500/30",
-  done: "bg-emerald-500/15 text-emerald-400 ring-emerald-500/30",
-  released: "bg-indigo-500/15 text-indigo-400 ring-indigo-500/30",
-};
-export const STATUS_BADGE_LIGHT: Record<TrackStatus, string> = {
-  unknown: "bg-slate-100 text-slate-600 ring-slate-300",
-  draft: "bg-amber-100 text-amber-800 ring-amber-300",
-  needs_mixing: "bg-orange-100 text-orange-800 ring-orange-300",
-  done: "bg-emerald-100 text-emerald-800 ring-emerald-300",
-  released: "bg-indigo-100 text-indigo-800 ring-indigo-300",
-};
 export const STATUS_PILL_DARK: Record<TrackStatus, string> = {
   unknown: "border-slate-500/40 text-slate-400 bg-slate-500/10 ring-slate-500/30",
   draft: "border-amber-500/40 text-amber-400 bg-amber-500/10 ring-amber-500/30",

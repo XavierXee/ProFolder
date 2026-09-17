@@ -152,8 +152,8 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                 <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Project</p>
                 <p className="text-lg font-semibold truncate">{file.projectId ?? "Unassociated"}</p>
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
-                  <StatusBadge status={status} isDark={isDark} />
-                  <ScoreBadge score={score} isDark={isDark} />
+                  <StatusBadge status={status} />
+                  <ScoreBadge score={score} />
                   <span className={`text-xs font-mono ${meta}`}>{file.extension}</span>
                 </div>
               </div>

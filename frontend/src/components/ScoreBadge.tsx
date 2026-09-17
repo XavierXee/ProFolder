@@ -1,7 +1,6 @@
-import { SCORE_DOT_COLORS } from "../scoreStyles.js";
+import { EMPTY_DOT, SCORE_DOT_COLORS } from "../scoreStyles.js";
 
-export default function ScoreBadge({ score, isDark = true }: { score: number | null; isDark?: boolean }) {
-  const empty = isDark ? "bg-slate-700" : "bg-slate-300";
+export default function ScoreBadge({ score }: { score: number | null }) {
   const label = score === null ? "Score: not set" : `Score: ${score} of 5`;
 
   return (
@@ -12,7 +11,7 @@ export default function ScoreBadge({ score, isDark = true }: { score: number | n
         return (
           <span
             key={i}
-            className={`w-2 h-2 rounded-full ${filled ? SCORE_DOT_COLORS[value] : empty}`}
+            className={`w-2 h-2 rounded-full ${filled ? SCORE_DOT_COLORS[value] : EMPTY_DOT}`}
             aria-hidden="true"
           />
         );

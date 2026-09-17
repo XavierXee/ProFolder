@@ -199,8 +199,8 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                 >
                   {typeLabel}
                 </span>
-                <StatusBadge status={status} isDark={isDark} />
-                <ScoreBadge score={score} isDark={isDark} />
+                <StatusBadge status={status} />
+                <ScoreBadge score={score} />
                 <span className={`text-xs font-mono ${meta}`}>{project.audioFileCount} audio files</span>
               </div>
 
