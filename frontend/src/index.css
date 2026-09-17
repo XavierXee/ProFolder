@@ -16,13 +16,72 @@
   --color-border: var(--rt-border);
   --color-ink: var(--rt-ink);
   --color-ink-muted: var(--rt-ink-muted);
+  --color-ink-faint: var(--rt-ink-faint);
   --color-accent: var(--rt-accent);
   --color-accent-ink: var(--rt-accent-ink);
   --color-danger: var(--rt-danger);
+  --color-danger-surface: var(--rt-danger-surface);
+  --color-danger-border: var(--rt-danger-border);
+  --color-notice: var(--rt-notice);
+  --color-notice-surface: var(--rt-notice-surface);
+  --color-success: var(--rt-success);
   --color-chrome: var(--rt-chrome);
   --font-sans: var(--rt-font-sans);
   --font-mono: var(--rt-font-mono);
+
+  /* Status tokens: badge (StatusBadge), pill-selected, and pill-unselected (shared across all
+     statuses, not per-status) — see statusStyles.ts for the consuming class-string maps. */
+  --color-status-unknown-badge-surface: var(--rt-status-unknown-badge-surface);
+  --color-status-unknown-badge-ink: var(--rt-status-unknown-badge-ink);
+  --color-status-unknown-badge-ring: var(--rt-status-unknown-badge-ring);
+  --color-status-unknown-pill-surface: var(--rt-status-unknown-pill-surface);
+  --color-status-unknown-pill-ink: var(--rt-status-unknown-pill-ink);
+  --color-status-unknown-pill-border: var(--rt-status-unknown-pill-border);
+  --color-status-unknown-pill-ring: var(--rt-status-unknown-pill-ring);
+
+  --color-status-draft-badge-surface: var(--rt-status-draft-badge-surface);
+  --color-status-draft-badge-ink: var(--rt-status-draft-badge-ink);
+  --color-status-draft-badge-ring: var(--rt-status-draft-badge-ring);
+  --color-status-draft-pill-surface: var(--rt-status-draft-pill-surface);
+  --color-status-draft-pill-ink: var(--rt-status-draft-pill-ink);
+  --color-status-draft-pill-border: var(--rt-status-draft-pill-border);
+  --color-status-draft-pill-ring: var(--rt-status-draft-pill-ring);
+
+  --color-status-needs_mixing-badge-surface: var(--rt-status-needs_mixing-badge-surface);
+  --color-status-needs_mixing-badge-ink: var(--rt-status-needs_mixing-badge-ink);
+  --color-status-needs_mixing-badge-ring: var(--rt-status-needs_mixing-badge-ring);
+  --color-status-needs_mixing-pill-surface: var(--rt-status-needs_mixing-pill-surface);
+  --color-status-needs_mixing-pill-ink: var(--rt-status-needs_mixing-pill-ink);
+  --color-status-needs_mixing-pill-border: var(--rt-status-needs_mixing-pill-border);
+  --color-status-needs_mixing-pill-ring: var(--rt-status-needs_mixing-pill-ring);
+
+  --color-status-done-badge-surface: var(--rt-status-done-badge-surface);
+  --color-status-done-badge-ink: var(--rt-status-done-badge-ink);
+  --color-status-done-badge-ring: var(--rt-status-done-badge-ring);
+  --color-status-done-pill-surface: var(--rt-status-done-pill-surface);
+  --color-status-done-pill-ink: var(--rt-status-done-pill-ink);
+  --color-status-done-pill-border: var(--rt-status-done-pill-border);
+  --color-status-done-pill-ring: var(--rt-status-done-pill-ring);
+
+  --color-status-released-badge-surface: var(--rt-status-released-badge-surface);
+  --color-status-released-badge-ink: var(--rt-status-released-badge-ink);
+  --color-status-released-badge-ring: var(--rt-status-released-badge-ring);
+  --color-status-released-pill-surface: var(--rt-status-released-pill-surface);
+  --color-status-released-pill-ink: var(--rt-status-released-pill-ink);
+  --color-status-released-pill-border: var(--rt-status-released-pill-border);
+  --color-status-released-pill-ring: var(--rt-status-released-pill-ring);
+
+  --color-status-pill-unselected-border: var(--rt-status-pill-unselected-border);
+  --color-status-pill-unselected-ink: var(--rt-status-pill-unselected-ink);
+  --color-status-pill-unselected-border-hover: var(--rt-status-pill-unselected-border-hover);
+  --color-status-pill-unselected-ink-hover: var(--rt-status-pill-unselected-ink-hover);
 }
+
+/* Tailwind v4 custom variant: lets components write `profolder:block` (paired with a plain
+ * `hidden` base class) to show/hide an element purely by theme, instead of a JS `isProFolder &&`
+ * conditional. Unused by any component as of this token-foundation task — first real consumer
+ * lands in a later task in this cycle. */
+@custom-variant profolder ([data-theme="profolder"] &);
 
 /* dark (also the unscoped :root default, matching today's default-dark behavior) */
 :root,
@@ -37,12 +96,82 @@
   --rt-border: rgba(255, 255, 255, 0.08);
   --rt-ink: #e2e8f0; /* matches the pre-existing dark `body { color: #e2e8f0 }` (Tailwind slate-200) */
   --rt-ink-muted: #64748b;
+  /* byte-faithful transcription of ScoreBadge.tsx/ScoreEditor.tsx's `isDark ? "bg-slate-700" : ...` */
+  --rt-ink-faint: oklch(37.2% 0.044 257.287);
   --rt-accent: #2563eb;
   --rt-accent-ink: #fff;
-  --rt-danger: #ef4444;
+  /* byte-faithful transcription of the delete-button ink role (BatchEditPanel.tsx/FileDetailPanel.tsx/
+     ProjectDetailPanel.tsx's `isDark ? "... text-red-400 ..." : ...`), consolidating that shade with the
+     error-banner ink role (CustomFilesTabPanel.tsx/App.tsx used text-red-300, one step lighter) into a
+     single ink token — a deliberate small simplification, not a byte-exact match for the banner sites. */
+  --rt-danger: oklch(70.4% 0.191 22.216);
+  /* byte-faithful transcription of the error-banner surface role (CustomFilesTabPanel.tsx/App.tsx's
+     `isDark ? "bg-red-500/10 ..." : ...`) */
+  --rt-danger-surface: oklch(63.7% 0.237 25.331 / 0.1);
+  /* byte-faithful transcription of the delete-button border role (BatchEditPanel.tsx/FileDetailPanel.tsx/
+     ProjectDetailPanel.tsx's `isDark ? "border-red-500/30 ..." : ...`) */
+  --rt-danger-border: oklch(63.7% 0.237 25.331 / 0.3);
+  /* byte-faithful transcription of the "unscored count" ink role (MetricsPanel.tsx/ProjectsTable.tsx's
+     `isDark ? "text-purple-400" : ...`), consolidating with App.tsx's "unscored" badge ink (which used
+     text-purple-300, one step lighter) into a single ink token — same simplification as --rt-danger above. */
+  --rt-notice: oklch(71.4% 0.203 305.504);
+  /* byte-faithful transcription of App.tsx's "unscored" badge surface role (`isDark ? "bg-purple-500/20 ..." : ...`) */
+  --rt-notice-surface: oklch(62.7% 0.265 303.9 / 0.2);
+  /* byte-faithful transcription of ProjectsTable.tsx's "has audio" icon ink role
+     (`isDark ? "text-emerald-400" : ...`) — the only isDark-conditional emerald usage; the 3 other
+     emerald-400 sites in the codebase are already theme-invariant today and are out of scope. */
+  --rt-success: oklch(76.5% 0.177 163.223);
   --rt-chrome: #0d0f14;
   --rt-font-sans: 'Inter', sans-serif;
   --rt-font-mono: 'JetBrains Mono', monospace;
+
+  /* Status tokens: byte-faithful transcriptions of statusStyles.ts's former STATUS_BADGE_DARK /
+     STATUS_PILL_DARK / STATUS_PILL_UNSELECTED_DARK maps, resolved from Tailwind's actual v4 oklch
+     palette (theme.css) — not the older v3 hex palette, which no longer matches what this app renders. */
+  --rt-status-unknown-badge-surface: oklch(55.4% 0.046 257.417 / 0.15);
+  --rt-status-unknown-badge-ink: oklch(70.4% 0.04 256.788);
+  --rt-status-unknown-badge-ring: oklch(55.4% 0.046 257.417 / 0.3);
+  --rt-status-unknown-pill-surface: oklch(55.4% 0.046 257.417 / 0.1);
+  --rt-status-unknown-pill-ink: oklch(70.4% 0.04 256.788);
+  --rt-status-unknown-pill-border: oklch(55.4% 0.046 257.417 / 0.4);
+  --rt-status-unknown-pill-ring: oklch(55.4% 0.046 257.417 / 0.3);
+
+  --rt-status-draft-badge-surface: oklch(76.9% 0.188 70.08 / 0.15);
+  --rt-status-draft-badge-ink: oklch(82.8% 0.189 84.429);
+  --rt-status-draft-badge-ring: oklch(76.9% 0.188 70.08 / 0.3);
+  --rt-status-draft-pill-surface: oklch(76.9% 0.188 70.08 / 0.1);
+  --rt-status-draft-pill-ink: oklch(82.8% 0.189 84.429);
+  --rt-status-draft-pill-border: oklch(76.9% 0.188 70.08 / 0.4);
+  --rt-status-draft-pill-ring: oklch(76.9% 0.188 70.08 / 0.3);
+
+  --rt-status-needs_mixing-badge-surface: oklch(70.5% 0.213 47.604 / 0.15);
+  --rt-status-needs_mixing-badge-ink: oklch(75% 0.183 55.934);
+  --rt-status-needs_mixing-badge-ring: oklch(70.5% 0.213 47.604 / 0.3);
+  --rt-status-needs_mixing-pill-surface: oklch(70.5% 0.213 47.604 / 0.1);
+  --rt-status-needs_mixing-pill-ink: oklch(75% 0.183 55.934);
+  --rt-status-needs_mixing-pill-border: oklch(70.5% 0.213 47.604 / 0.4);
+  --rt-status-needs_mixing-pill-ring: oklch(70.5% 0.213 47.604 / 0.3);
+
+  --rt-status-done-badge-surface: oklch(69.6% 0.17 162.48 / 0.15);
+  --rt-status-done-badge-ink: oklch(76.5% 0.177 163.223);
+  --rt-status-done-badge-ring: oklch(69.6% 0.17 162.48 / 0.3);
+  --rt-status-done-pill-surface: oklch(69.6% 0.17 162.48 / 0.1);
+  --rt-status-done-pill-ink: oklch(76.5% 0.177 163.223);
+  --rt-status-done-pill-border: oklch(69.6% 0.17 162.48 / 0.4);
+  --rt-status-done-pill-ring: oklch(69.6% 0.17 162.48 / 0.3);
+
+  --rt-status-released-badge-surface: oklch(58.5% 0.233 277.117 / 0.15);
+  --rt-status-released-badge-ink: oklch(67.3% 0.182 276.935);
+  --rt-status-released-badge-ring: oklch(58.5% 0.233 277.117 / 0.3);
+  --rt-status-released-pill-surface: oklch(58.5% 0.233 277.117 / 0.1);
+  --rt-status-released-pill-ink: oklch(67.3% 0.182 276.935);
+  --rt-status-released-pill-border: oklch(58.5% 0.233 277.117 / 0.4);
+  --rt-status-released-pill-ring: oklch(58.5% 0.233 277.117 / 0.3);
+
+  --rt-status-pill-unselected-border: rgb(255 255 255 / 0.10);
+  --rt-status-pill-unselected-ink: oklch(55.4% 0.046 257.417);
+  --rt-status-pill-unselected-border-hover: rgb(255 255 255 / 0.20);
+  --rt-status-pill-unselected-ink-hover: oklch(86.9% 0.022 252.894);
 }
 
 /* light */
@@ -55,12 +184,79 @@
   --rt-border: rgba(0, 0, 0, 0.08);
   --rt-ink: #0f172a;
   --rt-ink-muted: #94a3b8;
+  /* byte-faithful transcription of ScoreBadge.tsx/ScoreEditor.tsx's `isDark ? ... : "bg-slate-300"` */
+  --rt-ink-faint: oklch(86.9% 0.022 252.894);
   --rt-accent: #2563eb;
   --rt-accent-ink: #fff;
-  --rt-danger: #dc2626;
+  /* byte-faithful transcription of the delete-button ink role (BatchEditPanel.tsx/FileDetailPanel.tsx/
+     ProjectDetailPanel.tsx's `isDark ? ... : "... text-red-600 ..."`), consolidated with the error-banner
+     ink role (CustomFilesTabPanel.tsx/App.tsx used text-red-700, one step darker) — see dark block's comment. */
+  --rt-danger: oklch(57.7% 0.245 27.325);
+  /* byte-faithful transcription of the error-banner surface role (CustomFilesTabPanel.tsx/App.tsx's
+     `isDark ? ... : "bg-red-50 ..."`) */
+  --rt-danger-surface: oklch(97.1% 0.013 17.38);
+  /* byte-faithful transcription of the delete-button border role (BatchEditPanel.tsx/FileDetailPanel.tsx/
+     ProjectDetailPanel.tsx's `isDark ? ... : "border-red-300 ..."`) */
+  --rt-danger-border: oklch(80.8% 0.114 19.571);
+  /* byte-faithful transcription of the "unscored count" ink role (MetricsPanel.tsx/ProjectsTable.tsx's
+     `isDark ? ... : "text-purple-700"`) — this shade already matches App.tsx's "unscored" badge ink too,
+     so no consolidation was needed on the light side (see dark block's comment for the dark-side nuance). */
+  --rt-notice: oklch(49.6% 0.265 301.924);
+  /* byte-faithful transcription of App.tsx's "unscored" badge surface role (`isDark ? ... : "bg-purple-100 ..."`) */
+  --rt-notice-surface: oklch(94.6% 0.033 307.174);
+  /* byte-faithful transcription of ProjectsTable.tsx's "has audio" icon ink role
+     (`isDark ? ... : "text-emerald-700"`) — see dark block's comment on scope. */
+  --rt-success: oklch(50.8% 0.118 165.612);
   --rt-chrome: #f4f6f9;
   --rt-font-sans: 'Inter', sans-serif;
   --rt-font-mono: 'JetBrains Mono', monospace;
+
+  /* Status tokens: byte-faithful transcriptions of statusStyles.ts's former STATUS_BADGE_LIGHT /
+     STATUS_PILL_LIGHT / STATUS_PILL_UNSELECTED_LIGHT maps (see dark block's comment on the oklch source). */
+  --rt-status-unknown-badge-surface: oklch(96.8% 0.007 247.896);
+  --rt-status-unknown-badge-ink: oklch(27.9% 0.041 260.031);
+  --rt-status-unknown-badge-ring: oklch(86.9% 0.022 252.894);
+  --rt-status-unknown-pill-surface: oklch(98.4% 0.003 247.858);
+  --rt-status-unknown-pill-ink: oklch(44.6% 0.043 257.281);
+  --rt-status-unknown-pill-border: oklch(86.9% 0.022 252.894);
+  --rt-status-unknown-pill-ring: oklch(86.9% 0.022 252.894);
+
+  --rt-status-draft-badge-surface: oklch(96.2% 0.059 95.617);
+  --rt-status-draft-badge-ink: oklch(47.3% 0.137 46.201);
+  --rt-status-draft-badge-ring: oklch(87.9% 0.169 91.605);
+  --rt-status-draft-pill-surface: oklch(98.7% 0.022 95.277);
+  --rt-status-draft-pill-ink: oklch(55.5% 0.163 48.998);
+  --rt-status-draft-pill-border: oklch(82.8% 0.189 84.429 / 0.6);
+  --rt-status-draft-pill-ring: oklch(87.9% 0.169 91.605);
+
+  --rt-status-needs_mixing-badge-surface: oklch(95.4% 0.038 75.164);
+  --rt-status-needs_mixing-badge-ink: oklch(47% 0.157 37.304);
+  --rt-status-needs_mixing-badge-ring: oklch(83.7% 0.128 66.29);
+  --rt-status-needs_mixing-pill-surface: oklch(98% 0.016 73.684);
+  --rt-status-needs_mixing-pill-ink: oklch(55.3% 0.195 38.402);
+  --rt-status-needs_mixing-pill-border: oklch(75% 0.183 55.934 / 0.6);
+  --rt-status-needs_mixing-pill-ring: oklch(83.7% 0.128 66.29);
+
+  --rt-status-done-badge-surface: oklch(95% 0.052 163.051);
+  --rt-status-done-badge-ink: oklch(43.2% 0.095 166.913);
+  --rt-status-done-badge-ring: oklch(84.5% 0.143 164.978);
+  --rt-status-done-pill-surface: oklch(97.9% 0.021 166.113);
+  --rt-status-done-pill-ink: oklch(50.8% 0.118 165.612);
+  --rt-status-done-pill-border: oklch(76.5% 0.177 163.223 / 0.6);
+  --rt-status-done-pill-ring: oklch(84.5% 0.143 164.978);
+
+  --rt-status-released-badge-surface: oklch(93% 0.034 272.788);
+  --rt-status-released-badge-ink: oklch(39.8% 0.195 277.366);
+  --rt-status-released-badge-ring: oklch(78.5% 0.115 274.713);
+  --rt-status-released-pill-surface: oklch(96.2% 0.018 272.314);
+  --rt-status-released-pill-ink: oklch(45.7% 0.24 277.023);
+  --rt-status-released-pill-border: oklch(67.3% 0.182 276.935 / 0.6);
+  --rt-status-released-pill-ring: oklch(78.5% 0.115 274.713);
+
+  --rt-status-pill-unselected-border: oklch(86.9% 0.022 252.894);
+  --rt-status-pill-unselected-ink: oklch(44.6% 0.043 257.281);
+  --rt-status-pill-unselected-border-hover: oklch(70.4% 0.04 256.788);
+  --rt-status-pill-unselected-ink-hover: oklch(27.9% 0.041 260.031);
 }
 
 /* profolder (new brand theme, default) */
@@ -75,9 +271,67 @@
   --rt-accent: #FADF82;         /* Clip Yellow — unchanged */
   --rt-accent-ink: #1C1C1A;     /* unchanged */
   --rt-danger: #991b1b;         /* darkened from the old #ef4444 — WCAG-verified: 6.84:1 on surface, 5.33:1 on canvas (both pass AA; old value failed both, 3.10:1/2.42:1). Not consumed anywhere under profolder yet — this just prevents a broken value being inherited later. */
+  --rt-ink-faint: #B0B0B0;      /* reuses --rt-border's value, per Architect/user decision */
+  /* INTERIM PLACEHOLDER (Architect/Developer-proposed, needs visual sign-off later): reuses Light
+     theme's resolved danger-surface/border values, per user decision — --rt-danger's own ink value
+     above is the pre-existing, already-WCAG-verified one and is NOT a placeholder. */
+  --rt-danger-surface: oklch(97.1% 0.013 17.38);
+  --rt-danger-border: oklch(80.8% 0.114 19.571);
+  /* INTERIM PLACEHOLDER (Architect/Developer-proposed, needs visual sign-off later): reuses Light
+     theme's resolved notice/notice-surface/success values, per user decision. */
+  --rt-notice: oklch(49.6% 0.265 301.924);
+  --rt-notice-surface: oklch(94.6% 0.033 307.174);
+  --rt-success: oklch(50.8% 0.118 165.612);
   --rt-chrome: #1C1C1A;         /* NEW token — Rack Black chrome background for header/footer/logo-tile contexts, distinct from the now-light canvas/surface */
   --rt-font-sans: 'Archivo', sans-serif;
   --rt-font-mono: 'IBM Plex Mono', monospace;
+
+  /* Status tokens — INTERIM PLACEHOLDER (Architect/Developer-proposed, needs visual sign-off later):
+     every value below reuses Light theme's resolved value verbatim, per user decision. */
+  --rt-status-unknown-badge-surface: oklch(96.8% 0.007 247.896);
+  --rt-status-unknown-badge-ink: oklch(27.9% 0.041 260.031);
+  --rt-status-unknown-badge-ring: oklch(86.9% 0.022 252.894);
+  --rt-status-unknown-pill-surface: oklch(98.4% 0.003 247.858);
+  --rt-status-unknown-pill-ink: oklch(44.6% 0.043 257.281);
+  --rt-status-unknown-pill-border: oklch(86.9% 0.022 252.894);
+  --rt-status-unknown-pill-ring: oklch(86.9% 0.022 252.894);
+
+  --rt-status-draft-badge-surface: oklch(96.2% 0.059 95.617);
+  --rt-status-draft-badge-ink: oklch(47.3% 0.137 46.201);
+  --rt-status-draft-badge-ring: oklch(87.9% 0.169 91.605);
+  --rt-status-draft-pill-surface: oklch(98.7% 0.022 95.277);
+  --rt-status-draft-pill-ink: oklch(55.5% 0.163 48.998);
+  --rt-status-draft-pill-border: oklch(82.8% 0.189 84.429 / 0.6);
+  --rt-status-draft-pill-ring: oklch(87.9% 0.169 91.605);
+
+  --rt-status-needs_mixing-badge-surface: oklch(95.4% 0.038 75.164);
+  --rt-status-needs_mixing-badge-ink: oklch(47% 0.157 37.304);
+  --rt-status-needs_mixing-badge-ring: oklch(83.7% 0.128 66.29);
+  --rt-status-needs_mixing-pill-surface: oklch(98% 0.016 73.684);
+  --rt-status-needs_mixing-pill-ink: oklch(55.3% 0.195 38.402);
+  --rt-status-needs_mixing-pill-border: oklch(75% 0.183 55.934 / 0.6);
+  --rt-status-needs_mixing-pill-ring: oklch(83.7% 0.128 66.29);
+
+  --rt-status-done-badge-surface: oklch(95% 0.052 163.051);
+  --rt-status-done-badge-ink: oklch(43.2% 0.095 166.913);
+  --rt-status-done-badge-ring: oklch(84.5% 0.143 164.978);
+  --rt-status-done-pill-surface: oklch(97.9% 0.021 166.113);
+  --rt-status-done-pill-ink: oklch(50.8% 0.118 165.612);
+  --rt-status-done-pill-border: oklch(76.5% 0.177 163.223 / 0.6);
+  --rt-status-done-pill-ring: oklch(84.5% 0.143 164.978);
+
+  --rt-status-released-badge-surface: oklch(93% 0.034 272.788);
+  --rt-status-released-badge-ink: oklch(39.8% 0.195 277.366);
+  --rt-status-released-badge-ring: oklch(78.5% 0.115 274.713);
+  --rt-status-released-pill-surface: oklch(96.2% 0.018 272.314);
+  --rt-status-released-pill-ink: oklch(45.7% 0.24 277.023);
+  --rt-status-released-pill-border: oklch(67.3% 0.182 276.935 / 0.6);
+  --rt-status-released-pill-ring: oklch(78.5% 0.115 274.713);
+
+  --rt-status-pill-unselected-border: oklch(86.9% 0.022 252.894);
+  --rt-status-pill-unselected-ink: oklch(44.6% 0.043 257.281);
+  --rt-status-pill-unselected-border-hover: oklch(70.4% 0.04 256.788);
+  --rt-status-pill-unselected-ink-hover: oklch(27.9% 0.041 260.031);
 }
 
 /* Geometry tokens: plain CSS custom properties, not routed through @theme — consumed via

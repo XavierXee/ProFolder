@@ -6,3 +6,7 @@ export const SCORE_DOT_COLORS: Record<number, string> = {
   4: "bg-lime-500",
   5: "bg-green-500",
 };
+
+/** Empty (unscored) dot color, token-driven — replaces ScoreBadge.tsx/ScoreEditor.tsx's local
+ *  `isDark ? "bg-slate-700" : "bg-slate-300"` ternary (see index.css's `--rt-ink-faint`). */
+export const EMPTY_DOT = "bg-ink-faint";

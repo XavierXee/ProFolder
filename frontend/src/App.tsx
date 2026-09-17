@@ -25,11 +25,9 @@ import SplashScreen from "./components/SplashScreen.js";
 import type { CopyMoveDeleteOperation, CopyMoveDeleteOutcome, CopyMoveDeleteTarget } from "./components/CopyMoveDeleteDialog.js";
 import * as api from "./api/client.js";
 import type { FileFilters, LibraryStats, ProjectFilters, ScanStats } from "./api/client.js";
-import type { AudioFile, CustomTab, Project, TrackStatus } from "./types.js";
+import type { AudioFile, CustomTab, Project, Theme, TrackStatus } from "./types.js";
 
 type Tab = "projects" | "files" | number;
-
-type Theme = "profolder" | "light" | "dark";
 
 const THEME_STORAGE_KEY = "musicLibraryManager.theme";
 const LEGACY_THEME_STORAGE_KEY = "musicLibraryManager.isDark";

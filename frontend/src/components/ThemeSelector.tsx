@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import type { Theme } from "../types.js";
 
-type ThemeValue = "profolder" | "light" | "dark";
-
-const OPTIONS: { value: ThemeValue; label: string }[] = [
+const OPTIONS: { value: Theme; label: string }[] = [
   { value: "profolder", label: "ProFolder" },
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
@@ -22,8 +21,8 @@ export function ThemeSelector({
   value,
   onChange,
 }: {
-  value: ThemeValue;
-  onChange: (theme: ThemeValue) => void;
+  value: Theme;
+  onChange: (theme: Theme) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);

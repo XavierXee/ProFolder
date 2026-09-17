@@ -1,6 +1,9 @@
 import type { AudioFile as BackendAudioFile } from "../../src/models/AudioFile.js";
 
 export type AudioFile = BackendAudioFile & { projectPath?: string };
+
+/** The 3 selectable UI themes — see index.css's `[data-theme]` blocks. */
+export type Theme = "profolder" | "light" | "dark";
 export type { TrackStatus } from "../../src/models/AudioFile.js";
 export type { Project } from "../../src/models/Project.js";
 export type { DawType } from "../../src/scanner/dawTypes.js";
