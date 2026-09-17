@@ -216,7 +216,6 @@ export default function CustomFilesTabPanel({
         filters={filters}
         onChange={handleFilterChange}
         allTags={allTags}
-        isDark={isDark}
         resultLabel={loading ? "—" : `${files.length} of ${total} files`}
         searchPlaceholder="Search files or paths…"
         searchAriaLabel="Search by filename or path"

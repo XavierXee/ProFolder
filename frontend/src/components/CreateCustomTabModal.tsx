@@ -165,7 +165,6 @@ export default function CreateCustomTabModal({ open, isDark, allTags, onClose, o
                   options={STATUS_OPTIONS}
                   selected={statuses}
                   onChange={setStatuses}
-                  isDark={isDark}
                   reserveLabel={STATUS_RESERVE_LABEL}
                 />
                 <MultiSelectDropdown
@@ -173,7 +172,6 @@ export default function CreateCustomTabModal({ open, isDark, allTags, onClose, o
                   options={SCORE_OPTIONS}
                   selected={scores}
                   onChange={setScores}
-                  isDark={isDark}
                   reserveLabel={SCORE_RESERVE_LABEL}
                 />
                 <MultiSelectDropdown
@@ -181,7 +179,6 @@ export default function CreateCustomTabModal({ open, isDark, allTags, onClose, o
                   options={tagOptions}
                   selected={tags}
                   onChange={setTags}
-                  isDark={isDark}
                   reserveLabel={TAGS_RESERVE_LABEL}
                 />
               </div>

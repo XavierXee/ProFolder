@@ -10,8 +10,6 @@ export default function FilterBar({
   filters,
   onChange,
   allTags,
-  isDark,
-  isProFolder = false,
   resultLabel,
   selectedCount,
   onOpenBatchPanel,
@@ -19,10 +17,6 @@ export default function FilterBar({
   filters: FileFilters;
   onChange: (patch: FilterPatch) => void;
   allTags: string[];
-  isDark: boolean;
-  /** ProFolder brand theme flag (Section 07 "Interface application"). Defaults to false so
-   * existing callers render byte-identically to before. */
-  isProFolder?: boolean;
   resultLabel: string;
   selectedCount: number;
   onOpenBatchPanel: () => void;
@@ -32,8 +26,6 @@ export default function FilterBar({
       filters={filters}
       onChange={onChange}
       allTags={allTags}
-      isDark={isDark}
-      isProFolder={isProFolder}
       resultLabel={resultLabel}
       searchPlaceholder="Search files or paths…"
       searchAriaLabel="Search by filename or path"

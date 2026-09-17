@@ -12,7 +12,6 @@ function Harness({
   onChangeSpy,
   locked,
   resultLabel = "10 files",
-  isProFolder = false,
   sectionLabel,
 }: {
   initialFilters?: FilterToolbarFilters;
@@ -22,7 +21,6 @@ function Harness({
   onChangeSpy?: (patch: FilterToolbarPatch) => void;
   locked?: boolean;
   resultLabel?: string;
-  isProFolder?: boolean;
   sectionLabel?: string;
 }) {
   const [filters, setFilters] = useState<FilterToolbarFilters>(initialFilters);
@@ -37,8 +35,6 @@ function Harness({
       filters={filters}
       onChange={handleChange}
       allTags={allTags}
-      isDark={true}
-      isProFolder={isProFolder}
       resultLabel={resultLabel}
       searchPlaceholder="Search files or paths…"
       searchAriaLabel="Search by filename or path"
@@ -349,25 +345,17 @@ describe("FilterToolbar - locked mode", () => {
   });
 });
 
-describe("FilterToolbar - isProFolder styling", () => {
-  it("gives the toolbar container the surface/border treatment when isProFolder is true", () => {
-    const { container } = render(<Harness isProFolder />);
+describe("FilterToolbar - token-driven styling", () => {
+  it("gives the toolbar container the surface/border token treatment", () => {
+    const { container } = render(<Harness />);
 
     const toolbar = container.firstElementChild as HTMLElement;
     expect(toolbar.className).toContain("bg-surface");
     expect(toolbar.className).toContain("border-border");
   });
 
-  it("does not give the toolbar container the surface/border treatment when isProFolder is false (default)", () => {
-    const { container } = render(<Harness />);
-
-    const toolbar = container.firstElementChild as HTMLElement;
-    expect(toolbar.className).not.toContain("bg-surface");
-    expect(toolbar.className).not.toContain("border-border");
-  });
-
-  it("gives the Batch Edit button the accent-fill treatment when isProFolder is true, and keeps disabled:opacity-30 working while disabled", () => {
-    render(<Harness isProFolder selectedCount={0} />);
+  it("gives the Batch Edit button the accent-fill treatment, and keeps disabled:opacity-30 working while disabled", () => {
+    render(<Harness selectedCount={0} />);
 
     const btn = screen.getByRole("button", { name: "Batch Edit" });
     expect(btn.className).toContain("bg-accent");
@@ -376,8 +364,8 @@ describe("FilterToolbar - isProFolder styling", () => {
     expect(btn).toBeDisabled();
   });
 
-  it("keeps the accent-fill treatment on the Batch Edit button once it becomes enabled under isProFolder", () => {
-    render(<Harness isProFolder selectedCount={2} />);
+  it("keeps the accent-fill treatment on the Batch Edit button once it becomes enabled", () => {
+    render(<Harness selectedCount={2} />);
 
     const btn = screen.getByRole("button", { name: "Batch Edit (2)" });
     expect(btn).toBeEnabled();
@@ -385,16 +373,8 @@ describe("FilterToolbar - isProFolder styling", () => {
     expect(btn.className).toContain("text-accent-ink");
   });
 
-  it("does not give the Batch Edit button the accent-fill treatment when isProFolder is false (default)", () => {
-    render(<Harness selectedCount={2} />);
-
-    const btn = screen.getByRole("button", { name: "Batch Edit (2)" });
-    expect(btn.className).not.toContain("bg-accent");
-    expect(btn.className).not.toContain("text-accent-ink");
-  });
-
-  it("gives the Status/Score/Tags pickers and the Clear button the secondary treatment when isProFolder is true", () => {
-    render(<Harness isProFolder allTags={["indie"]} initialFilters={{ search: "rock" }} />);
+  it("gives the Status/Score/Tags pickers and the Clear button the secondary token treatment", () => {
+    render(<Harness allTags={["indie"]} initialFilters={{ search: "rock" }} />);
 
     const statusBtn = screen.getByRole("button", { name: "Status" });
     const scoreBtn = screen.getByRole("button", { name: "Score" });
@@ -408,30 +388,20 @@ describe("FilterToolbar - isProFolder styling", () => {
     }
   });
 
-  it("does not give the pickers or Clear button the secondary treatment when isProFolder is false (default)", () => {
-    render(<Harness allTags={["indie"]} initialFilters={{ search: "rock" }} />);
-
-    const statusBtn = screen.getByRole("button", { name: "Status" });
-    const clearBtn = screen.getByRole("button", { name: "Clear all filters" });
-
-    expect(statusBtn.className).not.toContain("bg-surface");
-    expect(clearBtn.className).not.toContain("bg-surface");
-  });
-
-  it("renders sectionLabel as a mono/uppercase eyebrow label only when isProFolder is true AND sectionLabel is provided", () => {
-    const { rerender } = render(<Harness isProFolder sectionLabel="PROJECT FOLDERS" />);
+  it("renders sectionLabel unconditionally (present in the DOM regardless of theme), gated purely by the profolder CSS variant", () => {
+    const { rerender } = render(<Harness sectionLabel="PROJECT FOLDERS" />);
 
     const label = screen.getByText("PROJECT FOLDERS");
     expect(label).toBeInTheDocument();
     expect(label.className).toContain("font-mono");
     expect(label.className).toContain("uppercase");
+    // Base "hidden" + "profolder:inline" variant pair is what gates visibility per-theme via
+    // CSS alone, not a JS isProFolder conditional -- the element itself is always in the DOM.
+    expect(label.className).toContain("hidden");
+    expect(label.className).toContain("profolder:inline");
 
-    // isProFolder true but sectionLabel omitted -> nothing extra rendered.
-    rerender(<Harness isProFolder />);
-    expect(screen.queryByText("PROJECT FOLDERS")).not.toBeInTheDocument();
-
-    // sectionLabel provided but isProFolder false -> nothing extra rendered.
-    rerender(<Harness sectionLabel="PROJECT FOLDERS" />);
+    // sectionLabel omitted -> nothing extra rendered (data-driven, not theme-driven).
+    rerender(<Harness />);
     expect(screen.queryByText("PROJECT FOLDERS")).not.toBeInTheDocument();
   });
 });

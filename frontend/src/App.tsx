@@ -587,8 +587,6 @@ export default function App() {
               filters={projectFilters}
               onChange={handleProjectsFilterChange}
               allTags={allTags}
-              isDark={isDark}
-              isProFolder={isProFolder}
               resultLabel={projectsLoading ? "—" : `${projects.length} of ${projectsTotal} projects`}
               selectedCount={selectedProjectIds.size}
               onOpenBatchPanel={() => {
@@ -621,8 +619,6 @@ export default function App() {
               filters={filters}
               onChange={handleFilesFilterChange}
               allTags={allTags}
-              isDark={isDark}
-              isProFolder={isProFolder}
               resultLabel={loading ? "—" : `${files.length} of ${total} files`}
               selectedCount={selectedFileIds.size}
               onOpenBatchPanel={() => {

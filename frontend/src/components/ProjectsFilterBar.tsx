@@ -7,8 +7,6 @@ export default function ProjectsFilterBar({
   filters,
   onChange,
   allTags,
-  isDark,
-  isProFolder = false,
   resultLabel,
   selectedCount,
   onOpenBatchPanel,
@@ -16,10 +14,6 @@ export default function ProjectsFilterBar({
   filters: ProjectFilters;
   onChange: (patch: FilterPatch) => void;
   allTags: string[];
-  isDark: boolean;
-  /** ProFolder brand theme flag (Section 07 "Interface application"). Defaults to false so
-   * existing callers render byte-identically to before. */
-  isProFolder?: boolean;
   resultLabel: string;
   selectedCount: number;
   onOpenBatchPanel: () => void;
@@ -29,8 +23,6 @@ export default function ProjectsFilterBar({
       filters={filters}
       onChange={onChange}
       allTags={allTags}
-      isDark={isDark}
-      isProFolder={isProFolder}
       resultLabel={resultLabel}
       searchPlaceholder="Search project folders…"
       searchAriaLabel="Search project folders"

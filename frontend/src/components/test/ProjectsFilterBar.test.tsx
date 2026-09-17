@@ -11,7 +11,6 @@ describe("ProjectsFilterBar", () => {
         filters={{ page: 1, pageSize: PAGE_SIZE }}
         onChange={vi.fn()}
         allTags={[]}
-        isDark={true}
         resultLabel="5 projects"
         selectedCount={0}
         onOpenBatchPanel={vi.fn()}
@@ -31,7 +30,6 @@ describe("ProjectsFilterBar", () => {
         filters={{ page: 1, pageSize: PAGE_SIZE }}
         onChange={vi.fn()}
         allTags={[]}
-        isDark={true}
         resultLabel="5 projects"
         selectedCount={2}
         onOpenBatchPanel={onOpenBatchPanel}
@@ -51,7 +49,6 @@ describe("ProjectsFilterBar", () => {
         filters={{ page: 1, pageSize: PAGE_SIZE }}
         onChange={onChange}
         allTags={[]}
-        isDark={true}
         resultLabel="5 projects"
         selectedCount={0}
         onOpenBatchPanel={vi.fn()}
@@ -64,36 +61,21 @@ describe("ProjectsFilterBar", () => {
     expect(onChange).toHaveBeenCalledWith({ statuses: ["draft"] });
   });
 
-  it("passes isProFolder through and renders the 'PROJECT FOLDERS' sectionLabel when isProFolder is true", () => {
+  it("renders the 'PROJECT FOLDERS' sectionLabel unconditionally, gated purely by the profolder CSS variant", () => {
     render(
       <ProjectsFilterBar
         filters={{ page: 1, pageSize: PAGE_SIZE }}
         onChange={vi.fn()}
         allTags={[]}
-        isDark={true}
-        isProFolder={true}
         resultLabel="5 projects"
         selectedCount={0}
         onOpenBatchPanel={vi.fn()}
       />
     );
 
-    expect(screen.getByText("PROJECT FOLDERS")).toBeInTheDocument();
-  });
-
-  it("does not render the sectionLabel when isProFolder is false (default)", () => {
-    render(
-      <ProjectsFilterBar
-        filters={{ page: 1, pageSize: PAGE_SIZE }}
-        onChange={vi.fn()}
-        allTags={[]}
-        isDark={true}
-        resultLabel="5 projects"
-        selectedCount={0}
-        onOpenBatchPanel={vi.fn()}
-      />
-    );
-
-    expect(screen.queryByText("PROJECT FOLDERS")).not.toBeInTheDocument();
+    const label = screen.getByText("PROJECT FOLDERS");
+    expect(label).toBeInTheDocument();
+    expect(label.className).toContain("hidden");
+    expect(label.className).toContain("profolder:inline");
   });
 });

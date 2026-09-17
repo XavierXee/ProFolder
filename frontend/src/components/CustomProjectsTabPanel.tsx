@@ -215,7 +215,6 @@ export default function CustomProjectsTabPanel({
         filters={filters}
         onChange={handleFilterChange}
         allTags={allTags}
-        isDark={isDark}
         resultLabel={loading ? "—" : `${projects.length} of ${total} projects`}
         searchPlaceholder="Search project folders…"
         searchAriaLabel="Search project folders"

@@ -72,8 +72,6 @@ export default function FilterToolbar({
   filters,
   onChange,
   allTags,
-  isDark,
-  isProFolder = false,
   resultLabel,
   searchPlaceholder,
   searchAriaLabel,
@@ -85,16 +83,13 @@ export default function FilterToolbar({
   filters: FilterToolbarFilters;
   onChange: (patch: FilterToolbarPatch) => void;
   allTags: string[];
-  isDark: boolean;
-  /** ProFolder brand theme flag (Section 07 "Interface application"). Defaults to false so
-   * existing callers render byte-identically to before. */
-  isProFolder?: boolean;
   resultLabel: string;
   searchPlaceholder: string;
   searchAriaLabel: string;
   /** Mono/uppercase eyebrow label (e.g. "PROJECT FOLDERS") shown before the search input.
-   * Only rendered when both this prop is provided AND `isProFolder` is true — Light/Dark never
-   * render it, matching Section 07's mockup being ProFolder-specific. */
+   * Rendered unconditionally when provided; its visibility is theme-gated purely via CSS (the
+   * `hidden profolder:inline` variant pair below) — Light/Dark hide it, matching Section 07's
+   * mockup being ProFolder-specific, with no JS theme conditional involved. */
   sectionLabel?: string;
   /** Number of currently-selected rows; drives the Batch Edit button's label and disabled state. */
   selectedCount: number;
@@ -116,21 +111,15 @@ export default function FilterToolbar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
-  const bg = isProFolder ? "bg-surface" : isDark ? "bg-[#0d0f14]" : "bg-[#f4f6f9]";
-  const borderOuter = isProFolder ? "border-border" : isDark ? "border-white/8" : "border-black/8";
-  const inputBg = isDark
-    ? "bg-white/5 border-white/10 text-slate-300 placeholder-slate-600"
-    : "bg-white border-slate-300 text-slate-800 placeholder-slate-400";
-  const clearCls = isProFolder
-    ? "border bg-surface border-border text-ink-muted hover:text-ink hover:bg-surface-hover px-2.5 py-1 rounded-[var(--rt-radius)]"
-    : isDark
-      ? "text-slate-500 hover:text-slate-300"
-      : "text-slate-500 hover:text-slate-800";
-  const batchEditCls = isProFolder
-    ? "bg-accent text-accent-ink border-accent"
-    : isDark
-      ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20"
-      : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20";
+  const bg = "bg-surface";
+  const borderOuter = "border-border";
+  // No pre-existing isProFolder branch covered this input's colors (a gap flagged for Reviewer
+  // sign-off, same as Task 2's chip-pattern flag): bg-canvas is consistently the "recessed field
+  // on a surface" tone across all 3 themes (darker than bg-surface in dark/light/profolder alike).
+  const inputBg = "bg-canvas border-border text-ink placeholder-ink-muted";
+  const clearCls =
+    "border bg-surface border-border text-ink-muted hover:text-ink hover:bg-surface-hover px-2.5 py-1 rounded-[var(--rt-radius)]";
+  const batchEditCls = "bg-accent text-accent-ink border-accent";
 
   const statuses = filters.statuses ?? [];
   const scores = filters.scores ?? [];
@@ -154,8 +143,8 @@ export default function FilterToolbar({
   return (
     <div className={`border-b ${borderOuter} ${bg}`}>
       <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 px-6 py-2.5">
-        {isProFolder && sectionLabel && (
-          <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted whitespace-nowrap">
+        {sectionLabel && (
+          <span className="hidden profolder:inline font-mono text-[11px] uppercase tracking-wider text-ink-muted whitespace-nowrap">
             {sectionLabel}
           </span>
         )}
@@ -180,8 +169,6 @@ export default function FilterToolbar({
               options={STATUS_OPTIONS}
               selected={statuses}
               onChange={(next) => onChange({ statuses: next })}
-              isDark={isDark}
-              isProFolder={isProFolder}
               reserveLabel={STATUS_RESERVE_LABEL}
             />
             <MultiSelectDropdown
@@ -189,8 +176,6 @@ export default function FilterToolbar({
               options={SCORE_OPTIONS}
               selected={scores}
               onChange={(next) => onChange({ scores: next })}
-              isDark={isDark}
-              isProFolder={isProFolder}
               reserveLabel={SCORE_RESERVE_LABEL}
             />
             <MultiSelectDropdown
@@ -198,15 +183,13 @@ export default function FilterToolbar({
               options={tagOptions}
               selected={tags}
               onChange={(next) => onChange({ tags: next })}
-              isDark={isDark}
-              isProFolder={isProFolder}
               reserveLabel={TAGS_RESERVE_LABEL}
             />
           </>
         )}
 
         <div className="ml-auto flex items-center gap-2">
-          <span className={`inline-grid text-xs font-mono whitespace-nowrap ${isDark ? "text-slate-600" : "text-slate-400"}`}>
+          <span className="inline-grid text-xs font-mono whitespace-nowrap text-ink-muted">
             {/* Reserve a single fixed width (RESULT_COUNT_RESERVE_LABEL) across every filter bar,
              * regardless of which noun ("files"/"projects") or digit counts the current
              * resultLabel has, so the box never resizes when navigating between tabs. */}
