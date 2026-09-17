@@ -20,7 +20,7 @@ export function Pagination({
     "border-border text-ink-muted hover:text-ink hover:border-ink-muted disabled:opacity-30 disabled:hover:text-ink-muted disabled:hover:border-border";
 
   return (
-    <div className="flex items-center justify-between px-6 py-2.5 border-t text-xs font-mono border-border text-slate-500">
+    <div className="flex items-center justify-between px-6 py-2.5 border-t text-xs font-mono border-border text-slate-500 sticky bottom-[33px] z-20 bg-canvas">
       <span>{total === 0 ? "No files" : `${start}–${end} of ${total}`}</span>
       <div className="flex items-center gap-2">
         <button type="button" disabled={page <= 1} onClick={() => onPageChange(1)} className={`px-2 py-1 rounded-[var(--rt-radius)] border transition-colors disabled:cursor-not-allowed ${btnCls}`}>

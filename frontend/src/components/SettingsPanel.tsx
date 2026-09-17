@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
 import type { ScanSettings } from "../api/client.js";
+import {ThemeSelector} from "./ThemeSelector";
+import {Theme} from "../types";
 
 type Props = {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
   open: boolean;
   onClose: () => void;
 };
@@ -37,7 +41,7 @@ function SettingRow({
   );
 }
 
-export default function SettingsPanel({ open, onClose }: Props) {
+export default function SettingsPanel({ theme, setTheme, open, onClose }: Props) {
   const [settings, setSettings] = useState<ScanSettings | null>(null);
   const [loading, setLoading] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -104,47 +108,55 @@ export default function SettingsPanel({ open, onClose }: Props) {
             aria-label="Close panel"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          <div className="flex items-center justify-between mb-1">
-            <p className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Scan Settings</p>
-            <div className="h-4">
-              {saveState === "saving" && <span className={`text-xs font-mono ${meta}`}>Saving…</span>}
-              {saveState === "saved" && <span className="text-xs font-mono text-emerald-400">Saved</span>}
-              {saveState === "error" && <span className="text-xs font-mono text-red-400">Failed to save</span>}
-            </div>
+        <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
+          <div className="w-full flex items-center justify-between mb-1">
+            <div className={`text-xs font-mono uppercase tracking-wider ${meta}`}>THEME</div>
+            <div><ThemeSelector value={theme} onChange={setTheme}/></div>
           </div>
-
-          {loading ? (
-            <p className={`text-sm mt-3 ${meta}`}>Loading…</p>
-          ) : error ? (
-            <p className="text-sm mt-3 text-red-400">{error}</p>
-          ) : settings ? (
-            <div className="divide-y divide-border">
-              <SettingRow
-                label="Exclude Samples folders"
-                description="Skip any folder named “Samples” — usually imported/library audio, not your own production content."
-                checked={settings.excludeSamplesFolders}
-                disabled={saveState === "saving"}
-                onChange={(checked) => handleChange({ excludeSamplesFolders: checked })}
-              />
-              <SettingRow
-                label="Exclude Backup folders"
-                description="Skip any folder named “Backup” — Ableton's auto-saved project versions, not real production content."
-                checked={settings.excludeBackupFolders}
-                disabled={saveState === "saving"}
-                onChange={(checked) => handleChange({ excludeBackupFolders: checked })}
-              />
-            </div>
-          ) : null}
-
-          <p className={`text-xs mt-4 ${meta}`}>Changes apply the next time you run a scan.</p>
         </div>
-      </div>
-    </>
-  );
-}
+
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+
+            <div className="flex items-center justify-between mb-1">
+              <p className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Scan Settings</p>
+              <div className="h-4">
+                {saveState === "saving" && <span className={`text-xs font-mono ${meta}`}>Saving…</span>}
+                {saveState === "saved" && <span className="text-xs font-mono text-emerald-400">Saved</span>}
+                {saveState === "error" && <span className="text-xs font-mono text-red-400">Failed to save</span>}
+              </div>
+            </div>
+
+            {loading ? (
+              <p className={`text-sm mt-3 ${meta}`}>Loading…</p>
+            ) : error ? (
+              <p className="text-sm mt-3 text-red-400">{error}</p>
+            ) : settings ? (
+              <div className="divide-y divide-border">
+                <SettingRow
+                  label="Exclude Samples folders"
+                  description="Skip any folder named “Samples” — usually imported/library audio, not your own production content."
+                  checked={settings.excludeSamplesFolders}
+                  disabled={saveState === "saving"}
+                  onChange={(checked) => handleChange({excludeSamplesFolders: checked})}
+                />
+                <SettingRow
+                  label="Exclude Backup folders"
+                  description="Skip any folder named “Backup” — Ableton's auto-saved project versions, not real production content."
+                  checked={settings.excludeBackupFolders}
+                  disabled={saveState === "saving"}
+                  onChange={(checked) => handleChange({excludeBackupFolders: checked})}
+                />
+              </div>
+            ) : null}
+
+            <p className={`text-xs mt-4 ${meta}`}>Changes apply the next time you run a scan.</p>
+          </div>
+        </div>
+      </>
+      );
+      }

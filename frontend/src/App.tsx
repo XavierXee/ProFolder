@@ -19,7 +19,6 @@ import DeleteTabConfirmDialog from "./components/DeleteTabConfirmDialog.js";
 import CustomFilesTabPanel from "./components/CustomFilesTabPanel.js";
 import CustomProjectsTabPanel from "./components/CustomProjectsTabPanel.js";
 import CopyMoveDeleteDialog from "./components/CopyMoveDeleteDialog.js";
-import { ThemeSelector } from "./components/ThemeSelector.js";
 import Logo from "./components/Logo.js";
 import SplashScreen from "./components/SplashScreen.js";
 import type { CopyMoveDeleteOperation, CopyMoveDeleteOutcome, CopyMoveDeleteTarget } from "./components/CopyMoveDeleteDialog.js";
@@ -432,7 +431,6 @@ export default function App() {
           <Logo size={28} />
           <div>
             <h1 className="text-sm font-semibold text-chrome-ink">ProFolder</h1>
-            <p className="text-xs font-mono text-chrome-ink-faint">Local Scan Console</p>
           </div>
 
           <div className={`border-l pl-3 ${sectionBorder}`}>
@@ -498,14 +496,10 @@ export default function App() {
             </svg>
             Settings
           </button>
-
-          <div className={`border-l pl-4 ${sectionBorder}`}>
-            <ThemeSelector value={theme} onChange={setTheme} />
-          </div>
         </div>
       </header>
 
-      <div className="flex flex-col flex-1 min-h-39">
+      <div className="bg-chrome-light flex flex-col flex-1 min-h-39">
         <div className={tabRowClassName(sectionBorder, theme)}>
         {/*<div className={`flex items-center gap-1 ${theme === 'profolder' ? "px-6" : ""} py-1.5 border-b ${sectionBorder}`}>*/}
           <button
@@ -724,7 +718,12 @@ export default function App() {
         onScanComplete={handleScanComplete}
       />
 
-      <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
+      <SettingsPanel
+        theme={theme}
+        setTheme={setTheme}
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
 
       <BatchEditPanel
         open={showFilesBatchPanel}
@@ -767,7 +766,7 @@ export default function App() {
         onCancel={() => setDeletingTab(null)}
       />
 
-      <footer className="border-t bg-chrome px-6 py-2 flex items-center justify-between border-chrome-border-faint">
+      <footer className="border-t bg-chrome-lighter px-6 py-2 flex items-center justify-between border-chrome-border-faint sticky bottom-0 z-20">
         <span className="text-xs font-mono text-chrome-ink-faint">ProFolder · Local, read-only scanner</span>
         <span className="text-xs font-mono text-chrome-ink-faint">Score and tag your tracks · Track what's ready to release</span>
       </footer>

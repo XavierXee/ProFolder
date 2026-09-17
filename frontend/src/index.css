@@ -26,6 +26,8 @@
   --color-notice-surface: var(--rt-notice-surface);
   --color-success: var(--rt-success);
   --color-chrome: var(--rt-chrome);
+  --color-chrome-light: var(--rt-chrome-light);
+  --color-chrome-lighter: var(--rt-chrome-lighter);
   --font-sans: var(--rt-font-sans);
   --font-mono: var(--rt-font-mono);
 
@@ -426,7 +428,11 @@
   --rt-notice: oklch(49.6% 0.265 301.924);
   --rt-notice-surface: oklch(94.6% 0.033 307.174);
   --rt-success: oklch(50.8% 0.118 165.612);
-  --rt-chrome: #1C1C1A;         /* NEW token — Rack Black chrome background for header/footer/logo-tile contexts, distinct from the now-light canvas/surface */
+  /*--rt-chrome: #1C1C1A;*/         /* NEW token — Rack Black chrome background for header/footer/logo-tile contexts, distinct from the now-light canvas/surface */
+  /*--rt-chrome: #b0b0b0;*/
+  --rt-chrome: #47c5a8;
+  --rt-chrome-light: #aad8cd;
+  --rt-chrome-lighter: #cadad6;
   --rt-font-sans: 'Archivo', sans-serif;
   --rt-font-mono: 'IBM Plex Mono', monospace;
 
