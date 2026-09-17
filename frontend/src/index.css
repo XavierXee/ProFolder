@@ -91,6 +91,24 @@
      Reviewer sign-off. */
   --color-scrim: var(--rt-scrim);
 
+  /* Ink-secondary token (Task 6, NEW color role): a canvas/surface-context secondary text tier
+     — sits between --color-ink and --color-ink-muted, used by ScanFolderPanel.tsx's/
+     DestinationFolderPicker.tsx's folder-tree row labels, CreateCustomTabModal.tsx's radio
+     labels, and BatchEditPanel.tsx's applied-tag chip text (all previously the identical
+     isDark ? "text-slate-300" : "text-slate-700" literal). Deliberately NOT named
+     --color-chrome-ink-secondary's sibling despite the parallel name — that token is
+     chrome-background-only (see its own doc comment) and unrelated to this one, which is for
+     the ordinary canvas/surface background these 7 components render on. FLAGGED for Reviewer
+     sign-off, same discipline as --color-info/--color-scrim/--color-warning-ink above. */
+  --color-ink-secondary: var(--rt-ink-secondary);
+
+  /* Chip-surface token (Task 6, NEW color role): the applied-tag chip background in
+     BatchEditPanel.tsx (isDark ? "bg-white/8" : "bg-slate-100"), paired with
+     --color-ink-secondary above for its text. TagEditor.tsx's own tag chips share this exact
+     literal but are unmigrated (Task 7 scope) — this token will be a direct drop-in for that
+     component too when its turn comes. FLAGGED for Reviewer sign-off. */
+  --color-chip-surface: var(--rt-chip-surface);
+
   /* Warning tokens (Task 5, NEW color role): ProjectDetailPanel.tsx's duplicate-folder banner
      uses amber, a 4th semantic role distinct from danger (red)/notice (purple)/info (blue)/
      success (emerald), all already spoken for by other roles. ink = banner title, ink-secondary =
@@ -141,7 +159,12 @@
   --rt-surface: #181b24;
   /* hover/selected values below are byte-faithful translations of the existing row
      hover/selected classes (hover:bg-white/3, bg-blue-500/8) found in FileRow.tsx /
-     ProjectsTable.tsx, resolved to the literal colors those Tailwind utilities produce. */
+     ProjectsTable.tsx, resolved to the literal colors those Tailwind utilities produce.
+     Also reused (Task 6) for DestinationFolderPicker.tsx's selected-row highlight, whose
+     original dark-theme literal was bg-blue-500/20 (2.5x more opaque than this token's
+     /8) — a deliberate simplification consolidating onto the existing "this item is
+     selected" token rather than adding a near-duplicate one, not a byte-faithful match
+     for that specific call site. */
   --rt-surface-hover: rgb(255 255 255 / 0.03);
   --rt-surface-selected: oklch(62.3% 0.214 259.815 / 0.08);
   --rt-border: rgba(255, 255, 255, 0.08);
@@ -232,6 +255,14 @@
   /* byte-faithful transcription of FileDetailPanel.tsx/ProjectDetailPanel.tsx's backdrop role
      (isDark ? "bg-black/50" : ...) — see @theme block's comment on this being a new role. */
   --rt-scrim: rgb(0 0 0 / 0.5);
+
+  /* byte-faithful transcription of the secondary-text role (isDark ? "text-slate-300" : ...) —
+     see @theme block's comment on this being a new role. */
+  --rt-ink-secondary: #cbd5e1; /* slate-300 */
+
+  /* byte-faithful transcription of BatchEditPanel.tsx's applied-tag chip surface role
+     (isDark ? "bg-white/8" : ...) — see @theme block's comment on this being a new role. */
+  --rt-chip-surface: rgb(255 255 255 / 0.08);
 
   /* byte-faithful transcription of ProjectDetailPanel.tsx's duplicate-warning banner role
      (isDark ? "text-amber-400"/"text-amber-400/70"/"bg-amber-500/10 ring-amber-500/25" : ...) —
@@ -345,6 +376,14 @@
      (isDark ? ... : "bg-black/20") — see dark block's comment. */
   --rt-scrim: rgb(0 0 0 / 0.2);
 
+  /* byte-faithful transcription of the secondary-text role (isDark ? ... : "text-slate-700") —
+     see dark block's comment. */
+  --rt-ink-secondary: #334155; /* slate-700 */
+
+  /* byte-faithful transcription of BatchEditPanel.tsx's applied-tag chip surface role
+     (isDark ? ... : "bg-slate-100") — see dark block's comment. */
+  --rt-chip-surface: #f1f5f9; /* slate-100 */
+
   /* byte-faithful transcription of ProjectDetailPanel.tsx's duplicate-warning banner role
      (isDark ? ... : "text-amber-800"/"text-amber-700/80"/"bg-amber-50 ring-amber-300") — see
      dark block's comment. */
@@ -447,6 +486,12 @@
   /* INTERIM PLACEHOLDER (Developer-proposed, needs visual sign-off later): reuses Light theme's
      resolved scrim value, same placeholder discipline as the danger/notice/success tokens above. */
   --rt-scrim: rgb(0 0 0 / 0.2);
+
+  /* INTERIM PLACEHOLDER (Developer-proposed, needs visual sign-off later): reuses Light theme's
+     resolved ink-secondary/chip-surface values, same placeholder discipline as the
+     danger/notice/success tokens above. */
+  --rt-ink-secondary: #334155;
+  --rt-chip-surface: #f1f5f9;
 
   /* INTERIM PLACEHOLDER (Developer-proposed, needs visual sign-off later): reuses Light theme's
      resolved warning-* values, same placeholder discipline as the danger/notice/success tokens

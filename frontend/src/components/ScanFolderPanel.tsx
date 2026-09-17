@@ -11,14 +11,12 @@ export function FolderTreeNode({
   excluded,
   onToggle,
   parentExcluded,
-  isDark,
   depth,
 }: {
   node: FolderNode;
   excluded: Set<string>;
   onToggle: (path: string, currentlyExcluded: boolean) => void;
   parentExcluded: boolean;
-  isDark: boolean;
   depth: number;
 }) {
   const [expanded, setExpanded] = useState(depth < 1);
@@ -34,7 +32,7 @@ export function FolderTreeNode({
           <button
             onClick={() => setExpanded((e) => !e)}
             aria-label={expanded ? `Collapse ${node.name}` : `Expand ${node.name}`}
-            className={`w-4 text-xs flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"}`}
+            className="w-4 text-xs flex-shrink-0 text-ink-muted hover:text-ink"
           >
             {expanded ? "▾" : "▸"}
           </button>
@@ -49,7 +47,7 @@ export function FolderTreeNode({
             onChange={() => onToggle(node.path, isExcluded)}
             className="accent-blue-500"
           />
-          <span className={isDark ? "text-slate-300" : "text-slate-700"}>{node.name}</span>
+          <span className="text-ink-secondary">{node.name}</span>
         </label>
       </div>
       {hasChildren && expanded && (
@@ -61,7 +59,6 @@ export function FolderTreeNode({
               excluded={excluded}
               onToggle={onToggle}
               parentExcluded={disabled || isExcluded}
-              isDark={isDark}
               depth={depth + 1}
             />
           ))}
@@ -73,13 +70,12 @@ export function FolderTreeNode({
 
 type Props = {
   open: boolean;
-  isDark: boolean;
   musicRoot: string | undefined;
   onClose: () => void;
   onScanComplete: (stats: ScanStats) => void;
 };
 
-export default function ScanFolderPanel({ open, isDark, musicRoot, onClose, onScanComplete }: Props) {
+export default function ScanFolderPanel({ open, musicRoot, onClose, onScanComplete }: Props) {
   const [tree, setTree] = useState<FolderNode | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -164,14 +160,16 @@ export default function ScanFolderPanel({ open, isDark, musicRoot, onClose, onSc
     }
   }
 
-  const panel = isDark ? "bg-[#13161e] border-white/8 text-slate-200" : "bg-white border-black/8 text-slate-800";
+  const panel = "bg-surface border-border text-ink";
   const meta = "text-slate-500";
-  const divider = isDark ? "border-white/8" : "border-slate-200";
+  const divider = "border-border";
+  const outlineBtn =
+    "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover";
 
   return (
     <>
       <div
-        className={`fixed inset-0 z-30 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0 pointer-events-none"} ${isDark ? "bg-black/50" : "bg-black/20"}`}
+        className={`fixed inset-0 z-30 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0 pointer-events-none"} bg-scrim`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -190,7 +188,7 @@ export default function ScanFolderPanel({ open, isDark, musicRoot, onClose, onSc
           <button
             ref={closeRef}
             onClick={onClose}
-            className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+            className="mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 text-ink-muted hover:text-ink hover:bg-surface-hover"
             aria-label="Close panel"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -208,14 +206,14 @@ export default function ScanFolderPanel({ open, isDark, musicRoot, onClose, onSc
               <button
                 onClick={handleSelectAll}
                 disabled={excluded.size === 0}
-                className={`text-xs font-mono transition-colors focus:outline-none focus-visible:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800"}`}
+                className="text-xs font-mono transition-colors focus:outline-none focus-visible:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline text-slate-500 hover:text-ink"
               >
                 Select All
               </button>
               <button
                 onClick={handleUnselectAll}
                 disabled={!tree || tree.children.length === 0 || tree.children.every((c) => excluded.has(c.path))}
-                className={`text-xs font-mono transition-colors focus:outline-none focus-visible:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800"}`}
+                className="text-xs font-mono transition-colors focus:outline-none focus-visible:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline text-slate-500 hover:text-ink"
               >
                 Unselect All
               </button>
@@ -236,7 +234,7 @@ export default function ScanFolderPanel({ open, isDark, musicRoot, onClose, onSc
               <p className={`text-sm ${meta}`}>No subfolders found under the production folder.</p>
             ) : (
               tree.children.map((child) => (
-                <FolderTreeNode key={child.path} node={child} excluded={excluded} onToggle={toggleFolder} parentExcluded={false} isDark={isDark} depth={0} />
+                <FolderTreeNode key={child.path} node={child} excluded={excluded} onToggle={toggleFolder} parentExcluded={false} depth={0} />
               ))
             )
           ) : null}
@@ -247,7 +245,7 @@ export default function ScanFolderPanel({ open, isDark, musicRoot, onClose, onSc
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20" : "border-black/10 text-slate-500 hover:text-slate-700 hover:border-black/20"}`}
+              className={outlineBtn}
             >
               Close
             </button>

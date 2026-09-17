@@ -271,7 +271,6 @@ export default function CustomFilesTabPanel({
         open={showBatchPanel}
         count={selectedFileIds.size}
         itemLabel="audio file"
-        isDark={isDark}
         allTags={allTags}
         itemType="files"
         selectedIds={[...selectedFileIds]}
@@ -283,7 +282,6 @@ export default function CustomFilesTabPanel({
 
       <CopyMoveDeleteDialog
         open={fileOpDialog !== null}
-        isDark={isDark}
         operation={fileOpDialog?.operation ?? "copy"}
         itemType="files"
         target={fileOpDialog?.target ?? { kind: "single", id: "", name: "" }}

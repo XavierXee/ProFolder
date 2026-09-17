@@ -701,7 +701,6 @@ export default function App() {
 
       <CopyMoveDeleteDialog
         open={fileOpDialog !== null}
-        isDark={isDark}
         operation={fileOpDialog?.operation ?? "copy"}
         itemType="files"
         target={fileOpDialog?.target ?? { kind: "single", id: "", name: "" }}
@@ -713,7 +712,6 @@ export default function App() {
 
       <CopyMoveDeleteDialog
         open={projectOpDialog !== null}
-        isDark={isDark}
         operation={projectOpDialog?.operation ?? "copy"}
         itemType="projects"
         target={projectOpDialog?.target ?? { kind: "single", id: "", name: "" }}
@@ -726,19 +724,17 @@ export default function App() {
 
       <ScanFolderPanel
         open={showScanPanel}
-        isDark={isDark}
         musicRoot={musicRoot}
         onClose={() => setShowScanPanel(false)}
         onScanComplete={handleScanComplete}
       />
 
-      <SettingsPanel open={showSettings} isDark={isDark} onClose={() => setShowSettings(false)} />
+      <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
 
       <BatchEditPanel
         open={showFilesBatchPanel}
         count={selectedFileIds.size}
         itemLabel="audio file"
-        isDark={isDark}
         allTags={allTags}
         itemType="files"
         selectedIds={[...selectedFileIds]}
@@ -752,7 +748,6 @@ export default function App() {
         open={showProjectsBatchPanel}
         count={selectedProjectIds.size}
         itemLabel="project folder"
-        isDark={isDark}
         allTags={allTags}
         itemType="projects"
         selectedIds={[...selectedProjectIds]}
@@ -765,7 +760,6 @@ export default function App() {
 
       <CreateCustomTabModal
         open={showCreateTabModal}
-        isDark={isDark}
         allTags={allTags}
         onClose={() => setShowCreateTabModal(false)}
         onCreated={handleCustomTabCreated}
@@ -773,7 +767,6 @@ export default function App() {
 
       <DeleteTabConfirmDialog
         open={deletingTab !== null}
-        isDark={isDark}
         tabName={deletingTab?.name ?? ""}
         onConfirm={handleDeleteTabConfirm}
         onCancel={() => setDeletingTab(null)}

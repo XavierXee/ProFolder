@@ -25,7 +25,6 @@ function makeSettings(overrides: Partial<ScanSettings> = {}): ScanSettings {
 function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0]> = {}) {
   const props = {
     open: true,
-    isDark: true,
     onClose: () => {},
     ...overrides,
   };

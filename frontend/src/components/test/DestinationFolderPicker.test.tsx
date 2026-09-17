@@ -34,7 +34,7 @@ function Harness({
   const [selectedPath, setSelectedPath] = useState<string | null>(initialSelected);
   return (
     <>
-      <DestinationFolderPicker isDark={true} excludedPath={excludedPath} selectedPath={selectedPath} onSelect={setSelectedPath} />
+      <DestinationFolderPicker excludedPath={excludedPath} selectedPath={selectedPath} onSelect={setSelectedPath} />
       <span data-testid="selected-value">{selectedPath ?? "none"}</span>
     </>
   );
@@ -109,6 +109,21 @@ describe("DestinationFolderPicker - single-select behavior", () => {
     expect(screen.getByRole("radio", { name: "Sibling" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Grandparent" })).not.toBeChecked();
     expect(screen.getByTestId("selected-value")).toHaveTextContent(siblingNode.path);
+  });
+
+  it("applies the bg-surface-selected token class to the selected row's container, not a hardcoded bg-blue-NNN literal", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Grandparent" })).toBeInTheDocument());
+    const row = screen.getByRole("radio", { name: "Grandparent" }).closest("label")!.parentElement!;
+    expect(row.className).not.toContain("bg-surface-selected");
+
+    await user.click(screen.getByRole("radio", { name: "Grandparent" }));
+
+    expect(row.className).toContain("bg-surface-selected");
+    expect(row.className).not.toContain("bg-blue-500/20");
+    expect(row.className).not.toContain("bg-blue-50");
   });
 });
 

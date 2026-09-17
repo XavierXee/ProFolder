@@ -23,7 +23,6 @@ export type CopyMoveDeleteOutcome = {
 
 type Props = {
   open: boolean;
-  isDark: boolean;
   operation: CopyMoveDeleteOperation;
   itemType: CopyMoveDeleteItemType;
   target: CopyMoveDeleteTarget;
@@ -164,7 +163,7 @@ async function runBatch(
   return { succeededCount: result.succeeded.length, failedCount: result.failed.length };
 }
 
-export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType, target, excludedPath, musicRoot, onClose, onSuccess, onError }: Props) {
+export default function CopyMoveDeleteDialog({ open, operation, itemType, target, excludedPath, musicRoot, onClose, onSuccess, onError }: Props) {
   const [destinationPath, setDestinationPath] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -234,8 +233,10 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
     }
   }
 
-  const panel = isDark ? "bg-[#13161e] border-white/8 text-slate-200" : "bg-white border-black/8 text-slate-800";
-  const divider = isDark ? "border-white/8" : "border-slate-200";
+  const panel = "bg-surface border-border text-ink";
+  const divider = "border-border";
+  const outlineBtn =
+    "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed border-border text-ink-muted hover:text-ink hover:bg-surface-hover";
   const title = dialogTitle(operation, itemType, target);
   const explanation = buildExplanationText(operation, itemType, target, destinationPath);
   const applyDangerCls = "bg-red-600 hover:bg-red-500 focus-visible:ring-red-500";
@@ -244,7 +245,7 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 ${isDark ? "bg-black/50" : "bg-black/20"}`}
+        className="fixed inset-0 z-40 bg-scrim"
         onClick={handleBackdropOrCancel}
         aria-hidden="true"
       />
@@ -261,7 +262,7 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
               ref={closeRef}
               onClick={handleBackdropOrCancel}
               disabled={busy}
-              className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+              className="mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed text-ink-muted hover:text-ink hover:bg-surface-hover"
               aria-label="Close dialog"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -276,8 +277,8 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
             {error && <p className="text-sm text-red-400">{error}</p>}
 
             {needsDestination && (
-              <div className={`border rounded-[var(--rt-radius)] max-h-64 overflow-y-auto px-2 py-2 ${isDark ? "border-white/10" : "border-black/10"}`}>
-                <DestinationFolderPicker isDark={isDark} excludedPath={pickerExcludedPath} selectedPath={destinationPath} onSelect={setDestinationPath} />
+              <div className="border rounded-[var(--rt-radius)] max-h-64 overflow-y-auto px-2 py-2 border-border">
+                <DestinationFolderPicker excludedPath={pickerExcludedPath} selectedPath={destinationPath} onSelect={setDestinationPath} />
               </div>
             )}
           </div>
@@ -286,7 +287,7 @@ export default function CopyMoveDeleteDialog({ open, isDark, operation, itemType
             <button
               onClick={handleBackdropOrCancel}
               disabled={busy}
-              className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? "border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20" : "border-black/10 text-slate-500 hover:text-slate-700 hover:border-black/20"}`}
+              className={outlineBtn}
             >
               Cancel
             </button>

@@ -6,7 +6,6 @@ import DeleteTabConfirmDialog from "../DeleteTabConfirmDialog.js";
 function renderDialog(overrides: Partial<Parameters<typeof DeleteTabConfirmDialog>[0]> = {}) {
   const props = {
     open: true,
-    isDark: true,
     tabName: "My Custom Tab",
     onConfirm: vi.fn(),
     onCancel: vi.fn(),
@@ -87,44 +86,24 @@ describe("DeleteTabConfirmDialog - open=true", () => {
   });
 });
 
-describe("DeleteTabConfirmDialog - isDark theming", () => {
-  it("renders the dark-theme card background/text classes when isDark=true", () => {
-    renderDialog({ isDark: true });
+describe("DeleteTabConfirmDialog - token-driven theming", () => {
+  it("renders the panel using the token-driven surface/border/ink classes, not a hardcoded hex/isDark literal", () => {
+    renderDialog();
 
     const dialog = screen.getByRole("dialog");
-    expect(dialog.className).toContain("bg-[#13161e]");
-    expect(dialog.className).toContain("text-slate-200");
-  });
-
-  it("renders the light-theme card background/text classes when isDark=false", () => {
-    renderDialog({ isDark: false });
-
-    const dialog = screen.getByRole("dialog");
-    expect(dialog.className).toContain("bg-white");
-    expect(dialog.className).toContain("text-slate-800");
+    expect(dialog.className).toContain("bg-surface");
+    expect(dialog.className).toContain("border-border");
+    expect(dialog.className).toContain("text-ink");
     expect(dialog.className).not.toContain("bg-[#13161e]");
+    expect(dialog.className).not.toContain("bg-white");
   });
 
-  it("still renders expected structure and responds to Cancel/Delete when isDark=false", async () => {
-    const user = userEvent.setup();
-    const { props } = renderDialog({ isDark: false, tabName: "Light Mode Tab" });
+  it("renders the backdrop using the shared bg-scrim token, not a hardcoded bg-black/NN literal", () => {
+    const { container } = renderDialog();
 
-    expect(screen.getByText(/Light Mode Tab/)).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Delete" }));
-    expect(props.onConfirm).toHaveBeenCalledTimes(1);
-    expect(props.onCancel).not.toHaveBeenCalled();
-  });
-
-  it("threads isDark through the backdrop opacity, not just the card", () => {
-    const { container: darkContainer } = renderDialog({ isDark: true });
-    const darkBackdrop = darkContainer.querySelector('[aria-hidden="true"]');
-    expect(darkBackdrop?.className).toContain("bg-black/50");
-    expect(darkBackdrop?.className).not.toContain("bg-black/20");
-
-    const { container: lightContainer } = renderDialog({ isDark: false });
-    const lightBackdrop = lightContainer.querySelector('[aria-hidden="true"]');
-    expect(lightBackdrop?.className).toContain("bg-black/20");
-    expect(lightBackdrop?.className).not.toContain("bg-black/50");
+    const backdrop = container.querySelector('[aria-hidden="true"]');
+    expect(backdrop?.className).toContain("bg-scrim");
+    expect(backdrop?.className).not.toContain("bg-black/50");
+    expect(backdrop?.className).not.toContain("bg-black/20");
   });
 });

@@ -4,7 +4,6 @@ import type { ScanSettings } from "../api/client.js";
 
 type Props = {
   open: boolean;
-  isDark: boolean;
   onClose: () => void;
 };
 
@@ -13,14 +12,12 @@ function SettingRow({
   description,
   checked,
   disabled,
-  isDark,
   onChange,
 }: {
   label: string;
   description: string;
   checked: boolean;
   disabled: boolean;
-  isDark: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
@@ -33,14 +30,14 @@ function SettingRow({
         className="accent-blue-500 mt-0.5"
       />
       <span>
-        <span className={`block text-sm font-medium ${isDark ? "text-slate-200" : "text-slate-800"}`}>{label}</span>
-        <span className={`block text-xs mt-0.5 ${isDark ? "text-slate-500" : "text-slate-500"}`}>{description}</span>
+        <span className="block text-sm font-medium text-ink">{label}</span>
+        <span className="block text-xs mt-0.5 text-slate-500">{description}</span>
       </span>
     </label>
   );
 }
 
-export default function SettingsPanel({ open, isDark, onClose }: Props) {
+export default function SettingsPanel({ open, onClose }: Props) {
   const [settings, setSettings] = useState<ScanSettings | null>(null);
   const [loading, setLoading] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -78,14 +75,14 @@ export default function SettingsPanel({ open, isDark, onClose }: Props) {
       .catch(() => setSaveState("error"));
   }
 
-  const panel = isDark ? "bg-[#13161e] border-white/8 text-slate-200" : "bg-white border-black/8 text-slate-800";
+  const panel = "bg-surface border-border text-ink";
   const meta = "text-slate-500";
-  const divider = isDark ? "border-white/8" : "border-slate-200";
+  const divider = "border-border";
 
   return (
     <>
       <div
-        className={`fixed inset-0 z-30 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0 pointer-events-none"} ${isDark ? "bg-black/50" : "bg-black/20"}`}
+        className={`fixed inset-0 z-30 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0 pointer-events-none"} bg-scrim`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -103,7 +100,7 @@ export default function SettingsPanel({ open, isDark, onClose }: Props) {
           <button
             ref={closeRef}
             onClick={onClose}
-            className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+            className="mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 text-ink-muted hover:text-ink hover:bg-surface-hover"
             aria-label="Close panel"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -127,13 +124,12 @@ export default function SettingsPanel({ open, isDark, onClose }: Props) {
           ) : error ? (
             <p className="text-sm mt-3 text-red-400">{error}</p>
           ) : settings ? (
-            <div className={`divide-y ${isDark ? "divide-white/8" : "divide-slate-200"}`}>
+            <div className="divide-y divide-border">
               <SettingRow
                 label="Exclude Samples folders"
                 description="Skip any folder named “Samples” — usually imported/library audio, not your own production content."
                 checked={settings.excludeSamplesFolders}
                 disabled={saveState === "saving"}
-                isDark={isDark}
                 onChange={(checked) => handleChange({ excludeSamplesFolders: checked })}
               />
               <SettingRow
@@ -141,7 +137,6 @@ export default function SettingsPanel({ open, isDark, onClose }: Props) {
                 description="Skip any folder named “Backup” — Ableton's auto-saved project versions, not real production content."
                 checked={settings.excludeBackupFolders}
                 disabled={saveState === "saving"}
-                isDark={isDark}
                 onChange={(checked) => handleChange({ excludeBackupFolders: checked })}
               />
             </div>

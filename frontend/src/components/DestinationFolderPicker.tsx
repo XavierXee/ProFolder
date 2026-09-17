@@ -17,14 +17,12 @@ function FolderNodeRow({
   selectedPath,
   excludedPath,
   onSelect,
-  isDark,
   depth,
 }: {
   node: FolderNode;
   selectedPath: string | null;
   excludedPath: string | undefined;
   onSelect: (path: string) => void;
-  isDark: boolean;
   depth: number;
 }) {
   const [expanded, setExpanded] = useState(depth < 1);
@@ -35,14 +33,14 @@ function FolderNodeRow({
   return (
     <div>
       <div
-        className={`flex items-center gap-1.5 py-1 rounded-[var(--rt-radius)] ${selected ? (isDark ? "bg-blue-500/20" : "bg-blue-50") : ""}`}
+        className={`flex items-center gap-1.5 py-1 rounded-[var(--rt-radius)] ${selected ? "bg-surface-selected" : ""}`}
         style={{ paddingLeft: depth * 16 }}
       >
         {hasChildren ? (
           <button
             onClick={() => setExpanded((e) => !e)}
             aria-label={expanded ? `Collapse ${node.name}` : `Expand ${node.name}`}
-            className={`w-4 text-xs flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"}`}
+            className="w-4 text-xs flex-shrink-0 text-ink-muted hover:text-ink"
           >
             {expanded ? "▾" : "▸"}
           </button>
@@ -58,7 +56,7 @@ function FolderNodeRow({
             onChange={() => onSelect(node.path)}
             className="accent-blue-500"
           />
-          <span className={isDark ? "text-slate-300" : "text-slate-700"}>{node.name}</span>
+          <span className="text-ink-secondary">{node.name}</span>
         </label>
       </div>
       {hasChildren && expanded && (
@@ -70,7 +68,6 @@ function FolderNodeRow({
               selectedPath={selectedPath}
               excludedPath={excludedPath}
               onSelect={onSelect}
-              isDark={isDark}
               depth={depth + 1}
             />
           ))}
@@ -81,7 +78,6 @@ function FolderNodeRow({
 }
 
 type Props = {
-  isDark: boolean;
   /** The item's own folder (for a file: its containing folder; for a project: the
    * project's own folder), and — via `isDescendantOrSelf` — every descendant of it, are
    * disabled and cannot be selected. Omit when there's nothing to exclude. */
@@ -94,7 +90,7 @@ type Props = {
   onSelect: (path: string) => void;
 };
 
-export default function DestinationFolderPicker({ isDark, excludedPath, selectedPath, onSelect }: Props) {
+export default function DestinationFolderPicker({ excludedPath, selectedPath, onSelect }: Props) {
   const [tree, setTree] = useState<FolderNode | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
@@ -109,7 +105,7 @@ export default function DestinationFolderPicker({ isDark, excludedPath, selected
       .finally(() => setLoading(false));
   }, []);
 
-  const meta = isDark ? "text-slate-500" : "text-slate-500";
+  const meta = "text-slate-500";
 
   if (loading) {
     return <p className={`text-sm ${meta}`}>Loading folders…</p>;
@@ -123,7 +119,7 @@ export default function DestinationFolderPicker({ isDark, excludedPath, selected
 
   return (
     <div role="tree" aria-label="Destination folder">
-      <FolderNodeRow node={tree} selectedPath={selectedPath} excludedPath={excludedPath} onSelect={onSelect} isDark={isDark} depth={0} />
+      <FolderNodeRow node={tree} selectedPath={selectedPath} excludedPath={excludedPath} onSelect={onSelect} depth={0} />
     </div>
   );
 }

@@ -33,7 +33,6 @@ type Props = {
   open: boolean;
   count: number;
   itemLabel: string;
-  isDark: boolean;
   allTags?: string[];
   /** "files" or "projects" — which kind of item this batch panel edits. Drives whether the
    * ancestor/descendant dedup above applies (projects only) before `onBatchOperation` is
@@ -60,7 +59,6 @@ export default function BatchEditPanel({
   open,
   count,
   itemLabel,
-  isDark,
   allTags = [],
   itemType,
   selectedIds,
@@ -133,15 +131,19 @@ export default function BatchEditPanel({
     }
   }
 
-  const panel = isDark ? "bg-[#13161e] border-white/8 text-slate-200" : "bg-white border-black/8 text-slate-800";
+  const panel = "bg-surface border-border text-ink";
   const meta = "text-slate-500";
-  const divider = isDark ? "border-white/8" : "border-slate-200";
-  const chipCls = isDark ? "bg-white/8 text-slate-300" : "bg-slate-100 text-slate-700";
+  const divider = "border-border";
+  const chipCls = "bg-chip-surface text-ink-secondary";
+  const outlineBtn =
+    "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover";
+  const dangerBtn =
+    "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 border-danger-border text-danger hover:bg-danger-surface";
 
   return (
     <>
       <div
-        className={`fixed inset-0 z-30 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0 pointer-events-none"} ${isDark ? "bg-black/50" : "bg-black/20"}`}
+        className={`fixed inset-0 z-30 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0 pointer-events-none"} bg-scrim`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -162,7 +164,7 @@ export default function BatchEditPanel({
           <button
             ref={closeRef}
             onClick={onClose}
-            className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+            className="mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 text-ink-muted hover:text-ink hover:bg-surface-hover"
             aria-label="Close panel"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -182,7 +184,7 @@ export default function BatchEditPanel({
               Applies immediately to all {count} selected {itemLabel}
               {count === 1 ? "" : "s"}, overwriting whatever score each already has.
             </p>
-            <ScoreEditor score={lastScore} onChange={handleScoreChange} disabled={scoreSaving} isDark={isDark} />
+            <ScoreEditor score={lastScore} onChange={handleScoreChange} disabled={scoreSaving} />
           </div>
 
           <div className={`border-t ${divider}`} />
@@ -205,7 +207,6 @@ export default function BatchEditPanel({
                   onCommit={handleAddTag}
                   suggestions={allTags}
                   placeholder="Add tag, press Enter…"
-                  isDark={isDark}
                   disabled={tagSaving}
                 />
               </div>
@@ -242,19 +243,19 @@ export default function BatchEditPanel({
             <div className="flex gap-2">
               <button
                 onClick={() => handleOperationClick("copy")}
-                className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                className={outlineBtn}
               >
                 Copy
               </button>
               <button
                 onClick={() => handleOperationClick("move")}
-                className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                className={outlineBtn}
               >
                 Move
               </button>
               <button
                 onClick={() => handleOperationClick("delete")}
-                className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
+                className={dangerBtn}
               >
                 Delete
               </button>
@@ -265,7 +266,7 @@ export default function BatchEditPanel({
         <div className={`px-6 py-4 border-t ${divider}`}>
           <button
             onClick={onClose}
-            className={`w-full px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+            className={`w-full ${outlineBtn}`}
           >
             Done
           </button>

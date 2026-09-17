@@ -8,13 +8,12 @@ type ScoreOption = number | "unscored";
 
 type Props = {
   open: boolean;
-  isDark: boolean;
   allTags: string[];
   onClose: () => void;
   onCreated: (tab: CustomTab) => void;
 };
 
-export default function CreateCustomTabModal({ open, isDark, allTags, onClose, onCreated }: Props) {
+export default function CreateCustomTabModal({ open, allTags, onClose, onCreated }: Props) {
   const [name, setName] = useState("");
   const [type, setType] = useState<CustomTabType>("projects");
   const [statuses, setStatuses] = useState<TrackStatus[]>([]);
@@ -69,18 +68,18 @@ export default function CreateCustomTabModal({ open, isDark, allTags, onClose, o
 
   if (!open) return null;
 
-  const panel = isDark ? "bg-[#13161e] border-white/8 text-slate-200" : "bg-white border-black/8 text-slate-800";
+  const panel = "bg-surface border-border text-ink";
   const meta = "text-slate-500";
-  const divider = isDark ? "border-white/8" : "border-slate-200";
-  const inputBg = isDark
-    ? "bg-white/5 border-white/10 text-slate-300 placeholder-slate-600"
-    : "bg-white border-slate-300 text-slate-800 placeholder-slate-400";
+  const divider = "border-border";
+  const inputBg = "bg-canvas border-border text-ink placeholder-ink-muted";
+  const outlineBtn =
+    "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover";
   const tagOptions = allTags.map((t) => ({ value: t, label: t }));
 
   return (
     <>
       <div
-        className={`fixed inset-0 z-30 ${isDark ? "bg-black/50" : "bg-black/20"}`}
+        className="fixed inset-0 z-30 bg-scrim"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -98,7 +97,7 @@ export default function CreateCustomTabModal({ open, isDark, allTags, onClose, o
           <button
             ref={closeRef}
             onClick={onClose}
-            className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+            className="mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 text-ink-muted hover:text-ink hover:bg-surface-hover"
             aria-label="Close panel"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -132,7 +131,7 @@ export default function CreateCustomTabModal({ open, isDark, allTags, onClose, o
             <fieldset>
               <legend className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Type</legend>
               <div className="flex gap-4">
-                <label className={`flex items-center gap-2 text-sm cursor-pointer ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                <label className="flex items-center gap-2 text-sm cursor-pointer text-ink-secondary">
                   <input
                     type="radio"
                     name="custom-tab-type"
@@ -143,7 +142,7 @@ export default function CreateCustomTabModal({ open, isDark, allTags, onClose, o
                   />
                   Project Folders
                 </label>
-                <label className={`flex items-center gap-2 text-sm cursor-pointer ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                <label className="flex items-center gap-2 text-sm cursor-pointer text-ink-secondary">
                   <input
                     type="radio"
                     name="custom-tab-type"
@@ -191,7 +190,7 @@ export default function CreateCustomTabModal({ open, isDark, allTags, onClose, o
             <button
               onClick={onClose}
               type="button"
-              className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20" : "border-black/10 text-slate-500 hover:text-slate-700 hover:border-black/20"}`}
+              className={outlineBtn}
             >
               Cancel
             </button>

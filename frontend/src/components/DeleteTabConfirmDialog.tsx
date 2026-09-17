@@ -2,13 +2,12 @@ import { useEffect } from "react";
 
 type Props = {
   open: boolean;
-  isDark: boolean;
   tabName: string;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
-export default function DeleteTabConfirmDialog({ open, isDark, tabName, onConfirm, onCancel }: Props) {
+export default function DeleteTabConfirmDialog({ open, tabName, onConfirm, onCancel }: Props) {
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -20,12 +19,14 @@ export default function DeleteTabConfirmDialog({ open, isDark, tabName, onConfir
 
   if (!open) return null;
 
-  const panel = isDark ? "bg-[#13161e] border-white/8 text-slate-200" : "bg-white border-black/8 text-slate-800";
+  const panel = "bg-surface border-border text-ink";
+  const outlineBtn =
+    "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover";
 
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 ${isDark ? "bg-black/50" : "bg-black/20"}`}
+        className="fixed inset-0 z-40 bg-scrim"
         onClick={onCancel}
         aria-hidden="true"
       />
@@ -42,7 +43,7 @@ export default function DeleteTabConfirmDialog({ open, isDark, tabName, onConfir
           <div className="mt-4 flex justify-end gap-2">
             <button
               onClick={onCancel}
-              className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20" : "border-black/10 text-slate-500 hover:text-slate-700 hover:border-black/20"}`}
+              className={outlineBtn}
             >
               Cancel
             </button>

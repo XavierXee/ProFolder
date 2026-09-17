@@ -258,7 +258,6 @@ export default function CustomProjectsTabPanel({
         open={showBatchPanel}
         count={selectedProjectIds.size}
         itemLabel="project folder"
-        isDark={isDark}
         allTags={allTags}
         itemType="projects"
         selectedIds={[...selectedProjectIds]}
@@ -271,7 +270,6 @@ export default function CustomProjectsTabPanel({
 
       <CopyMoveDeleteDialog
         open={projectOpDialog !== null}
-        isDark={isDark}
         operation={projectOpDialog?.operation ?? "copy"}
         itemType="projects"
         target={projectOpDialog?.target ?? { kind: "single", id: "", name: "" }}

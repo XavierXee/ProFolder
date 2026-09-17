@@ -28,7 +28,6 @@ function makeTab(overrides: Partial<CustomTab> = {}): CustomTab {
 function renderModal(overrides: Partial<Parameters<typeof CreateCustomTabModal>[0]> = {}) {
   const props = {
     open: true,
-    isDark: true,
     allTags: ["rock", "jazz"],
     onClose: vi.fn(),
     onCreated: vi.fn(),

@@ -45,7 +45,6 @@ const tree: FolderNode = { name: "root", path: "/music", type: "folder", childre
 function renderPanel(overrides: Partial<Parameters<typeof ScanFolderPanel>[0]> = {}) {
   const props = {
     open: true,
-    isDark: true,
     musicRoot: "/music",
     onClose: () => {},
     onScanComplete: vi.fn(),
@@ -91,7 +90,6 @@ describe("FolderTreeNode - direct rendering", () => {
       excluded: new Set<string>(),
       onToggle,
       parentExcluded: false,
-      isDark: true,
       depth: 0,
       ...overrides,
     };

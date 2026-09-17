@@ -54,7 +54,6 @@ const tree: FolderNode = { name: "music", path: "", type: "folder", children: [a
 function renderDialog(overrides: Partial<Parameters<typeof CopyMoveDeleteDialog>[0]> = {}) {
   const props = {
     open: true,
-    isDark: true,
     operation: "copy" as const,
     itemType: "files" as const,
     target: { kind: "single", id: "file-1", name: "track.mp3" } as CopyMoveDeleteTarget,

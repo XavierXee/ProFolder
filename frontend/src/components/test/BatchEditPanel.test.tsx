@@ -8,7 +8,6 @@ function renderPanel(overrides: Partial<Parameters<typeof BatchEditPanel>[0]> = 
     open: true,
     count: 3,
     itemLabel: "audio file",
-    isDark: true,
     allTags: [] as string[],
     itemType: "files" as const,
     selectedIds: ["file-1", "file-2", "file-3"],
@@ -249,7 +248,6 @@ describe("BatchEditPanel - reset on open", () => {
         open={false}
         count={3}
         itemLabel="audio file"
-        isDark={true}
         allTags={[]}
         itemType="files"
         selectedIds={["file-1", "file-2", "file-3"]}
@@ -264,7 +262,6 @@ describe("BatchEditPanel - reset on open", () => {
         open={true}
         count={3}
         itemLabel="audio file"
-        isDark={true}
         allTags={[]}
         itemType="files"
         selectedIds={["file-1", "file-2", "file-3"]}
@@ -300,7 +297,6 @@ describe("BatchEditPanel - reset on open", () => {
         open={false}
         count={3}
         itemLabel="audio file"
-        isDark={true}
         allTags={[]}
         itemType="files"
         selectedIds={["file-1", "file-2", "file-3"]}
@@ -315,7 +311,6 @@ describe("BatchEditPanel - reset on open", () => {
         open={true}
         count={3}
         itemLabel="audio file"
-        isDark={true}
         allTags={[]}
         itemType="files"
         selectedIds={["file-1", "file-2", "file-3"]}
