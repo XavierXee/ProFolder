@@ -44,6 +44,22 @@ function loadStoredTheme(): Theme {
   return "profolder";
 }
 
+/** Tab button classes for the default ("Project Folders"/"Audio Files") and custom tabs. Base
+ * classes render an underline-style tab (border-b-2, -mb-px to sit flush against the row's own
+ * border-b); `profolder:` variant classes override the structural bits (no underline offset, a
+ * full rounded border instead) and swap the active/inactive colors to the accent/surface tokens.
+ * Every property the profolder variant touches is also set by the base classes, so the variant's
+ * higher-specificity `[data-theme="profolder"] &` selector always wins for that theme with no JS
+ * branching needed — see `frontend/src/index.css`'s `@custom-variant profolder` and the "+" button
+ * above for the same established pattern. */
+function tabButtonClassName(active: boolean): string {
+  const base =
+    "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)]";
+  return active
+    ? `${base} border-blue-500 text-blue-400 profolder:bg-accent profolder:text-accent-ink profolder:border-accent`
+    : `${base} border-transparent text-slate-500 hover:text-ink profolder:bg-surface profolder:text-ink-muted profolder:border-border`;
+}
+
 /** Banner text for a completed single-item copy/move/delete, shared by the default and
  * custom Files/Projects tabs. A single-item request either resolves as a full success
  * (outcome.succeededCount === 1) or throws (handled via onError, never onSuccess) — see
@@ -92,8 +108,6 @@ export default function App() {
   const [lastScanChanges, setLastScanChanges] = useState<number | null>(null);
   const [banner, setBanner] = useState<string | undefined>();
   const [theme, setTheme] = useState<Theme>(loadStoredTheme);
-  const isDark = theme !== "light";
-  const isProFolder = theme === "profolder";
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -504,19 +518,7 @@ export default function App() {
               key={tab}
               onClick={() => handleTabChange(tab)}
               aria-current={activeTab === tab}
-              className={
-                isProFolder
-                  ? `px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-[var(--rt-radius)] border ${
-                      activeTab === tab
-                        ? "bg-accent text-accent-ink border-accent"
-                        : "bg-surface text-ink-muted border-border hover:text-ink"
-                    }`
-                  : `px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      activeTab === tab
-                        ? "border-blue-500 text-blue-400"
-                        : "border-transparent text-slate-500 hover:text-ink"
-                    }`
-              }
+              className={tabButtonClassName(activeTab === tab)}
             >
               {label}
             </button>
@@ -527,19 +529,7 @@ export default function App() {
               <button
                 onClick={() => handleTabChange(tab.id)}
                 aria-current={activeTab === tab.id}
-                className={
-                  isProFolder
-                    ? `px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-[var(--rt-radius)] border ${
-                        activeTab === tab.id
-                          ? "bg-accent text-accent-ink border-accent"
-                          : "bg-surface text-ink-muted border-border hover:text-ink"
-                      }`
-                    : `px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                        activeTab === tab.id
-                          ? "border-blue-500 text-blue-400"
-                          : "border-transparent text-slate-500 hover:text-ink"
-                      }`
-                }
+                className={tabButtonClassName(activeTab === tab.id)}
               >
                 {tab.name}
               </button>

@@ -164,8 +164,26 @@ describe("App - header branding", () => {
   });
 });
 
+// Task 8 of the theming rework: the isProFolder JS ternary for tab button classes (the last two
+// live isDark/isProFolder consumers anywhere in the codebase) was replaced by a single static
+// className (see App.tsx's tabButtonClassName helper) that unconditionally carries both the
+// underline-tab structural/color classes (border-b-2, -mb-px, border-blue-500/text-blue-400,
+// etc.) AND the profolder:-prefixed override classes (profolder:border, profolder:bg-accent,
+// etc.) — the exact same string renders for every theme; only the compiled CSS's
+// higher-specificity `[data-theme="profolder"] &` selector (see index.css's `@custom-variant
+// profolder`) decides which set of rules actually wins visually for a given theme. These
+// assertions therefore expect the SAME exact className string under all three themes, which is
+// itself the proof no JS branching survives on this element (a stale isProFolder ternary would
+// produce two different strings across themes, as the pre-Task-8 version of this describe block
+// asserted). jsdom cannot evaluate the CSS attribute-selector cascade itself (see file-level NOTE),
+// so these tests prove the class list, not which ruleset visually wins.
 describe("App - tab switcher styling per theme", () => {
-  it("gives the profolder theme's active tab the accent-fill treatment and the inactive tab the secondary/grey treatment", async () => {
+  const ACTIVE_CLASSNAME =
+    "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)] border-blue-500 text-blue-400 profolder:bg-accent profolder:text-accent-ink profolder:border-accent";
+  const INACTIVE_CLASSNAME =
+    "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)] border-transparent text-slate-500 hover:text-ink profolder:bg-surface profolder:text-ink-muted profolder:border-border";
+
+  it("renders the exact same active/inactive tab classNames under the profolder theme", async () => {
     render(<App />);
     await waitForMount();
     expect(document.documentElement.dataset.theme).toBe("profolder");
@@ -173,49 +191,11 @@ describe("App - tab switcher styling per theme", () => {
     const activeTab = screen.getByRole("button", { name: "Project Folders" });
     const inactiveTab = screen.getByRole("button", { name: "Audio Files" });
 
-    expect(activeTab.className).toContain("bg-accent");
-    expect(activeTab.className).toContain("text-accent-ink");
-    expect(inactiveTab.className).toContain("bg-surface");
-    expect(inactiveTab.className).toContain("text-ink-muted");
-    expect(inactiveTab.className).toContain("border-border");
-
-    // The old underline-tab treatment must be gone under profolder.
-    expect(activeTab.className).not.toContain("border-blue-500");
-    expect(activeTab.className).not.toContain("-mb-px");
+    expect(activeTab.className).toBe(ACTIVE_CLASSNAME);
+    expect(inactiveTab.className).toBe(INACTIVE_CLASSNAME);
   });
 
-  it("swaps the active/inactive accent classes when switching tabs under the profolder theme", async () => {
-    const user = userEvent.setup();
-    render(<App />);
-    await waitForMount();
-    expect(document.documentElement.dataset.theme).toBe("profolder");
-
-    const projectsTab = screen.getByRole("button", { name: "Project Folders" });
-    const filesTab = screen.getByRole("button", { name: "Audio Files" });
-
-    expect(projectsTab.className).toContain("bg-accent");
-    expect(filesTab.className).toContain("bg-surface");
-
-    await user.click(filesTab);
-
-    await waitFor(() => expect(filesTab.className).toContain("bg-accent"));
-    expect(filesTab.className).toContain("text-accent-ink");
-    expect(projectsTab.className).toContain("bg-surface");
-    expect(projectsTab.className).toContain("text-ink-muted");
-  });
-
-  // Regression guard, updated for Task 4 of the theming rework: the outer isProFolder structural
-  // split (pill vs underline tab treatment) is unchanged, but the inner isDark ternary that used
-  // to pick between hover:text-slate-300 (dark) and hover:text-slate-800 (light) was collapsed to
-  // the single already-theme-aware hover:text-ink token — so the dark/light class strings are now
-  // byte-identical to each other (not just to their own pre-task value), which is the point of
-  // this task: no JS branching left on this class string, only a CSS custom property that resolves
-  // differently per theme.
-  const BASE = "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
-  const ACTIVE_UNDERLINE = "border-blue-500 text-blue-400";
-  const INACTIVE_UNDERLINE = "border-transparent text-slate-500 hover:text-ink";
-
-  it("keeps the dark theme's active/inactive tab classNames using the token-driven underline treatment", async () => {
+  it("renders the exact same active/inactive tab classNames under the dark theme (no JS branch on theme)", async () => {
     localStorage.setItem(LEGACY_THEME_KEY, "true");
     render(<App />);
     await waitForMount();
@@ -224,11 +204,11 @@ describe("App - tab switcher styling per theme", () => {
     const activeTab = screen.getByRole("button", { name: "Project Folders" });
     const inactiveTab = screen.getByRole("button", { name: "Audio Files" });
 
-    expect(activeTab.className).toBe(`${BASE} ${ACTIVE_UNDERLINE}`);
-    expect(inactiveTab.className).toBe(`${BASE} ${INACTIVE_UNDERLINE}`);
+    expect(activeTab.className).toBe(ACTIVE_CLASSNAME);
+    expect(inactiveTab.className).toBe(INACTIVE_CLASSNAME);
   });
 
-  it("keeps the light theme's active/inactive tab classNames using the token-driven underline treatment", async () => {
+  it("renders the exact same active/inactive tab classNames under the light theme (no JS branch on theme)", async () => {
     localStorage.setItem(LEGACY_THEME_KEY, "false");
     render(<App />);
     await waitForMount();
@@ -237,8 +217,26 @@ describe("App - tab switcher styling per theme", () => {
     const activeTab = screen.getByRole("button", { name: "Project Folders" });
     const inactiveTab = screen.getByRole("button", { name: "Audio Files" });
 
-    expect(activeTab.className).toBe(`${BASE} ${ACTIVE_UNDERLINE}`);
-    expect(inactiveTab.className).toBe(`${BASE} ${INACTIVE_UNDERLINE}`);
+    expect(activeTab.className).toBe(ACTIVE_CLASSNAME);
+    expect(inactiveTab.className).toBe(INACTIVE_CLASSNAME);
+  });
+
+  it("swaps the active/inactive classNames when switching tabs, regardless of theme", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await waitForMount();
+    expect(document.documentElement.dataset.theme).toBe("profolder");
+
+    const projectsTab = screen.getByRole("button", { name: "Project Folders" });
+    const filesTab = screen.getByRole("button", { name: "Audio Files" });
+
+    expect(projectsTab.className).toBe(ACTIVE_CLASSNAME);
+    expect(filesTab.className).toBe(INACTIVE_CLASSNAME);
+
+    await user.click(filesTab);
+
+    await waitFor(() => expect(filesTab.className).toBe(ACTIVE_CLASSNAME));
+    expect(projectsTab.className).toBe(INACTIVE_CLASSNAME);
   });
 });
 
