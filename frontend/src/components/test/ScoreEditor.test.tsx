@@ -14,6 +14,22 @@ describe("ScoreEditor", () => {
     expect(screen.getByText("3/5")).toBeInTheDocument();
   });
 
+  // Regression-closure proof for Task 5's known interim issue: ScoreEditor previously defaulted
+  // to `isDark = true` internally, so callers (FileDetailPanel/ProjectDetailPanel) that pass no
+  // theme prop at all were rendering dark-theme-locked empty-dot colors for light/profolder
+  // users. ScoreEditor no longer has an isDark concept at all — this proves the empty dots use
+  // token classes (which resolve per-theme via CSS at runtime), not a hardcoded literal, when
+  // rendered exactly like those callers do: with no theme prop passed whatsoever.
+  it("renders empty dots with token classes (bg-ink-faint), not a hardcoded dark-locked literal, with no theme prop passed", () => {
+    render(<ScoreEditor score={2} onChange={() => {}} />);
+
+    const emptyDot = screen.getByRole("radio", { name: "5 of 5" });
+    expect(emptyDot.className).toContain("bg-ink-faint");
+    expect(emptyDot.className).toContain("hover:bg-ink-muted");
+    expect(emptyDot.className).not.toContain("bg-slate-700");
+    expect(emptyDot.className).not.toContain("bg-slate-300");
+  });
+
   it("renders no checked dot and no score label when score is null", () => {
     render(<ScoreEditor score={null} onChange={() => {}} />);
 

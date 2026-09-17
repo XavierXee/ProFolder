@@ -127,7 +127,6 @@ function renderPanel(overrides: Partial<Parameters<typeof CustomProjectsTabPanel
   const props = {
     tab: makeTab(),
     allTags: ["kick", "mix", "rock"],
-    isDark: true,
     refreshStats: vi.fn(),
     refreshTags: vi.fn(),
     refetchFiles: vi.fn(),
@@ -432,7 +431,6 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
       <CustomProjectsTabPanel
         tab={makeTab()}
         allTags={[]}
-        isDark
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
@@ -449,7 +447,6 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
       <CustomProjectsTabPanel
         tab={makeTab()}
         allTags={[]}
-        isDark
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
@@ -475,7 +472,6 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
       <CustomProjectsTabPanel
         tab={makeTab()}
         allTags={[]}
-        isDark
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
@@ -494,7 +490,6 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
       <CustomProjectsTabPanel
         tab={makeTab()}
         allTags={[]}
-        isDark
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}

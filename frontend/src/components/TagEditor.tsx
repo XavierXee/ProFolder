@@ -16,12 +16,10 @@ export function TagEditor({
   tags,
   onChange,
   allTags = [],
-  isDark = true,
 }: {
   tags: string[];
   onChange: (tags: string[]) => void;
   allTags?: string[];
-  isDark?: boolean;
 }) {
   const [input, setInput] = useState("");
 
@@ -37,8 +35,20 @@ export function TagEditor({
 
   const suggestions = useMemo(() => allTags.filter((t) => !tags.includes(t)), [allTags, tags]);
 
-  const chipCls = isDark ? "bg-white/8 text-slate-300" : "bg-slate-100 text-slate-700";
-  const removeCls = isDark ? "text-slate-500 hover:text-slate-200" : "text-slate-400 hover:text-slate-700";
+  // bg-chip-surface is a byte-faithful match: --rt-chip-surface's dark/light values are exact
+  // transcriptions of this chip's own former isDark ? "bg-white/8" : "bg-slate-100" literal
+  // (see index.css's doc comment on that token, which specifically flagged this component as
+  // its future drop-in). text-ink-secondary is likewise byte-faithful for the former
+  // isDark ? "text-slate-300" : "text-slate-700" text color.
+  const chipCls = "bg-chip-surface text-ink-secondary";
+  // Reuses the established close/remove-button pattern (text-ink-muted hover:text-ink) used
+  // throughout the codebase's already-migrated panels/dialogs (e.g. FileDetailPanel.tsx,
+  // BatchEditPanel.tsx, CreateCustomTabModal.tsx) — the base color is a byte-faithful match
+  // (--rt-ink-muted's dark/light values equal this chip's former text-slate-500/text-slate-400),
+  // the hover color follows the established consolidation (dark hover matches byte-exactly;
+  // light hover shifts one step darker in the higher-contrast direction, per index.css's
+  // documented discipline for these small consolidations).
+  const removeCls = "text-ink-muted hover:text-ink";
 
   return (
     <div className="flex flex-col gap-2">
@@ -61,7 +71,6 @@ export function TagEditor({
         onBlur={() => addTag(input)}
         suggestions={suggestions}
         placeholder="Add tag, press Enter…"
-        isDark={isDark}
       />
     </div>
   );

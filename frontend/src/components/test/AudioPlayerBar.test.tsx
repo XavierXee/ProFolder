@@ -28,7 +28,6 @@ function renderBar(overrides: Partial<Parameters<typeof AudioPlayerBar>[0]> = {}
   const props = {
     file: makeFile() as AudioFile | null,
     isPlaying: false,
-    isDark: true,
     onPlayingChange: vi.fn(),
     onClose: () => {},
     ...overrides,
@@ -69,6 +68,29 @@ describe("AudioPlayerBar - absent file", () => {
     const { container } = renderBar({ file: null });
 
     expect(container.firstChild).toBeNull();
+  });
+});
+
+describe("AudioPlayerBar - token-driven styling (no isDark prop)", () => {
+  it("renders with bg-surface/border-border on the bar and text-ink on the filename, with no hardcoded isDark literal", () => {
+    const { container } = renderBar({ file: makeFile({ filename: "Track.wav" }) });
+
+    const bar = container.firstChild as HTMLElement;
+    expect(bar.className).toContain("bg-surface");
+    expect(bar.className).toContain("border-border");
+    expect(bar.className).not.toContain("bg-[#13161e]");
+    expect(bar.className).not.toContain("bg-white");
+
+    expect(screen.getByText("Track.wav").className).toContain("text-ink");
+
+    expect(screen.getByLabelText("Close player").className).toContain("text-ink-muted");
+    // Stop button: text-ink-secondary (not text-ink-muted) preserves this button's original,
+    // higher-contrast idle color (byte-exact to the old text-slate-300 in dark; one step
+    // higher-contrast than the old text-slate-600 in light) — using ink-muted here would be a
+    // WCAG SC 1.4.11 contrast regression on the rendered icon (fill="currentColor").
+    const stopBtn = screen.getByLabelText("Stop");
+    expect(stopBtn.className).toContain("text-ink-secondary");
+    expect(stopBtn.className).not.toContain("text-ink-muted");
   });
 });
 
@@ -148,7 +170,6 @@ describe("AudioPlayerBar - reset on file change", () => {
       <AudioPlayerBar
         file={makeFile({ id: "file-2", filename: "Other.wav" })}
         isPlaying={false}
-        isDark={true}
         onPlayingChange={vi.fn()}
         onClose={() => {}}
       />

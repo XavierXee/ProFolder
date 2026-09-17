@@ -640,7 +640,6 @@ export default function App() {
               key={`custom-${activeCustomTab.id}`}
               tab={activeCustomTab}
               allTags={allTags}
-              isDark={isDark}
               refreshStats={refreshStats}
               refreshTags={refreshTags}
               refetchProjects={refetchProjects}
@@ -656,7 +655,6 @@ export default function App() {
               key={`custom-${activeCustomTab.id}`}
               tab={activeCustomTab}
               allTags={allTags}
-              isDark={isDark}
               refreshStats={refreshStats}
               refreshTags={refreshTags}
               refetchFiles={refetch}
@@ -672,7 +670,6 @@ export default function App() {
       <AudioPlayerBar
         file={playingFile}
         isPlaying={isPlaying}
-        isDark={isDark}
         onPlayingChange={setIsPlaying}
         onClose={handleClosePlayer}
       />

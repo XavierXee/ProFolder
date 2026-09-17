@@ -50,6 +50,27 @@ describe("TagEditor", () => {
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
+  // Regression-closure proof for Task 5's known interim issue: TagEditor previously defaulted
+  // to `isDark = true` internally, so callers (FileDetailPanel/ProjectDetailPanel) that pass no
+  // theme prop at all were rendering dark-theme-locked chip colors for light/profolder users.
+  // TagEditor no longer has an isDark concept at all — this proves it renders token classes
+  // (which resolve per-theme via CSS at runtime) rather than any hardcoded literal, when
+  // rendered exactly like those callers do: with no theme prop passed whatsoever.
+  it("renders chips with token classes (bg-chip-surface/text-ink-secondary), not a hardcoded dark-locked literal, with no theme prop passed", () => {
+    render(<Harness initialTags={["rock"]} />);
+
+    const chip = screen.getByText("rock");
+    expect(chip.className).toContain("bg-chip-surface");
+    expect(chip.className).toContain("text-ink-secondary");
+    expect(chip.className).not.toContain("bg-white/8");
+    expect(chip.className).not.toContain("bg-slate-100");
+
+    const removeBtn = screen.getByLabelText("Remove tag rock");
+    expect(removeBtn.className).toContain("text-ink-muted");
+    expect(removeBtn.className).not.toContain("text-slate-500");
+    expect(removeBtn.className).not.toContain("text-slate-400");
+  });
+
   it("renders with no chips when there are no tags", () => {
     render(<Harness initialTags={[]} />);
 

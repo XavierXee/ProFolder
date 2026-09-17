@@ -15,7 +15,6 @@ type SortKey = NonNullable<ProjectFilters["sortBy"]>;
 type Props = {
   tab: CustomTab;
   allTags: string[];
-  isDark: boolean;
   /** App-level refresh for the header stats (draft/unscored counts). Mirroring App.tsx's own
    * handleProjectStatusSave/handleProjectTagsSave/handleProjectScoreSave and batch
    * equivalents (none of which call `refreshStats`, since those mutations don't change how
@@ -54,7 +53,6 @@ type Props = {
 export default function CustomProjectsTabPanel({
   tab,
   allTags,
-  isDark,
   refreshStats,
   refreshTags,
   refetchFiles,

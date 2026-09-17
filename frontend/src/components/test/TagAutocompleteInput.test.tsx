@@ -54,6 +54,32 @@ describe("TagAutocompleteInput", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
+  it("renders the input and dropdown with token classes, not hardcoded isDark literals — no isDark prop exists on this component anymore", async () => {
+    const user = userEvent.setup();
+    render(<Harness suggestions={["Rock", "Jazz"]} onCommit={() => {}} />);
+    const input = screen.getByRole("combobox");
+
+    expect(input.className).toContain("bg-canvas");
+    expect(input.className).toContain("border-border");
+    expect(input.className).toContain("text-ink");
+    expect(input.className).not.toContain("bg-white/5");
+    expect(input.className).not.toContain("text-slate-300");
+
+    await user.type(input, "ro");
+    const listbox = screen.getByRole("listbox");
+    expect(listbox.className).toContain("bg-surface");
+    expect(listbox.className).toContain("border-border");
+    expect(listbox.className).not.toContain("bg-[#1a1d27]");
+
+    const option = screen.getByRole("option", { name: "Rock" });
+    expect(option.className).toContain("text-ink-secondary");
+    expect(option.className).not.toContain("text-slate-300");
+    expect(option.className).not.toContain("text-slate-700");
+
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("option", { name: "Rock" }).className).toContain("bg-surface-selected");
+  });
+
   it("shows a case-insensitive filtered suggestion list while typing", async () => {
     const user = userEvent.setup();
     render(<Harness suggestions={["Rock", "Jazz", "Punk"]} onCommit={() => {}} />);

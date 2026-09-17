@@ -7,7 +7,6 @@ type Props = {
   onCommit: (value: string) => void;
   suggestions: string[];
   placeholder?: string;
-  isDark?: boolean;
   disabled?: boolean;
   onBlur?: () => void;
   className?: string;
@@ -36,7 +35,6 @@ export function TagAutocompleteInput({
   onCommit,
   suggestions,
   placeholder = "Add tag, press Enter…",
-  isDark = true,
   disabled = false,
   onBlur,
   className = "",
@@ -83,9 +81,11 @@ export function TagAutocompleteInput({
     }
   }
 
-  const inputCls = isDark
-    ? "bg-white/5 border-white/10 text-slate-300 placeholder-slate-600"
-    : "bg-white border-slate-300 text-slate-800 placeholder-slate-400";
+  // Token-driven: reuses FilterToolbar.tsx's established "recessed field on a surface" input
+  // role (bg-canvas border-border text-ink placeholder-ink-muted) — same rationale as that
+  // component's own doc comment (no pre-existing isDark/isProFolder branch covered this exact
+  // combination, but this is the same "text input rendered inside a panel" role).
+  const inputCls = "bg-canvas border-border text-ink placeholder-ink-muted";
 
   return (
     <div className="relative">
@@ -106,9 +106,7 @@ export function TagAutocompleteInput({
       {open && filtered.length > 0 && (
         <ul
           role="listbox"
-          className={`absolute left-0 right-0 mt-1 z-50 max-h-48 overflow-y-auto rounded-[var(--rt-radius)] border shadow-lg text-sm ${
-            isDark ? "bg-[#1a1d27] border-white/10" : "bg-white border-slate-200"
-          }`}
+          className="absolute left-0 right-0 mt-1 z-50 max-h-48 overflow-y-auto rounded-[var(--rt-radius)] border shadow-lg text-sm bg-surface border-border"
         >
           {filtered.map((tag, i) => (
             <li
@@ -122,14 +120,13 @@ export function TagAutocompleteInput({
                 commit(tag);
               }}
               onMouseEnter={() => setHighlighted(i)}
+              // Highlighted: reuses MultiSelectDropdown.tsx/DestinationFolderPicker.tsx's
+              // established "selected row" pair (bg-surface-selected text-ink). Not highlighted:
+              // text-ink-secondary is a byte-faithful match for this option row's original
+              // isDark ? "text-slate-300" : "text-slate-700" (see index.css's --rt-ink-secondary
+              // doc comment), paired with the general row-hover token.
               className={`px-3 py-1.5 cursor-pointer font-mono ${
-                i === highlighted
-                  ? isDark
-                    ? "bg-blue-500/20 text-blue-300"
-                    : "bg-blue-50 text-blue-700"
-                  : isDark
-                    ? "text-slate-300 hover:bg-white/5"
-                    : "text-slate-700 hover:bg-slate-50"
+                i === highlighted ? "bg-surface-selected text-ink" : "text-ink-secondary hover:bg-surface-hover"
               }`}
             >
               {tag}

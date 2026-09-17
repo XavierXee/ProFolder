@@ -90,7 +90,6 @@ function renderPanel(overrides: Partial<Parameters<typeof CustomFilesTabPanel>[0
   const props = {
     tab: makeTab(),
     allTags: ["kick", "mix", "rock"],
-    isDark: true,
     refreshStats: vi.fn(),
     refreshTags: vi.fn(),
     refetchProjects: vi.fn(),
@@ -123,6 +122,20 @@ beforeEach(() => {
   mockBatchCopyFiles.mockReset().mockResolvedValue({ succeeded: ["f1", "f2"], failed: [] });
   mockBatchMoveFiles.mockReset().mockResolvedValue({ succeeded: ["f1", "f2"], failed: [] });
   mockBatchDeleteFiles.mockReset().mockResolvedValue({ succeeded: ["f1", "f2"], failed: [] });
+});
+
+describe("CustomFilesTabPanel - error banner is token-driven (no isDark prop)", () => {
+  it("renders the fetch-error banner with bg-danger-surface/text-danger, not a hardcoded isDark literal", async () => {
+    mockGetFiles.mockReset().mockRejectedValue(new Error("Could not load files"));
+    renderPanel();
+
+    const banner = await screen.findByText("Could not load files");
+
+    expect(banner.className).toContain("bg-danger-surface");
+    expect(banner.className).toContain("text-danger");
+    expect(banner.className).not.toContain("bg-red-500/10");
+    expect(banner.className).not.toContain("bg-red-50");
+  });
 });
 
 describe("CustomFilesTabPanel - locked filters seed the initial fetch", () => {
@@ -373,7 +386,6 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
       <CustomFilesTabPanel
         tab={makeTab()}
         allTags={[]}
-        isDark
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchProjects={() => {}}
@@ -392,7 +404,6 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
       <CustomFilesTabPanel
         tab={makeTab()}
         allTags={[]}
-        isDark
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchProjects={() => {}}
@@ -420,7 +431,6 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
       <CustomFilesTabPanel
         tab={makeTab()}
         allTags={[]}
-        isDark
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchProjects={() => {}}
@@ -441,7 +451,6 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
       <CustomFilesTabPanel
         tab={makeTab()}
         allTags={[]}
-        isDark
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchProjects={() => {}}

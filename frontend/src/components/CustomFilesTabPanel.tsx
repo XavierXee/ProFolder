@@ -16,7 +16,6 @@ type SortKey = NonNullable<FileFilters["sortBy"]>;
 type Props = {
   tab: CustomTab;
   allTags: string[];
-  isDark: boolean;
   /** App-level refresh for the header stats (draft/unscored counts). Must be called
    * wherever App.tsx's own file-mutation handlers call it, so the (currently invisible)
    * default tabs and header stats stay correct for when the user switches back. */
@@ -50,7 +49,6 @@ type Props = {
 export default function CustomFilesTabPanel({
   tab,
   allTags,
-  isDark,
   refreshStats,
   refreshTags,
   refetchProjects,
@@ -226,8 +224,11 @@ export default function CustomFilesTabPanel({
         }}
       />
 
+      {/* bg-danger-surface/text-danger: byte-faithful match for this banner's former
+          isDark ? "bg-red-500/10 text-red-300" : "bg-red-50 text-red-700" — same error-banner
+          role already established for this exact literal by App.tsx's own error banner. */}
       {error && (
-        <div className={`mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono ${isDark ? "bg-red-500/10 text-red-300" : "bg-red-50 text-red-700"}`}>
+        <div className="mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono bg-danger-surface text-danger">
           {error}
         </div>
       )}

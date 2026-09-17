@@ -12,12 +12,11 @@ export function formatTime(seconds: number): string {
 type Props = {
   file: AudioFile | null;
   isPlaying: boolean;
-  isDark: boolean;
   onPlayingChange: (playing: boolean) => void;
   onClose: () => void;
 };
 
-export default function AudioPlayerBar({ file, isPlaying, isDark, onPlayingChange, onClose }: Props) {
+export default function AudioPlayerBar({ file, isPlaying, onPlayingChange, onClose }: Props) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -57,11 +56,26 @@ export default function AudioPlayerBar({ file, isPlaying, isDark, onPlayingChang
     setCurrentTime(next);
   }
 
-  const border = isDark ? "border-white/8 bg-[#13161e]" : "border-black/8 bg-white";
+  // Token-driven: reuses the established "floating panel on canvas" role (bg-surface
+  // border-border) shared by FileDetailPanel.tsx/BatchEditPanel.tsx/etc.'s own `panel` const,
+  // since this bar is the same kind of persistent overlay chrome, just docked to the bottom
+  // edge instead of a side/center panel.
+  const border = "border-border bg-surface";
   const meta = "text-slate-500";
-  const iconBtn = isDark
-    ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20"
-    : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20";
+  // Reuses ThemeSelector.tsx's established bordered-icon-button idle/hover pattern (border
+  // changes on hover, not a background fill). The idle TEXT color is text-ink-secondary, not
+  // text-ink-muted: this button's original literal was isDark ? "text-slate-300" : "text-slate-600"
+  // — byte-exact to --rt-ink-secondary's dark value (#cbd5e1) and one step higher-contrast than
+  // its light value (#334155 vs the old slate-600), not the dimmer --rt-ink-muted role (which
+  // would drop dark-theme contrast from ~11.6:1 to ~3.6:1 and light from ~7.6:1 to ~2.6:1,
+  // both well under WCAG SC 1.4.11's 3:1 minimum for a UI-control icon rendered via
+  // fill="currentColor" — caught in Reviewer pass on this task). hover:text-ink is byte-exact
+  // for light (old hover:text-slate-900 = --rt-ink's light value #0f172a) and still moves toward
+  // higher contrast for dark (old hover:text-slate-100, new resolves to slate-200) — same
+  // "shift toward higher contrast, never lower" discipline documented in index.css's chrome-ink
+  // consolidation. The border classes are unchanged (border-border/hover:border-ink-muted) since
+  // the contrast finding is specifically about the icon's rendered fill color, not the border.
+  const iconBtn = "border-border text-ink-secondary hover:text-ink hover:border-ink-muted";
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-40 border-t px-6 py-3 flex items-center gap-4 shadow-2xl ${border}`}>
@@ -75,7 +89,7 @@ export default function AudioPlayerBar({ file, isPlaying, isDark, onPlayingChang
       />
 
       <div className="min-w-0 w-56 flex-shrink-0">
-        <p className={`text-sm font-medium truncate ${isDark ? "text-slate-200" : "text-slate-800"}`} title={file.filename}>
+        <p className="text-sm font-medium truncate text-ink" title={file.filename}>
           {file.filename}
         </p>
         {error ? (
@@ -130,7 +144,7 @@ export default function AudioPlayerBar({ file, isPlaying, isDark, onPlayingChang
       <button
         onClick={onClose}
         aria-label="Close player"
-        className={`p-1.5 rounded-[var(--rt-radius)] transition-colors flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+        className="p-1.5 rounded-[var(--rt-radius)] transition-colors flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
