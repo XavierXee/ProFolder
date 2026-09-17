@@ -17,14 +17,12 @@ function SortTh({
   sortKey,
   filters,
   onSortChange,
-  isDark,
   label,
   className = "",
 }: {
   sortKey: SortKey;
   filters: FileFilters;
   onSortChange: (key: SortKey) => void;
-  isDark: boolean;
   label: string;
   className?: string;
 }) {
@@ -34,9 +32,7 @@ function SortTh({
       <button
         onClick={() => onSortChange(sortKey)}
         aria-label={`Sort by ${label}`}
-        className={`flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider focus:outline-none focus-visible:underline transition-colors ${
-          isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"
-        }`}
+        className="flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted hover:text-ink focus:outline-none focus-visible:underline transition-colors"
       >
         {label}
         {sortIndicator(filters, sortKey)}
@@ -50,8 +46,6 @@ export function FileTable({
   filters,
   loading,
   flashId,
-  isDark,
-  isProFolder = false,
   selectedId,
   selectedIds,
   playingFileId,
@@ -67,8 +61,6 @@ export function FileTable({
   filters: FileFilters;
   loading: boolean;
   flashId: string | null;
-  isDark: boolean;
-  isProFolder?: boolean;
   selectedId: string | null;
   selectedIds: Set<string>;
   playingFileId: string | null;
@@ -90,19 +82,19 @@ export function FileTable({
     }
   }, [flashId]);
 
-  const thBase = `px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`;
+  const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted";
   const staticTh = `${thBase} text-left`;
   const allSelected = files.length > 0 && files.every((f) => selectedIds.has(f.id));
 
   return (
     <table className="w-full border-collapse table-fixed" aria-label="Audio files">
       <caption className="sr-only">Scanned audio files, sortable by column</caption>
-      <thead className={`border-b sticky top-0 z-10 ${isDark ? "bg-[#0d0f14] border-white/8" : "bg-[#f4f6f9] border-black/8"}`}>
+      <thead className="border-b sticky top-0 z-10 bg-canvas border-border">
         <tr>
           <th scope="col" className={`${thBase} text-center w-[4%]`}>
             <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible files" />
           </th>
-          <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Track / File" className="w-[24%]" />
+          <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} label="Track / File" className="w-[24%]" />
           <th scope="col" className={`${staticTh} w-[12%]`}>
             Status
           </th>
@@ -112,9 +104,9 @@ export function FileTable({
           <th scope="col" className={`${staticTh} w-[10%]`}>
             Project
           </th>
-          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Score" className="w-[8%]" />
-          <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Location" className="w-[16%]" />
-          <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Modified" className="w-[10%]" />
+          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} label="Score" className="w-[8%]" />
+          <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} label="Location" className="w-[16%]" />
+          <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} label="Modified" className="w-[10%]" />
         </tr>
       </thead>
       <tbody>
@@ -127,8 +119,6 @@ export function FileTable({
             <FileRow
               key={file.id}
               file={file}
-              isDark={isDark}
-              isProFolder={isProFolder}
               isSelected={file.id === selectedId}
               isFlash={file.id === flashId}
               flashRef={flashRef}

@@ -23,8 +23,6 @@ export function computeLocation(relativePath: string): string {
 
 export function FileRow({
   file,
-  isDark,
-  isProFolder = false,
   isSelected,
   isFlash,
   flashRef,
@@ -35,8 +33,6 @@ export function FileRow({
   onPlayClick,
 }: {
   file: AudioFile;
-  isDark: boolean;
-  isProFolder?: boolean;
   isSelected: boolean;
   isFlash: boolean;
   flashRef: RefObject<HTMLTableRowElement> | null;
@@ -53,18 +49,8 @@ export function FileRow({
       ref={isFlash ? flashRef : null}
       onClick={onClick}
       aria-selected={isSelected}
-      className={`border-b cursor-pointer transition-colors ${
-        isProFolder
-          ? isSelected
-            ? "border-border bg-surface-selected"
-            : "border-border bg-surface hover:bg-surface-hover"
-          : isSelected
-            ? isDark
-              ? "border-white/5 bg-blue-500/8"
-              : "border-black/5 bg-blue-50"
-            : isDark
-              ? "border-white/5 hover:bg-white/3"
-              : "border-black/5 hover:bg-black/3"
+      className={`border-b cursor-pointer transition-colors border-border ${
+        isSelected ? "bg-surface-selected" : "bg-surface hover:bg-surface-hover"
       }`}
     >
       <td className="px-4 py-3.5 text-center">
@@ -79,13 +65,7 @@ export function FileRow({
             }}
             aria-label={isPlayingThis ? `Pause ${file.filename}` : `Play ${file.filename}`}
             className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-              isPlayingThis
-                ? isDark
-                  ? "text-blue-400 bg-blue-500/15"
-                  : "text-blue-700 bg-blue-100"
-                : isDark
-                  ? "text-slate-400 hover:text-slate-100 hover:bg-white/10"
-                  : "text-slate-500 hover:text-slate-900 hover:bg-black/10"
+              isPlayingThis ? "text-accent-ink bg-accent" : "text-ink-muted hover:text-ink hover:bg-surface-hover"
             }`}
           >
             {isPlayingThis ? (
@@ -98,16 +78,10 @@ export function FileRow({
               </svg>
             )}
           </button>
-          {isProFolder && (
-            <span aria-hidden="true" className={`w-[3px] h-[22px] flex-none ${isSelected ? "bg-chrome" : "bg-border"}`} />
-          )}
+          <span aria-hidden="true" className={`hidden profolder:flex w-[3px] h-[22px] flex-none ${isSelected ? "bg-chrome" : "bg-border"}`} />
           <div className="min-w-0">
-            <div
-              className={`text-sm truncate ${isProFolder ? (isSelected ? "font-semibold" : "font-medium") : "font-medium"} ${isDark ? "text-slate-200" : "text-slate-800"}`}
-            >
-              {file.filename}
-            </div>
-            <div className={`text-xs font-mono mt-0.5 ${isDark ? "text-slate-600" : "text-slate-400"}`}>{file.extension}</div>
+            <div className={`text-sm truncate font-medium ${isSelected ? "profolder:font-semibold" : ""} text-ink`}>{file.filename}</div>
+            <div className="text-xs font-mono mt-0.5 text-ink-muted">{file.extension}</div>
           </div>
         </div>
       </td>
@@ -116,15 +90,13 @@ export function FileRow({
       </td>
       <td className="px-4 py-3.5 max-w-40">
         {file.tags.length === 0 ? (
-          <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>—</span>
+          <span className="text-xs font-mono text-ink-faint">—</span>
         ) : (
           <div className="flex flex-wrap gap-1">
             {file.tags.map((tag) => (
               <span
                 key={tag}
-                className={`inline-flex items-center px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${
-                  isProFolder ? "bg-surface border border-border text-ink-muted" : isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-600"
-                }`}
+                className="inline-flex items-center px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono bg-surface border border-border text-ink-muted"
               >
                 {tag}
               </span>
@@ -133,18 +105,18 @@ export function FileRow({
         )}
       </td>
       <td className="px-4 py-3.5">
-        <span className={`block truncate text-xs font-mono ${isDark ? "text-slate-400" : "text-slate-600"}`}>{file.projectId ?? "—"}</span>
+        <span className="block truncate text-xs font-mono text-ink-muted">{file.projectId ?? "—"}</span>
       </td>
       <td className="px-4 py-3.5 min-w-28">
         <ScoreBadge score={file.score} />
       </td>
       <td className="px-4 py-3.5 max-w-xs">
-        <p className={`text-xs leading-relaxed truncate ${isDark ? "text-slate-500" : "text-slate-400"}`} title={file.path}>
+        <p className="text-xs leading-relaxed truncate text-ink-muted" title={file.path}>
           {location}
         </p>
       </td>
       <td className="px-4 py-3.5 whitespace-nowrap">
-        <span className={`text-xs font-mono ${isDark ? "text-slate-500" : "text-slate-400"}`}>{formatTime(file.modifiedAt)}</span>
+        <span className="text-xs font-mono text-ink-muted">{formatTime(file.modifiedAt)}</span>
       </td>
     </tr>
   );

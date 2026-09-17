@@ -242,7 +242,6 @@ export default function CustomFilesTabPanel({
           filters={filters}
           loading={loading}
           flashId={flashId}
-          isDark={isDark}
           selectedId={selectedId}
           selectedIds={selectedFileIds}
           playingFileId={playingFileId}

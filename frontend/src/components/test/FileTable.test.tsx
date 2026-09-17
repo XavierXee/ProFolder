@@ -40,7 +40,6 @@ function renderTable(overrides: Partial<Parameters<typeof FileTable>[0]> = {}) {
     filters: {} as FileFilters,
     loading: false,
     flashId: null,
-    isDark: true,
     selectedId: null,
     selectedIds: new Set<string>(),
     playingFileId: null,
@@ -232,7 +231,6 @@ describe("FileTable - loading/empty/populated states", () => {
         filters={{}}
         loading={false}
         flashId={null}
-        isDark={true}
         selectedId={null}
         selectedIds={new Set()}
         playingFileId="f1"
@@ -294,18 +292,32 @@ describe("FileTable - select-all checkbox", () => {
   });
 });
 
-describe("FileTable - isProFolder pass-through to FileRow", () => {
-  it("threads isProFolder through to rows, rendering the ProFolder accent-bar element", () => {
-    const files = [makeFile({ id: "f1", filename: "one.wav" })];
-    const { container } = renderTable({ loading: false, files, isProFolder: true });
-
-    expect(getAccentBar(container)).not.toBeNull();
-  });
-
-  it("does not render the ProFolder accent-bar element when isProFolder is omitted (defaults to false)", () => {
+describe("FileTable - accent-bar rendering (CSS-driven via profolder: variant, no isProFolder prop)", () => {
+  it("renders the ProFolder accent-bar element in every row unconditionally (visibility handled purely by CSS)", () => {
     const files = [makeFile({ id: "f1", filename: "one.wav" })];
     const { container } = renderTable({ loading: false, files });
 
-    expect(getAccentBar(container)).toBeNull();
+    const accentBar = getAccentBar(container);
+    expect(accentBar).not.toBeNull();
+    expect(accentBar).toHaveClass("hidden");
+    expect(accentBar).toHaveClass("profolder:flex");
+  });
+});
+
+describe("FileTable - header token classes", () => {
+  it("gives the sticky header row the bg-canvas/border-border tokens", () => {
+    const { container } = renderTable();
+
+    const thead = container.querySelector("thead");
+    expect(thead).toHaveClass("bg-canvas");
+    expect(thead).toHaveClass("border-border");
+  });
+
+  it("gives sort-header buttons the text-ink-muted token with a hover:text-ink accent", () => {
+    renderTable();
+
+    const button = within(screen.getByRole("columnheader", { name: /Track \/ File/ })).getByRole("button");
+    expect(button).toHaveClass("text-ink-muted");
+    expect(button).toHaveClass("hover:text-ink");
   });
 });

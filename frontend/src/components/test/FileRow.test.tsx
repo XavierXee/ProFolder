@@ -36,7 +36,6 @@ function getAccentBar(container: HTMLElement): HTMLElement | null {
 function renderRow(overrides: Partial<Parameters<typeof FileRow>[0]> = {}) {
   const props = {
     file: makeFile(),
-    isDark: true,
     isSelected: false,
     isFlash: false,
     flashRef: null,
@@ -221,49 +220,58 @@ describe("FileRow", () => {
   });
 });
 
-describe("FileRow - ProFolder theme", () => {
-  it("selected row: uses bg-surface-selected, a bg-chrome accent bar, and font-semibold on the name", () => {
-    const { container } = renderRow({ isProFolder: true, isSelected: true, file: makeFile({ filename: "beat.wav" }) });
+describe("FileRow - token-driven styling (no isDark/isProFolder props)", () => {
+  it("selected row: uses the bg-surface-selected token, border-border, and font-semibold (via the profolder: variant) on the name", () => {
+    const { container } = renderRow({ isSelected: true, file: makeFile({ filename: "beat.wav" }) });
 
     const row = container.querySelector("tr");
     expect(row).toHaveClass("bg-surface-selected");
+    expect(row).toHaveClass("border-border");
     expect(row).not.toHaveClass("bg-surface");
 
     const name = screen.getByText("beat.wav");
-    expect(name).toHaveClass("font-semibold");
-    expect(name).not.toHaveClass("font-medium");
-
-    const accentBar = getAccentBar(container);
-    expect(accentBar).not.toBeNull();
-    expect(accentBar).toHaveClass("bg-chrome");
-    expect(accentBar).not.toHaveClass("bg-border");
+    expect(name).toHaveClass("font-medium");
+    expect(name).toHaveClass("profolder:font-semibold");
   });
 
-  it("unselected row: uses bg-surface, a bg-border accent bar, and font-medium on the name", () => {
-    const { container } = renderRow({ isProFolder: true, isSelected: false, file: makeFile({ filename: "beat.wav" }) });
+  it("unselected row: uses the bg-surface/hover:bg-surface-hover tokens, border-border, and plain font-medium (no profolder: variant) on the name", () => {
+    const { container } = renderRow({ isSelected: false, file: makeFile({ filename: "beat.wav" }) });
 
     const row = container.querySelector("tr");
     expect(row).toHaveClass("bg-surface");
+    expect(row).toHaveClass("hover:bg-surface-hover");
+    expect(row).toHaveClass("border-border");
     expect(row).not.toHaveClass("bg-surface-selected");
 
     const name = screen.getByText("beat.wav");
     expect(name).toHaveClass("font-medium");
-    expect(name).not.toHaveClass("font-semibold");
+    expect(name).not.toHaveClass("profolder:font-semibold");
+  });
+
+  it("always renders the ProFolder accent-bar element (visibility is CSS-driven via `hidden profolder:flex`, not a JS conditional)", () => {
+    const { container } = renderRow({ isSelected: true, file: makeFile({ filename: "beat.wav" }) });
 
     const accentBar = getAccentBar(container);
     expect(accentBar).not.toBeNull();
+    expect(accentBar).toHaveClass("hidden");
+    expect(accentBar).toHaveClass("profolder:flex");
+    expect(accentBar).toHaveClass("bg-chrome");
+    expect(accentBar).not.toHaveClass("bg-border");
+  });
+
+  it("accent-bar uses bg-border (not bg-chrome) when the row is unselected, and still renders unconditionally", () => {
+    const { container } = renderRow({ isSelected: false });
+
+    const accentBar = getAccentBar(container);
+    expect(accentBar).not.toBeNull();
+    expect(accentBar).toHaveClass("hidden");
+    expect(accentBar).toHaveClass("profolder:flex");
     expect(accentBar).toHaveClass("bg-border");
     expect(accentBar).not.toHaveClass("bg-chrome");
   });
 
-  it("does not render an accent bar element when isProFolder is false", () => {
-    const { container } = renderRow({ isProFolder: false, isSelected: true });
-
-    expect(getAccentBar(container)).toBeNull();
-  });
-
   it("renders tag chips with the display-chip treatment (bg-surface/border-border/text-ink-muted)", () => {
-    renderRow({ isProFolder: true, file: makeFile({ tags: ["rock"] }) });
+    renderRow({ file: makeFile({ tags: ["rock"] }) });
 
     const chip = screen.getByText("rock");
     expect(chip).toHaveClass("bg-surface");
@@ -273,7 +281,7 @@ describe("FileRow - ProFolder theme", () => {
   });
 
   it("applies the same display-chip tag treatment regardless of whether the row is selected", () => {
-    renderRow({ isProFolder: true, isSelected: true, file: makeFile({ tags: ["rock"] }) });
+    renderRow({ isSelected: true, file: makeFile({ tags: ["rock"] }) });
 
     const chip = screen.getByText("rock");
     expect(chip).toHaveClass("bg-surface");
@@ -283,7 +291,6 @@ describe("FileRow - ProFolder theme", () => {
 
   it("uses bg-chrome only on the selected-row accent bar, nowhere else in the row", () => {
     const { container } = renderRow({
-      isProFolder: true,
       isSelected: true,
       file: makeFile({ tags: ["rock"], projectId: "proj-1" }),
     });
@@ -292,46 +299,44 @@ describe("FileRow - ProFolder theme", () => {
     expect(chromeEls).toHaveLength(1);
     expect(chromeEls[0]).toHaveAttribute("aria-hidden", "true");
   });
-});
 
-describe("FileRow - Light/Dark regression guard (isProFolder omitted)", () => {
-  it("selected row still uses the pre-existing blue-highlight classes for dark theme, with no ProFolder tokens", () => {
-    const { container } = renderRow({ isDark: true, isSelected: true, file: makeFile({ filename: "beat.wav" }) });
+  it("gives the filename text-ink and the empty-tags placeholder text-ink-faint", () => {
+    // projectId is set so only the tags cell (not also the project cell) renders "—",
+    // keeping this assertion unambiguous — the project cell's own "—" fallback uses
+    // text-ink-muted, a distinct (less dim) token from the tags cell's text-ink-faint.
+    const { container } = renderRow({ file: makeFile({ filename: "beat.wav", tags: [], projectId: "proj-1" }) });
 
-    const row = container.querySelector("tr");
-    expect(row).toHaveClass("bg-blue-500/8");
-    expect(row).not.toHaveClass("bg-surface-selected");
-
-    const name = screen.getByText("beat.wav");
-    expect(name).toHaveClass("font-medium");
-    expect(name).not.toHaveClass("font-semibold");
-
-    expect(getAccentBar(container)).toBeNull();
+    expect(screen.getByText("beat.wav")).toHaveClass("text-ink");
+    const tagsCell = container.querySelectorAll("td")[3];
+    expect(tagsCell.textContent).toBe("—");
+    expect(tagsCell.querySelector("span")).toHaveClass("text-ink-faint");
   });
 
-  it("selected row still uses the pre-existing blue-highlight classes for light theme, with no ProFolder tokens", () => {
-    const { container } = renderRow({ isDark: false, isSelected: true, file: makeFile({ filename: "beat.wav" }) });
+  it("colors the playing-state play button with bg-accent/text-accent-ink, and the idle button with text-ink-muted", () => {
+    const { rerender } = renderRow({ file: makeFile({ filename: "beat.wav" }), isPlayingThis: false });
 
-    const row = container.querySelector("tr");
-    expect(row).toHaveClass("bg-blue-50");
-    expect(row).not.toHaveClass("bg-surface-selected");
-  });
+    expect(screen.getByRole("button", { name: "Play beat.wav" })).toHaveClass("text-ink-muted");
 
-  it("unselected row tag chips still use the pre-existing dark-theme classes", () => {
-    renderRow({ isDark: true, file: makeFile({ tags: ["rock"] }) });
+    rerender(
+      <table>
+        <tbody>
+          <FileRow
+            file={makeFile({ filename: "beat.wav" })}
+            isSelected={false}
+            isFlash={false}
+            flashRef={null}
+            onClick={() => {}}
+            checked={false}
+            onToggleCheck={() => {}}
+            isPlayingThis={true}
+            onPlayClick={() => {}}
+          />
+        </tbody>
+      </table>
+    );
 
-    const chip = screen.getByText("rock");
-    expect(chip).toHaveClass("bg-white/5");
-    expect(chip).toHaveClass("text-slate-400");
-    expect(chip).not.toHaveClass("bg-surface");
-  });
-
-  it("unselected row tag chips still use the pre-existing light-theme classes", () => {
-    renderRow({ isDark: false, file: makeFile({ tags: ["rock"] }) });
-
-    const chip = screen.getByText("rock");
-    expect(chip).toHaveClass("bg-slate-100");
-    expect(chip).toHaveClass("text-slate-600");
-    expect(chip).not.toHaveClass("bg-surface");
+    const playingButton = screen.getByRole("button", { name: "Pause beat.wav" });
+    expect(playingButton).toHaveClass("bg-accent");
+    expect(playingButton).toHaveClass("text-accent-ink");
   });
 });

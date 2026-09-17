@@ -418,21 +418,21 @@ describe("ProjectsTable - select-all checkbox", () => {
   });
 });
 
-describe("ProjectsTable - ProFolder theme", () => {
-  it("selected row: uses bg-surface-selected, a bg-chrome accent bar, and font-semibold on the name", () => {
+describe("ProjectsTable - token-driven row styling (no isProFolder prop)", () => {
+  it("selected row: uses bg-surface-selected, border-border, a bg-chrome accent bar, and font-semibold (via the profolder: variant) on the name", () => {
     const { container } = renderTable({
-      isProFolder: true,
       selectedId: "p1",
       projects: [makeProject({ id: "p1", name: "Song One" })],
     });
 
     const row = container.querySelector("tbody tr");
     expect(row).toHaveClass("bg-surface-selected");
+    expect(row).toHaveClass("border-border");
     expect(row).not.toHaveClass("bg-surface");
 
     const name = screen.getByText("Song One");
-    expect(name).toHaveClass("font-semibold");
-    expect(name).not.toHaveClass("font-medium");
+    expect(name).toHaveClass("font-medium");
+    expect(name).toHaveClass("profolder:font-semibold");
 
     const accentBar = getAccentBar(container);
     expect(accentBar).not.toBeNull();
@@ -440,20 +440,20 @@ describe("ProjectsTable - ProFolder theme", () => {
     expect(accentBar).not.toHaveClass("bg-border");
   });
 
-  it("unselected row: uses bg-surface, a bg-border accent bar, and font-medium on the name", () => {
+  it("unselected row: uses bg-surface, hover:bg-surface-hover, a bg-border accent bar, and plain font-medium (no profolder: variant) on the name", () => {
     const { container } = renderTable({
-      isProFolder: true,
       selectedId: null,
       projects: [makeProject({ id: "p1", name: "Song One" })],
     });
 
     const row = container.querySelector("tbody tr");
     expect(row).toHaveClass("bg-surface");
+    expect(row).toHaveClass("hover:bg-surface-hover");
     expect(row).not.toHaveClass("bg-surface-selected");
 
     const name = screen.getByText("Song One");
     expect(name).toHaveClass("font-medium");
-    expect(name).not.toHaveClass("font-semibold");
+    expect(name).not.toHaveClass("profolder:font-semibold");
 
     const accentBar = getAccentBar(container);
     expect(accentBar).not.toBeNull();
@@ -461,18 +461,20 @@ describe("ProjectsTable - ProFolder theme", () => {
     expect(accentBar).not.toHaveClass("bg-chrome");
   });
 
-  it("does not render an accent bar element when isProFolder is false", () => {
+  it("always renders the ProFolder accent-bar element (visibility is CSS-driven via `hidden profolder:flex`, not a JS conditional)", () => {
     const { container } = renderTable({
-      isProFolder: false,
       selectedId: "p1",
       projects: [makeProject({ id: "p1", name: "Song One" })],
     });
 
-    expect(getAccentBar(container)).toBeNull();
+    const accentBar = getAccentBar(container);
+    expect(accentBar).not.toBeNull();
+    expect(accentBar).toHaveClass("hidden");
+    expect(accentBar).toHaveClass("profolder:flex");
   });
 
   it("renders tag chips with the display-chip treatment (bg-surface/border-border/text-ink-muted)", () => {
-    renderTable({ isProFolder: true, projects: [makeProject({ id: "p1", tags: ["rock"] })] });
+    renderTable({ projects: [makeProject({ id: "p1", tags: ["rock"] })] });
 
     const chip = screen.getByText("rock");
     expect(chip).toHaveClass("bg-surface");
@@ -483,7 +485,6 @@ describe("ProjectsTable - ProFolder theme", () => {
 
   it("applies the same display-chip tag treatment regardless of whether the row is selected", () => {
     renderTable({
-      isProFolder: true,
       selectedId: "p1",
       projects: [makeProject({ id: "p1", tags: ["rock"] })],
     });
@@ -496,7 +497,6 @@ describe("ProjectsTable - ProFolder theme", () => {
 
   it("uses bg-chrome only on the selected-row accent bar, nowhere else in the row", () => {
     const { container } = renderTable({
-      isProFolder: true,
       selectedId: "p1",
       projects: [makeProject({ id: "p1", tags: ["rock"] })],
     });
@@ -505,54 +505,33 @@ describe("ProjectsTable - ProFolder theme", () => {
     expect(chromeEls).toHaveLength(1);
     expect(chromeEls[0]).toHaveAttribute("aria-hidden", "true");
   });
-});
 
-describe("ProjectsTable - Light/Dark regression guard (isProFolder omitted)", () => {
-  it("selected row still uses the pre-existing blue-highlight classes for dark theme, with no ProFolder tokens", () => {
-    const { container } = renderTable({
-      isDark: true,
-      selectedId: "p1",
-      projects: [makeProject({ id: "p1", name: "Song One" })],
+  it("colors the dawType label with text-ink when detected, and text-ink-muted for a plain folder", () => {
+    renderTable({
+      projects: [
+        makeProject({ id: "p1", dawType: "ableton", detectedVia: ".als file" }),
+        makeProject({ id: "p2", dawType: undefined }),
+      ],
     });
 
-    const row = container.querySelector("tbody tr");
-    expect(row).toHaveClass("bg-blue-500/8");
-    expect(row).not.toHaveClass("bg-surface-selected");
-
-    const name = screen.getByText("Song One");
-    expect(name).toHaveClass("font-medium");
-    expect(name).not.toHaveClass("font-semibold");
-
-    expect(getAccentBar(container)).toBeNull();
+    expect(screen.getByText("Ableton")).toHaveClass("text-ink");
+    expect(screen.getByText("Folder")).toHaveClass("text-ink-muted");
   });
 
-  it("selected row still uses the pre-existing blue-highlight classes for light theme, with no ProFolder tokens", () => {
-    const { container } = renderTable({
-      isDark: false,
-      selectedId: "p1",
-      projects: [makeProject({ id: "p1", name: "Song One" })],
+  it("colors the video/image media icons with text-notice/text-success tokens", () => {
+    renderTable({
+      projects: [makeProject({ id: "p1", hasVideo: true }), makeProject({ id: "p2", hasImage: true })],
     });
 
-    const row = container.querySelector("tbody tr");
-    expect(row).toHaveClass("bg-blue-50");
-    expect(row).not.toHaveClass("bg-surface-selected");
+    expect(screen.getByLabelText("Contains video files")).toHaveClass("text-notice");
+    expect(screen.getByLabelText("Contains image files")).toHaveClass("text-success");
   });
 
-  it("unselected row tag chips still use the pre-existing dark-theme classes", () => {
-    renderTable({ isDark: true, projects: [makeProject({ id: "p1", tags: ["rock"] })] });
+  it("gives empty-state placeholders ('—') the text-ink-faint token", () => {
+    renderTable({ projects: [makeProject({ id: "p1", tags: [], hasVideo: false, hasImage: false })] });
 
-    const chip = screen.getByText("rock");
-    expect(chip).toHaveClass("bg-white/5");
-    expect(chip).toHaveClass("text-slate-400");
-    expect(chip).not.toHaveClass("bg-surface");
-  });
-
-  it("unselected row tag chips still use the pre-existing light-theme classes", () => {
-    renderTable({ isDark: false, projects: [makeProject({ id: "p1", tags: ["rock"] })] });
-
-    const chip = screen.getByText("rock");
-    expect(chip).toHaveClass("bg-slate-100");
-    expect(chip).toHaveClass("text-slate-600");
-    expect(chip).not.toHaveClass("bg-surface");
+    const placeholders = screen.getAllByText("—");
+    expect(placeholders.length).toBeGreaterThan(0);
+    placeholders.forEach((el) => expect(el).toHaveClass("text-ink-faint"));
   });
 });

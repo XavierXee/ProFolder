@@ -19,14 +19,12 @@ function SortTh({
   sortKey,
   filters,
   onSortChange,
-  isDark,
   label,
   className = "text-left",
 }: {
   sortKey: SortKey;
   filters: ProjectFilters;
   onSortChange: (key: SortKey) => void;
-  isDark: boolean;
   label: string;
   className?: string;
 }) {
@@ -36,9 +34,7 @@ function SortTh({
       <button
         onClick={() => onSortChange(sortKey)}
         aria-label={`Sort by ${label}`}
-        className={`flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider focus:outline-none focus-visible:underline transition-colors ${
-          isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"
-        }`}
+        className="flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted hover:text-ink focus:outline-none focus-visible:underline transition-colors"
       >
         {label}
         {sortIndicator(filters, sortKey)}
@@ -65,7 +61,6 @@ export function ProjectsTable({
   pageSize,
   loading,
   isDark,
-  isProFolder = false,
   selectedId,
   selectedIds,
   filters,
@@ -83,7 +78,6 @@ export function ProjectsTable({
   pageSize: number;
   loading: boolean;
   isDark: boolean;
-  isProFolder?: boolean;
   selectedId?: string | null;
   selectedIds: Set<string>;
   filters: ProjectFilters;
@@ -96,8 +90,8 @@ export function ProjectsTable({
    * so the last rows don't end up permanently hidden behind it. */
   playerActive?: boolean;
 }) {
-  const meta = isDark ? "text-slate-600" : "text-slate-400";
-  const thBase = `px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`;
+  const meta = "text-ink-muted";
+  const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted";
   const staticTh = `${thBase} text-center`;
   const leftTh = `${thBase} text-left`;
   const allSelected = projects.length > 0 && projects.every((p) => selectedIds.has(p.id));
@@ -106,12 +100,12 @@ export function ProjectsTable({
     <div className="flex flex-col flex-1 min-h-0">
       <main className={`flex-1 overflow-auto ${playerActive ? "pb-20" : ""}`} aria-live="polite" aria-label="Project folders">
         <table className="w-full border-collapse table-fixed" aria-label="Project folders">
-          <thead className={`border-b sticky top-0 z-10 ${isDark ? "bg-[#0d0f14] border-white/8" : "bg-[#f4f6f9] border-black/8"}`}>
+          <thead className="border-b sticky top-0 z-10 bg-canvas border-border">
             <tr>
               <th scope="col" className={`${staticTh} w-[4%]`}>
                 <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible project folders" />
               </th>
-              <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} isDark={isDark} label="Project Folder" className="text-left w-[24%]" />
+              <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} label="Project Folder" className="text-left w-[24%]" />
               <th scope="col" className={`${staticTh} w-[9%]`}>
                 Type
               </th>
@@ -121,14 +115,14 @@ export function ProjectsTable({
               <th scope="col" className={`${leftTh} w-[15%]`}>
                 Tags
               </th>
-              <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center w-[9%]" label="Score" />
+              <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} className="text-center w-[9%]" label="Score" />
               <th scope="col" className={`${staticTh} w-[9%]`}>
                 Audio Files
               </th>
               <th scope="col" className={`${staticTh} w-[8%]`}>
                 Media
               </th>
-              <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} isDark={isDark} className="text-center w-[11%]" label="Modified" />
+              <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} className="text-center w-[11%]" label="Modified" />
             </tr>
           </thead>
           <tbody>
@@ -156,18 +150,8 @@ export function ProjectsTable({
                     key={project.id}
                     onClick={() => onRowClick(project.id)}
                     aria-selected={isSelected}
-                    className={`border-b cursor-pointer transition-colors ${
-                      isProFolder
-                        ? isSelected
-                          ? "border-border bg-surface-selected"
-                          : "border-border bg-surface hover:bg-surface-hover"
-                        : isSelected
-                          ? isDark
-                            ? "border-white/5 bg-blue-500/8"
-                            : "border-black/5 bg-blue-50"
-                          : isDark
-                            ? "border-white/5 hover:bg-white/3"
-                            : "border-black/5 hover:bg-black/3"
+                    className={`border-b cursor-pointer transition-colors border-border ${
+                      isSelected ? "bg-surface-selected" : "bg-surface hover:bg-surface-hover"
                     }`}
                   >
                     <td className="px-4 py-3.5 text-center">
@@ -175,13 +159,9 @@ export function ProjectsTable({
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">
-                        {isProFolder && (
-                          <span aria-hidden="true" className={`w-[3px] h-[22px] flex-none ${isSelected ? "bg-chrome" : "bg-border"}`} />
-                        )}
+                        <span aria-hidden="true" className={`hidden profolder:flex w-[3px] h-[22px] flex-none ${isSelected ? "bg-chrome" : "bg-border"}`} />
                         <div className="min-w-0">
-                          <div
-                            className={`text-sm truncate ${isProFolder ? (isSelected ? "font-semibold" : "font-medium") : "font-medium"} ${isDark ? "text-slate-200" : "text-slate-800"}`}
-                          >
+                          <div className={`text-sm truncate font-medium ${isSelected ? "profolder:font-semibold" : ""} text-ink`}>
                             {project.name}
                           </div>
                           <div className={`text-xs font-mono mt-0.5 truncate max-w-xs ${meta}`} title={project.path}>
@@ -193,7 +173,7 @@ export function ProjectsTable({
                     <td className="px-4 py-3.5 text-center">
                       <span
                         title={typeTooltip}
-                        className={`text-xs font-mono cursor-default ${project.dawType ? (isDark ? "text-blue-400" : "text-blue-700") : isDark ? "text-slate-500" : "text-slate-500"}`}
+                        className={`text-xs font-mono cursor-default ${project.dawType ? "text-ink" : "text-ink-muted"}`}
                       >
                         {typeLabel}
                       </span>
@@ -203,15 +183,13 @@ export function ProjectsTable({
                     </td>
                     <td className="px-4 py-3.5 max-w-40">
                       {project.tags.length === 0 ? (
-                        <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>—</span>
+                        <span className="text-xs font-mono text-ink-faint">—</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {project.tags.map((tag) => (
                             <span
                               key={tag}
-                              className={`inline-flex items-center px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${
-                                isProFolder ? "bg-surface border border-border text-ink-muted" : isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-600"
-                              }`}
+                              className="inline-flex items-center px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono bg-surface border border-border text-ink-muted"
                             >
                               {tag}
                             </span>
@@ -223,13 +201,13 @@ export function ProjectsTable({
                       <ScoreBadge score={project.score} />
                     </td>
                     <td className="px-4 py-3.5 text-center">
-                      <span className={`text-sm font-mono tabular-nums ${isDark ? "text-slate-300" : "text-slate-700"}`}>{project.audioFileCount}</span>
+                      <span className="text-sm font-mono tabular-nums text-ink">{project.audioFileCount}</span>
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       <div className="flex items-center justify-center gap-2">
                         {project.hasVideo && (
                           <svg
-                            className={`w-4 h-4 ${isDark ? "text-purple-400" : "text-purple-700"}`}
+                            className="w-4 h-4 text-notice"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -246,7 +224,7 @@ export function ProjectsTable({
                         )}
                         {project.hasImage && (
                           <svg
-                            className={`w-4 h-4 ${isDark ? "text-emerald-400" : "text-emerald-700"}`}
+                            className="w-4 h-4 text-success"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -261,16 +239,14 @@ export function ProjectsTable({
                             />
                           </svg>
                         )}
-                        {!project.hasVideo && !project.hasImage && (
-                          <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>—</span>
-                        )}
+                        {!project.hasVideo && !project.hasImage && <span className="text-xs font-mono text-ink-faint">—</span>}
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       {project.contentModifiedAt === null ? (
-                        <span className={`text-xs font-mono ${isDark ? "text-slate-700" : "text-slate-400"}`}>—</span>
+                        <span className="text-xs font-mono text-ink-faint">—</span>
                       ) : (
-                        <span className={`text-xs font-mono ${isDark ? "text-slate-500" : "text-slate-400"}`}>{formatTime(project.contentModifiedAt)}</span>
+                        <span className="text-xs font-mono text-ink-muted">{formatTime(project.contentModifiedAt)}</span>
                       )}
                     </td>
                   </tr>
