@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import ProjectDetailPanel from "../ProjectDetailPanel.js";
 import type { Project } from "../../types.js";
 import type { FolderNode, NestedDawProjectFile, ProjectDetail, ProjectDuplicatesResult } from "../../api/client.js";
+import { STATUS_BADGE, STATUS_PILL, STATUS_PILL_UNSELECTED } from "../../statusStyles.js";
 
 vi.mock("../../api/client.js", () => ({
   getProjectDetail: vi.fn(),
@@ -81,7 +82,6 @@ function makeDawFile(overrides: Partial<NestedDawProjectFile> = {}): NestedDawPr
 function renderPanel(overrides: Partial<Parameters<typeof ProjectDetailPanel>[0]> = {}) {
   const props = {
     project: makeProject(),
-    isDark: true,
     allTags: [] as string[],
     onClose: () => {},
     onReveal: () => {},
@@ -335,7 +335,6 @@ describe("ProjectDetailPanel - duplicates banner", () => {
     rerender(
       <ProjectDetailPanel
         project={projectB}
-        isDark={true}
         allTags={[]}
         onClose={() => {}}
         onReveal={() => {}}
@@ -505,7 +504,6 @@ describe("ProjectDetailPanel - re-sync on project id change", () => {
     rerender(
       <ProjectDetailPanel
         project={projectB}
-        isDark={true}
         allTags={[]}
         onClose={() => {}}
         onReveal={() => {}}
@@ -683,5 +681,86 @@ describe("ProjectDetailPanel - saving indicator", () => {
     await user.type(screen.getByRole("combobox"), "jazz{Enter}");
 
     expect(await screen.findByText("Saving…")).toBeInTheDocument();
+  });
+});
+
+// Token-class coverage: this panel is no longer isDark/isProFolder-driven (see App.tsx and
+// index.css's [data-theme] blocks), so these tests assert the token classes themselves are
+// present rather than any isDark-branch selection (removed from this file entirely).
+describe("ProjectDetailPanel - token-driven classes", () => {
+  it("applies STATUS_PILL's per-status classes to the selected status button and STATUS_PILL_UNSELECTED to the rest", () => {
+    renderPanel({ project: makeProject({ status: "draft" }) });
+
+    const draftBtn = screen.getByRole("button", { name: "Draft" });
+    const doneBtn = screen.getByRole("button", { name: "Done" });
+
+    for (const cls of STATUS_PILL.draft.split(" ")) {
+      expect(draftBtn.className).toContain(cls);
+    }
+    for (const cls of STATUS_PILL_UNSELECTED.split(" ")) {
+      expect(doneBtn.className).toContain(cls);
+    }
+  });
+
+  it("applies the danger-token classes to the Delete button", () => {
+    renderPanel();
+
+    const deleteBtn = screen.getByRole("button", { name: "Delete" });
+    expect(deleteBtn.className).toContain("border-danger-border");
+    expect(deleteBtn.className).toContain("text-danger");
+    expect(deleteBtn.className).toContain("hover:bg-danger-surface");
+  });
+
+  it("applies the scrim token class to the backdrop", () => {
+    const { container } = renderPanel();
+
+    const backdrop = container.querySelector('[aria-hidden="true"]');
+    expect(backdrop?.className).toContain("bg-scrim");
+  });
+
+  it("applies the info-token classes to the type badge when dawType is set, and the STATUS_BADGE 'unknown' classes when it is not", () => {
+    const { rerender, props } = renderPanel({ project: makeProject({ dawType: "ableton" }) });
+
+    const badge = screen.getByText("Ableton", { selector: "span" });
+    expect(badge.className).toContain("bg-info-surface");
+    expect(badge.className).toContain("text-info");
+    expect(badge.className).toContain("ring-info/30");
+
+    rerender(<ProjectDetailPanel {...props} project={makeProject({ dawType: undefined })} />);
+
+    const folderBadge = screen.getByText("Folder", { selector: "span" });
+    for (const cls of STATUS_BADGE.unknown.split(" ")) {
+      expect(folderBadge.className).toContain(cls);
+    }
+  });
+
+  it("applies the warning-token classes to the duplicate-warning banner", async () => {
+    mockGetProjectDuplicates.mockReset().mockResolvedValue(
+      makeDuplicatesResult({
+        matches: [
+          {
+            projectId: "p2",
+            projectName: "Other Song",
+            projectPath: "/music/Other Song",
+            matchingSampleCount: 2,
+            sampleCount: 3,
+            matchRatio: 0.6666,
+          },
+        ],
+      })
+    );
+    renderPanel();
+
+    const banner = (await screen.findByText(/Possible duplicate/)).closest("div");
+    expect(banner?.className).toContain("bg-warning-surface");
+    // Full-word check (not a substring check): "ring-warning-ring" is the real generated
+    // Tailwind utility for the --color-warning-ring token (the utility name is "ring-" +
+    // the full registered color name "warning-ring", not just "warning") — a plain
+    // `toContain("ring-warning")` substring check would pass even against the wrong class
+    // "ring-warning" (no token registered under that shorter name, so it silently renders
+    // no ring at all), which is exactly the bug this test caught during development via a
+    // compiled-CSS spot-check, not via this assertion as originally written.
+    expect(banner?.className.split(" ")).toContain("ring-warning-ring");
+    expect((await screen.findByText(/Possible duplicate/)).className).toContain("text-warning-ink");
   });
 });

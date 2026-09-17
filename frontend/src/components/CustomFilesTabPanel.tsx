@@ -258,7 +258,6 @@ export default function CustomFilesTabPanel({
 
       <FileDetailPanel
         file={selectedFile}
-        isDark={isDark}
         allTags={allTags}
         onClose={() => setSelectedId(null)}
         onSaveStatus={handleFileStatusSave}

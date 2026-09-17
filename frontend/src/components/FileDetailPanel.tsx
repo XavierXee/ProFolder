@@ -5,7 +5,7 @@ import StatusBadge from "./StatusBadge.js";
 import ScoreBadge from "./ScoreBadge.js";
 import { ScoreEditor } from "./ScoreEditor.js";
 import { TagEditor } from "./TagEditor.js";
-import { ALL_STATUSES, STATUS_LABELS, STATUS_PILL_DARK, STATUS_PILL_LIGHT, STATUS_PILL_UNSELECTED_DARK, STATUS_PILL_UNSELECTED_LIGHT } from "../statusStyles.js";
+import { ALL_STATUSES, STATUS_LABELS, STATUS_PILL, STATUS_PILL_UNSELECTED } from "../statusStyles.js";
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -26,7 +26,6 @@ export function formatFull(iso: string) {
 
 type Props = {
   file: AudioFile | null;
-  isDark: boolean;
   allTags?: string[];
   onClose: () => void;
   onSaveStatus: (id: string, status: TrackStatus) => Promise<void>;
@@ -39,7 +38,7 @@ type Props = {
   onFileOperation: (operation: CopyMoveDeleteOperation, file: AudioFile) => void;
 };
 
-export default function FileDetailPanel({ file, isDark, allTags = [], onClose, onSaveStatus, onSaveTags, onSaveScore, onReveal, onFileOperation }: Props) {
+export default function FileDetailPanel({ file, allTags = [], onClose, onSaveStatus, onSaveTags, onSaveScore, onReveal, onFileOperation }: Props) {
   const [status, setStatus] = useState<TrackStatus>("unknown");
   const [tags, setTags] = useState<string[]>([]);
   const [score, setScore] = useState<number | null>(null);
@@ -107,16 +106,18 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
     }
   }
 
-  const panel = isDark ? "bg-[#13161e] border-white/8 text-slate-200" : "bg-white border-black/8 text-slate-800";
+  const panel = "bg-surface border-border text-ink";
   const meta = "text-slate-500";
-  const divider = isDark ? "border-white/8" : "border-slate-200";
-  const statusColors = isDark ? STATUS_PILL_DARK : STATUS_PILL_LIGHT;
-  const statusUnselected = isDark ? STATUS_PILL_UNSELECTED_DARK : STATUS_PILL_UNSELECTED_LIGHT;
+  const divider = "border-border";
+  const outlineBtn =
+    "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover";
+  const dangerBtn =
+    "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 border-danger-border text-danger hover:bg-danger-surface";
 
   return (
     <>
       <div
-        className={`fixed inset-0 z-30 transition-opacity duration-200 ${file ? "opacity-100" : "opacity-0 pointer-events-none"} ${isDark ? "bg-black/50" : "bg-black/20"}`}
+        className={`fixed inset-0 z-30 transition-opacity duration-200 ${file ? "opacity-100" : "opacity-0 pointer-events-none"} bg-scrim`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -138,7 +139,7 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
               <button
                 ref={closeRef}
                 onClick={onClose}
-                className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+                className="mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 text-ink-muted hover:text-ink hover:bg-surface-hover"
                 aria-label="Close panel"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -158,26 +159,26 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                 </div>
               </div>
 
-              <div className={`p-4 rounded-[var(--rt-radius-lg)] border ${isDark ? "bg-white/3 border-white/8" : "bg-slate-50 border-slate-200"}`}>
+              <div className="p-4 rounded-[var(--rt-radius-lg)] border bg-surface-hover border-border">
                 <p className={`text-xs font-mono uppercase tracking-wider mb-1 ${meta}`}>Size</p>
                 <p className="text-xl font-mono font-semibold tabular-nums">{formatBytes(file.size)}</p>
               </div>
 
               <div>
                 <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Location</p>
-                <p className={`text-sm leading-relaxed break-all ${isDark ? "text-slate-300" : "text-slate-600"}`}>{file.relativePath}</p>
+                <p className="text-sm leading-relaxed break-all text-ink">{file.relativePath}</p>
                 <p className={`text-xs font-mono mt-2 break-all ${meta}`}>{file.path}</p>
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => onReveal(file.path)}
-                    className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                    className={outlineBtn}
                   >
                     Reveal file in Finder
                   </button>
                   {file.projectPath && (
                     <button
                       onClick={() => onReveal(file.projectPath!)}
-                      className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                      className={outlineBtn}
                     >
                       Reveal project
                     </button>
@@ -186,19 +187,19 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => onFileOperation("copy", file)}
-                    className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                    className={outlineBtn}
                   >
                     Copy
                   </button>
                   <button
                     onClick={() => onFileOperation("move", file)}
-                    className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                    className={outlineBtn}
                   >
                     Move
                   </button>
                   <button
                     onClick={() => onFileOperation("delete", file)}
-                    className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
+                    className={dangerBtn}
                   >
                     Delete
                   </button>
@@ -222,7 +223,7 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                         disabled={statusSaving}
                         aria-pressed={selected}
                         className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed ${
-                          selected ? `ring-1 ${statusColors[s]}` : statusUnselected
+                          selected ? `ring-1 ${STATUS_PILL[s]}` : STATUS_PILL_UNSELECTED
                         }`}
                       >
                         {STATUS_LABELS[s]}
@@ -237,7 +238,7 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                   Score
                   {scoreSaving && <span className="normal-case tracking-normal">Saving…</span>}
                 </p>
-                <ScoreEditor score={score} onChange={handleScoreChange} disabled={scoreSaving} isDark={isDark} />
+                <ScoreEditor score={score} onChange={handleScoreChange} disabled={scoreSaving} />
               </div>
 
               <div>
@@ -245,7 +246,7 @@ export default function FileDetailPanel({ file, isDark, allTags = [], onClose, o
                   Tags
                   {tagsSaving && <span className="normal-case tracking-normal">Saving…</span>}
                 </p>
-                <TagEditor tags={tags} onChange={handleTagsChange} allTags={allTags} isDark={isDark} />
+                <TagEditor tags={tags} onChange={handleTagsChange} allTags={allTags} />
               </div>
             </div>
           </>

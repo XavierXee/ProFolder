@@ -3,6 +3,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import FileDetailPanel, { formatBytes, formatFull } from "../FileDetailPanel.js";
 import type { AudioFile } from "../../types.js";
+import { STATUS_PILL, STATUS_PILL_UNSELECTED } from "../../statusStyles.js";
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -27,7 +28,6 @@ function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
 function renderPanel(overrides: Partial<Parameters<typeof FileDetailPanel>[0]> = {}) {
   const props = {
     file: makeFile(),
-    isDark: true,
     allTags: [] as string[],
     onClose: () => {},
     onSaveStatus: vi.fn().mockResolvedValue(undefined),
@@ -356,7 +356,6 @@ describe("FileDetailPanel - re-sync on file id change", () => {
     rerender(
       <FileDetailPanel
         file={fileB}
-        isDark={true}
         allTags={[]}
         onClose={() => {}}
         onSaveStatus={onSaveStatus}
@@ -371,5 +370,54 @@ describe("FileDetailPanel - re-sync on file id change", () => {
     expect(screen.getByRole("button", { name: "Done" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText("ambient")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "1 of 5" })).toHaveAttribute("aria-checked", "true");
+  });
+});
+
+// Token-class coverage: this panel is no longer isDark/isProFolder-driven (see App.tsx and
+// index.css's [data-theme] blocks), so these tests assert the token classes themselves are
+// present rather than any isDark-branch selection (removed from this file entirely).
+describe("FileDetailPanel - token-driven classes", () => {
+  it("applies STATUS_PILL's per-status classes to the selected status button and STATUS_PILL_UNSELECTED to the rest", () => {
+    renderPanel({ file: makeFile({ status: "draft" }) });
+
+    const draftBtn = screen.getByRole("button", { name: "Draft" });
+    const doneBtn = screen.getByRole("button", { name: "Done" });
+
+    for (const cls of STATUS_PILL.draft.split(" ")) {
+      expect(draftBtn.className).toContain(cls);
+    }
+    for (const cls of STATUS_PILL_UNSELECTED.split(" ")) {
+      expect(doneBtn.className).toContain(cls);
+    }
+  });
+
+  it("applies the danger-token classes to the Delete button", () => {
+    renderPanel();
+
+    const deleteBtn = screen.getByRole("button", { name: "Delete" });
+    expect(deleteBtn.className).toContain("border-danger-border");
+    expect(deleteBtn.className).toContain("text-danger");
+    expect(deleteBtn.className).toContain("hover:bg-danger-surface");
+  });
+
+  it("applies the scrim token class to the backdrop", () => {
+    const { container } = renderPanel();
+
+    const backdrop = container.querySelector('[aria-hidden="true"]');
+    expect(backdrop?.className).toContain("bg-scrim");
+  });
+
+  it("applies surface/border/ink tokens to the panel and its outline action buttons", () => {
+    renderPanel();
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toContain("bg-surface");
+    expect(dialog.className).toContain("border-border");
+    expect(dialog.className).toContain("text-ink");
+
+    const copyBtn = screen.getByRole("button", { name: "Copy" });
+    expect(copyBtn.className).toContain("border-border");
+    expect(copyBtn.className).toContain("text-ink-muted");
+    expect(copyBtn.className).toContain("hover:bg-surface-hover");
   });
 });

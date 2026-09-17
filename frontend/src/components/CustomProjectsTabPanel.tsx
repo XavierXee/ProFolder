@@ -245,7 +245,6 @@ export default function CustomProjectsTabPanel({
 
       <ProjectDetailPanel
         project={selectedProject}
-        isDark={isDark}
         allTags={allTags}
         onClose={() => setSelectedProjectId(null)}
         onReveal={handleReveal}

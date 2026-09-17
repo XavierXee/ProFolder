@@ -8,9 +8,9 @@ import StatusBadge from "./StatusBadge.js";
 import ScoreBadge from "./ScoreBadge.js";
 import { ScoreEditor } from "./ScoreEditor.js";
 import { TagEditor } from "./TagEditor.js";
-import { ALL_STATUSES, STATUS_LABELS, STATUS_PILL_DARK, STATUS_PILL_LIGHT, STATUS_PILL_UNSELECTED_DARK, STATUS_PILL_UNSELECTED_LIGHT } from "../statusStyles.js";
+import { ALL_STATUSES, STATUS_BADGE, STATUS_LABELS, STATUS_PILL, STATUS_PILL_UNSELECTED } from "../statusStyles.js";
 
-function ReadOnlyFolderTreeNode({ node, isDark, depth }: { node: FolderNode; isDark: boolean; depth: number }) {
+function ReadOnlyFolderTreeNode({ node, depth }: { node: FolderNode; depth: number }) {
   const [expanded, setExpanded] = useState(depth < 1);
   const hasChildren = node.children.length > 0;
   const isFile = node.type === "file";
@@ -22,27 +22,25 @@ function ReadOnlyFolderTreeNode({ node, isDark, depth }: { node: FolderNode; isD
           <button
             onClick={() => setExpanded((e) => !e)}
             aria-label={expanded ? `Collapse ${node.name}` : `Expand ${node.name}`}
-            className={`w-4 text-xs flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"}`}
+            className="w-4 text-xs flex-shrink-0 text-ink-muted hover:text-ink"
           >
             {expanded ? "▾" : "▸"}
           </button>
         ) : (
           <span className="w-4 flex-shrink-0" />
         )}
-        <span
-          className={
-            isFile
-              ? `text-xs font-mono ${isDark ? "text-slate-500" : "text-slate-500"}`
-              : `text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-700"}`
-          }
-        >
+        {/* The file-leaf label was already theme-invariant before this migration (both isDark
+            branches resolved to the identical "text-slate-500" literal) — kept as a plain literal
+            here rather than switched to a token, to avoid introducing new light-theme variance
+            (text-ink-muted's light value is one shade lighter than the byte-faithful slate-500). */}
+        <span className={isFile ? "text-xs font-mono text-slate-500" : "text-sm font-medium text-ink"}>
           {node.name}
         </span>
       </div>
       {hasChildren && expanded && (
         <div>
           {node.children.map((child) => (
-            <ReadOnlyFolderTreeNode key={child.path} node={child} isDark={isDark} depth={depth + 1} />
+            <ReadOnlyFolderTreeNode key={child.path} node={child} depth={depth + 1} />
           ))}
         </div>
       )}
@@ -52,7 +50,6 @@ function ReadOnlyFolderTreeNode({ node, isDark, depth }: { node: FolderNode; isD
 
 type Props = {
   project: (Project & { audioFileCount: number }) | null;
-  isDark: boolean;
   allTags?: string[];
   onClose: () => void;
   onReveal: (path: string) => void;
@@ -65,7 +62,7 @@ type Props = {
   onProjectOperation: (operation: CopyMoveDeleteOperation, project: Project & { audioFileCount: number }) => void;
 };
 
-export default function ProjectDetailPanel({ project, isDark, allTags = [], onClose, onReveal, onSaveStatus, onSaveTags, onSaveScore, onProjectOperation }: Props) {
+export default function ProjectDetailPanel({ project, allTags = [], onClose, onReveal, onSaveStatus, onSaveTags, onSaveScore, onProjectOperation }: Props) {
   const [detail, setDetail] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -146,15 +143,19 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
     return () => window.removeEventListener("keydown", onKey);
   }, [project, onClose]);
 
-  const panel = isDark ? "bg-[#13161e] border-white/8 text-slate-200" : "bg-white border-black/8 text-slate-800";
+  const panel = "bg-surface border-border text-ink";
   const meta = "text-slate-500";
-  const divider = isDark ? "border-white/8" : "border-slate-200";
+  const divider = "border-border";
+  const outlineBtn =
+    "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover";
+  const dangerBtn =
+    "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 border-danger-border text-danger hover:bg-danger-surface";
   const typeLabel = project?.dawType ? DAW_LABELS[project.dawType] : "Folder";
 
   return (
     <>
       <div
-        className={`fixed inset-0 z-30 transition-opacity duration-200 ${project ? "opacity-100" : "opacity-0 pointer-events-none"} ${isDark ? "bg-black/50" : "bg-black/20"}`}
+        className={`fixed inset-0 z-30 transition-opacity duration-200 ${project ? "opacity-100" : "opacity-0 pointer-events-none"} bg-scrim`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -175,7 +176,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
               <button
                 ref={closeRef}
                 onClick={onClose}
-                className={`mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 ${isDark ? "text-slate-500 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-700 hover:bg-black/5"}`}
+                className="mt-0.5 p-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex-shrink-0 text-ink-muted hover:text-ink hover:bg-surface-hover"
                 aria-label="Close panel"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -186,15 +187,15 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
 
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
               <div className="flex items-center gap-3 flex-wrap">
+                {/* "No DAW type" reuses STATUS_BADGE's "unknown" slate tokens (same visual family
+                    as the original slate literals here) rather than inventing a dedicated neutral
+                    badge role. The "has DAW type" case uses the info tokens (Task 4's blue role)
+                    with a `/30` opacity modifier for the ring, since no dedicated "info ring" token
+                    exists — flagged for Reviewer sign-off, same discipline as other new-role gaps
+                    in this task. */}
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium ring-1 ${
-                    project.dawType
-                      ? isDark
-                        ? "bg-blue-500/15 text-blue-400 ring-blue-500/30"
-                        : "bg-blue-100 text-blue-800 ring-blue-300"
-                      : isDark
-                        ? "bg-slate-500/15 text-slate-400 ring-slate-500/30"
-                        : "bg-slate-100 text-slate-600 ring-slate-300"
+                    project.dawType ? "bg-info-surface text-info ring-info/30" : STATUS_BADGE.unknown
                   }`}
                 >
                   {typeLabel}
@@ -209,23 +210,18 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
               )}
 
               {duplicates && duplicates.matches.length > 0 && (
-                <div
-                  className={`rounded-[var(--rt-radius-lg)] px-3 py-2.5 ring-1 ${isDark ? "bg-amber-500/10 ring-amber-500/25" : "bg-amber-50 ring-amber-300"}`}
-                >
-                  <p className={`text-xs font-mono font-medium mb-1.5 ${isDark ? "text-amber-400" : "text-amber-800"}`}>
+                <div className="rounded-[var(--rt-radius-lg)] px-3 py-2.5 ring-1 bg-warning-surface ring-warning-ring">
+                  <p className="text-xs font-mono font-medium mb-1.5 text-warning-ink">
                     Possible duplicate of {duplicates.matches.length}{" "}
                     other folder{duplicates.matches.length > 1 ? "s" : ""}
                   </p>
-                  <p className={`text-xs mb-2 ${isDark ? "text-amber-400/70" : "text-amber-700/80"}`}>
+                  <p className="text-xs mb-2 text-warning-ink-secondary">
                     Based on matching sample files in each project's Samples folder.
                   </p>
                   <div className="space-y-1.5">
                     {duplicates.matches.map((m) => (
-                      <div
-                        key={m.projectId}
-                        className={`px-2.5 py-1.5 rounded-[var(--rt-radius)] ${isDark ? "bg-white/5" : "bg-white"}`}
-                      >
-                        <p className={`text-xs font-mono truncate ${isDark ? "text-slate-200" : "text-slate-800"}`}>
+                      <div key={m.projectId} className="px-2.5 py-1.5 rounded-[var(--rt-radius)] bg-surface-hover">
+                        <p className="text-xs font-mono truncate text-ink">
                           {m.projectName}
                         </p>
                         <p className={`text-xs font-mono truncate ${meta}`} title={m.projectPath}>
@@ -244,25 +240,25 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
               <div className="flex gap-2">
                 <button
                   onClick={() => onReveal(project.path)}
-                  className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                  className={outlineBtn}
                 >
                   Reveal in Finder
                 </button>
                 <button
                   onClick={() => onProjectOperation("copy", project)}
-                  className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                  className={outlineBtn}
                 >
                   Copy
                 </button>
                 <button
                   onClick={() => onProjectOperation("move", project)}
-                  className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isDark ? "border-white/10 text-slate-300 hover:text-slate-100 hover:border-white/20" : "border-black/10 text-slate-600 hover:text-slate-900 hover:border-black/20"}`}
+                  className={outlineBtn}
                 >
                   Move
                 </button>
                 <button
                   onClick={() => onProjectOperation("delete", project)}
-                  className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${isDark ? "border-red-500/30 text-red-400 hover:text-red-300 hover:border-red-500/50" : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"}`}
+                  className={dangerBtn}
                 >
                   Delete
                 </button>
@@ -276,8 +272,6 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Select status">
                   {ALL_STATUSES.map((s) => {
                     const selected = status === s;
-                    const statusColors = isDark ? STATUS_PILL_DARK : STATUS_PILL_LIGHT;
-                    const statusUnselected = isDark ? STATUS_PILL_UNSELECTED_DARK : STATUS_PILL_UNSELECTED_LIGHT;
                     return (
                       <button
                         key={s}
@@ -285,7 +279,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                         disabled={statusSaving}
                         aria-pressed={selected}
                         className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed ${
-                          selected ? `ring-1 ${statusColors[s]}` : statusUnselected
+                          selected ? `ring-1 ${STATUS_PILL[s]}` : STATUS_PILL_UNSELECTED
                         }`}
                       >
                         {STATUS_LABELS[s]}
@@ -300,7 +294,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                   Score
                   {scoreSaving && <span className="normal-case tracking-normal">Saving…</span>}
                 </p>
-                <ScoreEditor score={score} onChange={handleScoreChange} disabled={scoreSaving} isDark={isDark} />
+                <ScoreEditor score={score} onChange={handleScoreChange} disabled={scoreSaving} />
               </div>
 
               <div>
@@ -308,7 +302,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                   Tags
                   {tagsSaving && <span className="normal-case tracking-normal">Saving…</span>}
                 </p>
-                <TagEditor tags={tags} onChange={handleTagsChange} allTags={allTags} isDark={isDark} />
+                <TagEditor tags={tags} onChange={handleTagsChange} allTags={allTags} />
               </div>
 
               <div className={`border-t ${divider}`} />
@@ -322,12 +316,12 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                     {detail.dawProjectFiles.map((f) => (
                       <div
                         key={f.path}
-                        className={`flex items-center justify-between gap-3 px-2.5 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono ${isDark ? "bg-white/3" : "bg-slate-50"}`}
+                        className="flex items-center justify-between gap-3 px-2.5 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono bg-surface-hover"
                       >
-                        <span className={`truncate ${isDark ? "text-slate-300" : "text-slate-700"}`} title={f.relativePath}>
+                        <span className="truncate text-ink" title={f.relativePath}>
                           {f.relativePath}
                         </span>
-                        <span className={`flex-shrink-0 ${isDark ? "text-blue-400" : "text-blue-700"}`}>{DAW_LABELS[f.dawType]}</span>
+                        <span className="flex-shrink-0 text-info">{DAW_LABELS[f.dawType]}</span>
                       </div>
                     ))}
                   </div>
@@ -342,7 +336,7 @@ export default function ProjectDetailPanel({ project, isDark, allTags = [], onCl
                   <p className="text-sm text-red-400">{error}</p>
                 ) : detail && detail.subfolderTree.children.length > 0 ? (
                   detail.subfolderTree.children.map((child) => (
-                    <ReadOnlyFolderTreeNode key={child.path} node={child} isDark={isDark} depth={0} />
+                    <ReadOnlyFolderTreeNode key={child.path} node={child} depth={0} />
                   ))
                 ) : (
                   <p className={`text-sm ${meta}`}>Empty folder.</p>

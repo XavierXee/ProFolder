@@ -679,7 +679,6 @@ export default function App() {
 
       <FileDetailPanel
         file={selectedFile}
-        isDark={isDark}
         allTags={allTags}
         onClose={() => setSelectedId(null)}
         onSaveStatus={handleFileStatusSave}
@@ -691,7 +690,6 @@ export default function App() {
 
       <ProjectDetailPanel
         project={selectedProject}
-        isDark={isDark}
         allTags={allTags}
         onClose={() => setSelectedProjectId(null)}
         onReveal={handleReveal}
