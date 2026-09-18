@@ -239,6 +239,16 @@ When("I cancel the delete confirmation", async ({ page }) => {
 });
 
 When("I confirm deleting my custom tab {string}", async ({ page }, baseName: string) => {
+  const fullName = resolveTabName(page, baseName);
+  // confirmTabDeletion defaults to true (see src/config/confirmationSettings.ts) on this
+  // suite's fresh scratch DB, so DeleteTabConfirmDialog.tsx renders a "type the tab name to
+  // confirm" input that must be filled before Delete is enabled — see
+  // DeleteTabConfirmDialog.tsx/ConfirmTextInput.tsx. Filled defensively (only if present) so
+  // this step still works unchanged if that setting is ever off.
+  const confirmInput = deleteConfirmDialog(page).getByLabel(`Type "${fullName}" to confirm`);
+  if ((await confirmInput.count()) > 0) {
+    await confirmInput.fill(fullName);
+  }
   await Promise.all([
     page.waitForResponse(
       (res) => res.request().method() === "DELETE" && new URL(res.url()).pathname.startsWith("/api/custom-tabs/")

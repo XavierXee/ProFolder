@@ -359,6 +359,37 @@ export function setScanSettings(patch: Partial<ScanSettings>): Promise<ScanSetti
   return request<ScanSettings>(`/config/scan-settings`, { method: "PUT", body: JSON.stringify(patch) });
 }
 
+export type ConfirmationSettings = {
+  confirmTagRemoval: boolean;
+  confirmTabDeletion: boolean;
+  confirmCopy: boolean;
+  confirmMove: boolean;
+  confirmDelete: boolean;
+};
+
+export function getConfirmationSettings(): Promise<ConfirmationSettings> {
+  return request<ConfirmationSettings>(`/config/confirmation-settings`);
+}
+
+export function setConfirmationSettings(patch: Partial<ConfirmationSettings>): Promise<ConfirmationSettings> {
+  return request<ConfirmationSettings>(`/config/confirmation-settings`, { method: "PUT", body: JSON.stringify(patch) });
+}
+
+export type PaginationSettings = {
+  itemsPerPage: number;
+};
+
+export function getPaginationSettings(): Promise<PaginationSettings> {
+  return request<PaginationSettings>(`/config/pagination-settings`);
+}
+
+export function setPaginationSettings(patch: Partial<PaginationSettings>): Promise<PaginationSettings> {
+  return request<PaginationSettings>(`/config/pagination-settings`, {
+    method: "PUT",
+    body: JSON.stringify(patch),
+  });
+}
+
 export function getStats(): Promise<LibraryStats> {
   return request<LibraryStats>(`/stats`);
 }

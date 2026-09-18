@@ -21,6 +21,8 @@ vi.mock("../../api/client.js", () => ({
   batchCopyFiles: vi.fn(),
   batchMoveFiles: vi.fn(),
   batchDeleteFiles: vi.fn(),
+  getConfirmationSettings: vi.fn(),
+  getPaginationSettings: vi.fn(),
 }));
 
 import * as api from "../../api/client.js";
@@ -39,6 +41,8 @@ const mockDeleteFile = vi.mocked(api.deleteFile);
 const mockBatchCopyFiles = vi.mocked(api.batchCopyFiles);
 const mockBatchMoveFiles = vi.mocked(api.batchMoveFiles);
 const mockBatchDeleteFiles = vi.mocked(api.batchDeleteFiles);
+const mockGetConfirmationSettings = vi.mocked(api.getConfirmationSettings);
+const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -122,6 +126,17 @@ beforeEach(() => {
   mockBatchCopyFiles.mockReset().mockResolvedValue({ succeeded: ["f1", "f2"], failed: [] });
   mockBatchMoveFiles.mockReset().mockResolvedValue({ succeeded: ["f1", "f2"], failed: [] });
   mockBatchDeleteFiles.mockReset().mockResolvedValue({ succeeded: ["f1", "f2"], failed: [] });
+  // Confirmation off by default — this file's tests predate the double-text-confirmation
+  // feature and don't exercise its typed-confirmation gating (see CopyMoveDeleteDialog.test.tsx
+  // for that coverage).
+  mockGetConfirmationSettings.mockReset().mockResolvedValue({
+    confirmTagRemoval: false,
+    confirmTabDeletion: false,
+    confirmCopy: false,
+    confirmMove: false,
+    confirmDelete: false,
+  });
+  mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: PAGE_SIZE });
 });
 
 describe("CustomFilesTabPanel - error banner is token-driven (no isDark prop)", () => {

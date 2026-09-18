@@ -1,4 +1,7 @@
 import { useEffect } from "react";
+import { useConfirmationRequired } from "../hooks/useConfirmationRequired.js";
+import { useTypedConfirmation } from "../hooks/useTypedConfirmation.js";
+import ConfirmTextInput from "./ConfirmTextInput.js";
 
 type Props = {
   open: boolean;
@@ -8,6 +11,18 @@ type Props = {
 };
 
 export default function DeleteTabConfirmDialog({ open, tabName, onConfirm, onCancel }: Props) {
+  const required = useConfirmationRequired("confirmTabDeletion", open);
+  const { value, setValue, satisfied, reset } = useTypedConfirmation(tabName, required);
+
+  // This dialog stays mounted across multiple different tab-delete flows (App.tsx renders it
+  // unconditionally), so the typed-confirmation reset must re-run on every open transition, not
+  // just the first mount.
+  useEffect(() => {
+    if (!open) return;
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -40,6 +55,11 @@ export default function DeleteTabConfirmDialog({ open, tabName, onConfirm, onCan
           <p className="text-sm">
             Delete the tab &quot;{tabName}&quot;? This cannot be undone.
           </p>
+          {required && (
+            <div className="mt-3">
+              <ConfirmTextInput expectedText={tabName} value={value} onChange={setValue} autoFocus />
+            </div>
+          )}
           <div className="mt-4 flex justify-end gap-2">
             <button
               onClick={onCancel}
@@ -49,7 +69,8 @@ export default function DeleteTabConfirmDialog({ open, tabName, onConfirm, onCan
             </button>
             <button
               onClick={onConfirm}
-              className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-red-600 text-white hover:bg-red-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
+              disabled={required && !satisfied}
+              className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-red-600 text-white hover:bg-red-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Delete
             </button>

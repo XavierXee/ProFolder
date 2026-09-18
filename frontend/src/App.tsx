@@ -7,6 +7,7 @@ import { Pagination } from "./components/Pagination.js";
 import FileDetailPanel from "./components/FileDetailPanel.js";
 import ProjectDetailPanel from "./components/ProjectDetailPanel.js";
 import MetricsPanel from "./components/MetricsPanel.js";
+import TagsStatusesPanel from "./components/TagsStatusesPanel.js";
 import ScanFolderPanel from "./components/ScanFolderPanel.js";
 import SettingsPanel from "./components/SettingsPanel.js";
 import { ProjectsTable } from "./components/ProjectsTable.js";
@@ -119,6 +120,7 @@ export default function App() {
   const [stats, setStats] = useState<LibraryStats | undefined>();
   const [allTags, setAllTags] = useState<string[]>([]);
   const [showMetrics, setShowMetrics] = useState(false);
+  const [showTagsStatuses, setShowTagsStatuses] = useState(false);
   const [showScanPanel, setShowScanPanel] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("projects");
@@ -458,6 +460,28 @@ export default function App() {
             </svg>
             Scan Library
           </button>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowTagsStatuses((v) => !v)}
+              aria-label="Statuses and tags"
+              aria-expanded={showTagsStatuses}
+              aria-haspopup="dialog"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+              </svg>
+            </button>
+            {showTagsStatuses && (
+              <TagsStatusesPanel allTags={allTags} onClose={() => setShowTagsStatuses(false)} />
+            )}
+          </div>
 
           <div className="relative">
             <button

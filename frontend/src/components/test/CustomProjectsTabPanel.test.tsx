@@ -23,6 +23,8 @@ vi.mock("../../api/client.js", () => ({
   batchCopyProjects: vi.fn(),
   batchMoveProjects: vi.fn(),
   batchDeleteProjects: vi.fn(),
+  getConfirmationSettings: vi.fn(),
+  getPaginationSettings: vi.fn(),
 }));
 
 import * as api from "../../api/client.js";
@@ -43,6 +45,8 @@ const mockDeleteProject = vi.mocked(api.deleteProject);
 const mockBatchCopyProjects = vi.mocked(api.batchCopyProjects);
 const mockBatchMoveProjects = vi.mocked(api.batchMoveProjects);
 const mockBatchDeleteProjects = vi.mocked(api.batchDeleteProjects);
+const mockGetConfirmationSettings = vi.mocked(api.getConfirmationSettings);
+const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 
 type ProjectRow = Project & { audioFileCount: number };
 
@@ -159,6 +163,17 @@ beforeEach(() => {
   mockBatchCopyProjects.mockReset().mockResolvedValue({ succeeded: ["p1", "p2"], failed: [] });
   mockBatchMoveProjects.mockReset().mockResolvedValue({ succeeded: ["p1", "p2"], failed: [] });
   mockBatchDeleteProjects.mockReset().mockResolvedValue({ succeeded: ["p1", "p2"], failed: [] });
+  // Confirmation off by default — this file's tests predate the double-text-confirmation
+  // feature and don't exercise its typed-confirmation gating (see CopyMoveDeleteDialog.test.tsx
+  // for that coverage).
+  mockGetConfirmationSettings.mockReset().mockResolvedValue({
+    confirmTagRemoval: false,
+    confirmTabDeletion: false,
+    confirmCopy: false,
+    confirmMove: false,
+    confirmDelete: false,
+  });
+  mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: PAGE_SIZE });
 });
 
 describe("CustomProjectsTabPanel - locked filters seed the initial fetch", () => {

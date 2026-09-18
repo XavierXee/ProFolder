@@ -7,7 +7,7 @@ import CopyMoveDeleteDialog, {
   toRelativePath,
   type CopyMoveDeleteTarget,
 } from "../CopyMoveDeleteDialog.js";
-import type { FolderNode } from "../../api/client.js";
+import type { ConfirmationSettings, FolderNode } from "../../api/client.js";
 
 vi.mock("../../api/client.js", () => ({
   getFolderTree: vi.fn(),
@@ -23,6 +23,7 @@ vi.mock("../../api/client.js", () => ({
   batchCopyProjects: vi.fn(),
   batchMoveProjects: vi.fn(),
   batchDeleteProjects: vi.fn(),
+  getConfirmationSettings: vi.fn(),
 }));
 
 import * as api from "../../api/client.js";
@@ -40,6 +41,18 @@ const mockDeleteProject = vi.mocked(api.deleteProject);
 const mockBatchCopyProjects = vi.mocked(api.batchCopyProjects);
 const mockBatchMoveProjects = vi.mocked(api.batchMoveProjects);
 const mockBatchDeleteProjects = vi.mocked(api.batchDeleteProjects);
+const mockGetConfirmationSettings = vi.mocked(api.getConfirmationSettings);
+
+function makeConfirmationSettings(overrides: Partial<ConfirmationSettings> = {}): ConfirmationSettings {
+  return {
+    confirmTagRemoval: false,
+    confirmTabDeletion: false,
+    confirmCopy: false,
+    confirmMove: false,
+    confirmDelete: false,
+    ...overrides,
+  };
+}
 
 // Two-level fixture matching `buildFolderTree`'s REAL root-relative shape (see
 // src/scanner/folderTree.ts): the root's own path is "", and every other node's path is a
@@ -88,6 +101,9 @@ beforeEach(() => {
   mockBatchCopyProjects.mockReset().mockResolvedValue({ succeeded: ["p-1", "p-2"], failed: [] });
   mockBatchMoveProjects.mockReset().mockResolvedValue({ succeeded: ["p-1", "p-2"], failed: [] });
   mockBatchDeleteProjects.mockReset().mockResolvedValue({ succeeded: ["p-1", "p-2"], failed: [] });
+  // Default: all confirmation settings off, matching this file's pre-existing tests, which
+  // predate the double-text-confirmation feature and assert today's un-gated enablement.
+  mockGetConfirmationSettings.mockReset().mockResolvedValue(makeConfirmationSettings());
 });
 
 describe("buildExplanationText", () => {
@@ -209,10 +225,12 @@ describe("CopyMoveDeleteDialog - Apply enablement", () => {
     expect(screen.getByRole("button", { name: "Move" })).not.toBeDisabled();
   });
 
-  it("Apply (Move to Trash) is enabled immediately for delete, with no destination step required", () => {
+  it("Apply (Move to Trash) is enabled for delete once settings load, with no destination step required", async () => {
     renderDialog({ operation: "delete" });
 
-    expect(screen.getByRole("button", { name: "Move to Trash" })).not.toBeDisabled();
+    // confirmDelete defaults to false in this file's mock, but settings load asynchronously —
+    // wait for the fail-safe-required window to clear.
+    await waitFor(() => expect(screen.getByRole("button", { name: "Move to Trash" })).not.toBeDisabled());
   });
 
   it("Apply (Move to Trash) stays disabled for an empty batch", () => {
@@ -277,6 +295,7 @@ describe("CopyMoveDeleteDialog - correct client function per operation/type/targ
     const onSuccess = vi.fn();
     renderDialog({ operation: "delete", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" }, onSuccess });
 
+    await waitFor(() => expect(screen.getByRole("button", { name: "Move to Trash" })).not.toBeDisabled());
     await user.click(screen.getByRole("button", { name: "Move to Trash" }));
 
     await waitFor(() => expect(mockDeleteFile).toHaveBeenCalledWith("f1"));
@@ -287,6 +306,7 @@ describe("CopyMoveDeleteDialog - correct client function per operation/type/targ
     const user = userEvent.setup();
     renderDialog({ operation: "delete", itemType: "files", target: { kind: "batch", ids: ["f1", "f2"], count: 2 } });
 
+    await waitFor(() => expect(screen.getByRole("button", { name: "Move to Trash" })).not.toBeDisabled());
     await user.click(screen.getByRole("button", { name: "Move to Trash" }));
 
     await waitFor(() => expect(mockBatchDeleteFiles).toHaveBeenCalledWith(["f1", "f2"]));
@@ -336,6 +356,7 @@ describe("CopyMoveDeleteDialog - correct client function per operation/type/targ
     const user = userEvent.setup();
     renderDialog({ operation: "delete", itemType: "projects", target: { kind: "single", id: "p1", name: "Song Idea" } });
 
+    await waitFor(() => expect(screen.getByRole("button", { name: "Move to Trash" })).not.toBeDisabled());
     await user.click(screen.getByRole("button", { name: "Move to Trash" }));
 
     await waitFor(() => expect(mockDeleteProject).toHaveBeenCalledWith("p1"));
@@ -345,6 +366,7 @@ describe("CopyMoveDeleteDialog - correct client function per operation/type/targ
     const user = userEvent.setup();
     renderDialog({ operation: "delete", itemType: "projects", target: { kind: "batch", ids: ["p1", "p2"], count: 2 } });
 
+    await waitFor(() => expect(screen.getByRole("button", { name: "Move to Trash" })).not.toBeDisabled());
     await user.click(screen.getByRole("button", { name: "Move to Trash" }));
 
     await waitFor(() => expect(mockBatchDeleteProjects).toHaveBeenCalledWith(["p1", "p2"]));
@@ -601,5 +623,90 @@ describe("CopyMoveDeleteDialog - dismissal", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("CopyMoveDeleteDialog - double confirmation gating", () => {
+  it.each([
+    ["copy", "confirmCopy", "COPY", "Copy"],
+    ["move", "confirmMove", "MOVE", "Move"],
+    ["delete", "confirmDelete", "DELETE", "Move to Trash"],
+  ] as const)(
+    "operation=%s: Apply stays disabled until the exact uppercase keyword is typed when %s is true",
+    async (operation, settingField, keyword, buttonLabel) => {
+      mockGetConfirmationSettings.mockReset().mockResolvedValue(makeConfirmationSettings({ [settingField]: true }));
+      // delay: null — this dialog has its own real setTimeout(..., 50) mount-effect that
+      // auto-focuses its close button 50ms after open; real-timer inter-keystroke
+      // delays can straddle that window and drop characters typed here.
+      const user = userEvent.setup({ delay: null });
+      renderDialog({
+        operation,
+        itemType: "files",
+        target: { kind: "single", id: "f1", name: "a.wav" },
+      });
+
+      const input = await screen.findByLabelText(`Type "${keyword}" to confirm`);
+      if (operation !== "delete") {
+        await selectDestination(user);
+      }
+
+      expect(screen.getByRole("button", { name: buttonLabel })).toBeDisabled();
+
+      await user.type(input, keyword);
+
+      expect(screen.getByRole("button", { name: buttonLabel })).not.toBeDisabled();
+    }
+  );
+
+  it("keeps Apply disabled if the typed text doesn't exactly match the uppercase keyword (case-sensitive)", async () => {
+    mockGetConfirmationSettings.mockReset().mockResolvedValue(makeConfirmationSettings({ confirmDelete: true }));
+    const user = userEvent.setup({ delay: null });
+    renderDialog({ operation: "delete", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" } });
+
+    const input = await screen.findByLabelText('Type "DELETE" to confirm');
+    await user.type(input, "delete");
+
+    expect(screen.getByRole("button", { name: "Move to Trash" })).toBeDisabled();
+  });
+
+  it("renders no confirmation input, and Apply's enablement is governed only by the pre-existing conditions, when the setting is false", async () => {
+    renderDialog({ operation: "copy", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" } });
+
+    await waitFor(() => expect(mockGetConfirmationSettings).toHaveBeenCalled());
+    expect(screen.queryByLabelText(/to confirm/)).not.toBeInTheDocument();
+  });
+
+  it("treats confirmation as required (renders the input) before settings have loaded yet, fail-safe", async () => {
+    mockGetConfirmationSettings.mockReset().mockReturnValue(new Promise(() => {}));
+    renderDialog({ operation: "delete", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" } });
+
+    expect(await screen.findByLabelText('Type "DELETE" to confirm')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Move to Trash" })).toBeDisabled();
+  });
+
+  it("resets typed confirmation text on a fresh open (operation change while the dialog stays mounted)", async () => {
+    mockGetConfirmationSettings.mockReset().mockResolvedValue(makeConfirmationSettings({ confirmCopy: true, confirmMove: true }));
+    const user = userEvent.setup({ delay: null });
+    const baseProps = {
+      itemType: "files" as const,
+      target: { kind: "single", id: "f1", name: "a.wav" } as CopyMoveDeleteTarget,
+      musicRoot: "/music",
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+      onError: vi.fn(),
+    };
+    const { rerender } = render(<CopyMoveDeleteDialog open={true} operation="copy" {...baseProps} />);
+
+    const copyInput = await screen.findByLabelText('Type "COPY" to confirm');
+    await user.type(copyInput, "COPY");
+    expect(copyInput).toHaveValue("COPY");
+
+    // Close, then reopen the same mounted dialog instance for a different operation.
+    rerender(<CopyMoveDeleteDialog open={false} operation="copy" {...baseProps} />);
+    rerender(<CopyMoveDeleteDialog open={true} operation="move" {...baseProps} />);
+
+    const moveInput = await screen.findByLabelText('Type "MOVE" to confirm');
+    expect(moveInput).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Move" })).toBeDisabled();
   });
 });

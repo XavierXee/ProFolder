@@ -30,6 +30,7 @@ Feature: Copy/Move/Delete — copying a single file
     Then I should see the file operation dialog
     And I should see the destination folder tree
     When I select destination folder "File Ops E2E Copy Destination" in the file operation dialog
+    And I type "COPY" to confirm in the file operation dialog
     Then the file operation apply button should be enabled
     When I confirm the copy in the file operation dialog
     Then I should not see the file operation dialog

@@ -21,6 +21,8 @@ vi.mock("../api/client.js", () => ({
   getCustomTabs: vi.fn(),
   createCustomTab: vi.fn(),
   deleteCustomTab: vi.fn(),
+  getConfirmationSettings: vi.fn(),
+  getPaginationSettings: vi.fn(),
 }));
 
 import * as api from "../api/client.js";
@@ -34,6 +36,8 @@ const mockGetAllTags = vi.mocked(api.getAllTags);
 const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
 const mockCreateCustomTab = vi.mocked(api.createCustomTab);
 const mockDeleteCustomTab = vi.mocked(api.deleteCustomTab);
+const mockGetConfirmationSettings = vi.mocked(api.getConfirmationSettings);
+const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -117,6 +121,17 @@ beforeEach(() => {
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
   mockCreateCustomTab.mockReset().mockResolvedValue(NEW_TAB);
   mockDeleteCustomTab.mockReset().mockResolvedValue(undefined);
+  // Confirmation off by default — this file's test predates the double-text-confirmation
+  // feature and doesn't exercise its typed-confirmation gating (see
+  // DeleteTabConfirmDialog.test.tsx for that coverage).
+  mockGetConfirmationSettings.mockReset().mockResolvedValue({
+    confirmTagRemoval: false,
+    confirmTabDeletion: false,
+    confirmCopy: false,
+    confirmMove: false,
+    confirmDelete: false,
+  });
+  mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 });
 });
 
 describe("App - custom tabs wiring", () => {

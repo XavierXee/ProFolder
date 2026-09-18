@@ -140,6 +140,31 @@ function fileOpApplyButton(page: Page) {
   return fileOpDialog(page).getByRole("button", { name: /^(Copy|Move)/ });
 }
 
+// confirmCopy/confirmMove/confirmDelete all default to true (see
+// src/config/confirmationSettings.ts) on this suite's fresh scratch DB, so
+// CopyMoveDeleteDialog.tsx now renders a "type COPY/MOVE/DELETE to confirm" input (see
+// ConfirmTextInput.tsx) that must be filled with the exact keyword before Apply is enabled.
+// Filled defensively (only if present) so the confirm steps below still work unchanged if a
+// scenario ever runs with the relevant setting off.
+function fileOpConfirmInput(page: Page, keyword: string) {
+  return fileOpDialog(page).getByLabel(`Type "${keyword}" to confirm`);
+}
+
+async function fillFileOpConfirmationIfPresent(page: Page, keyword: string) {
+  const input = fileOpConfirmInput(page, keyword);
+  if ((await input.count()) > 0) {
+    await input.fill(keyword);
+  }
+}
+
+// Explicit action step for scenarios that need the Apply-enablement state itself to reflect a
+// pre-typed confirmation BEFORE any confirm/cancel step runs (destination-picker.feature,
+// cancel.feature — neither of which ever clicks Apply, so the fill-if-present helper above,
+// which only runs from inside the confirm-click steps, never gets a chance to fire for them).
+When("I type {string} to confirm in the file operation dialog", async ({ page }, keyword: string) => {
+  await fileOpConfirmInput(page, keyword).fill(keyword);
+});
+
 When("I click {string} in the file detail panel", async ({ page }, label: string) => {
   await fileDetailPanel(page).getByRole("button", { name: label, exact: true }).click();
 });
@@ -211,10 +236,12 @@ function isBatchFileDelete(page: Page) {
 }
 
 When("I confirm the delete in the file operation dialog", async ({ page }) => {
+  await fillFileOpConfirmationIfPresent(page, "DELETE");
   await Promise.all([isSingleFileDelete(page), isFilesRefetch(page), fileOpApplyButton(page).click()]);
 });
 
 When("I confirm the batch delete in the file operation dialog", async ({ page }) => {
+  await fillFileOpConfirmationIfPresent(page, "DELETE");
   await Promise.all([isBatchFileDelete(page), isFilesRefetch(page), fileOpApplyButton(page).click()]);
 });
 
@@ -256,16 +283,19 @@ function isSingleProjectMove(page: Page) {
 // actually completed before the next step reads the table, not just that the API call itself
 // resolved.
 When("I confirm the copy in the file operation dialog", async ({ page }) => {
+  await fillFileOpConfirmationIfPresent(page, "COPY");
   await Promise.all([isSingleFileCopy(page), isFilesRefetch(page), isProjectsRefetch(page), fileOpApplyButton(page).click()]);
 });
 
 When("I confirm the move in the file operation dialog", async ({ page }) => {
+  await fillFileOpConfirmationIfPresent(page, "MOVE");
   await Promise.all([isSingleFileMove(page), isFilesRefetch(page), isProjectsRefetch(page), fileOpApplyButton(page).click()]);
 });
 
 // handleProjectOpSuccess (App.tsx) refetches both /api/projects and /api/files unconditionally
 // (a project's member files move along with it), same reasoning as the file-op steps above.
 When("I confirm the project move in the file operation dialog", async ({ page }) => {
+  await fillFileOpConfirmationIfPresent(page, "MOVE");
   await Promise.all([isSingleProjectMove(page), isProjectsRefetch(page), isFilesRefetch(page), fileOpApplyButton(page).click()]);
 });
 

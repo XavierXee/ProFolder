@@ -21,6 +21,7 @@ vi.mock("../api/client.js", () => ({
   getAllTags: vi.fn(),
   getCustomTabs: vi.fn(),
   getFileAudioUrl: vi.fn((id: string) => `/api/files/${id}/audio`),
+  getPaginationSettings: vi.fn(),
 }));
 
 import * as api from "../api/client.js";
@@ -32,6 +33,7 @@ const mockGetLastScan = vi.mocked(api.getLastScan);
 const mockGetStats = vi.mocked(api.getStats);
 const mockGetAllTags = vi.mocked(api.getAllTags);
 const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
+const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -85,6 +87,7 @@ beforeEach(() => {
   mockGetStats.mockReset().mockResolvedValue(STATS);
   mockGetAllTags.mockReset().mockResolvedValue([]);
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
+  mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 });
 });
 
 async function switchToFilesTab(user: ReturnType<typeof userEvent.setup>) {

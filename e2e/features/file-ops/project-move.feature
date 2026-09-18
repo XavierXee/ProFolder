@@ -39,6 +39,7 @@ Feature: Copy/Move/Delete — moving a project folder relocates its whole subtre
     And I click "Move" in the folder detail panel
     Then I should see the file operation dialog
     When I select destination folder "File Ops E2E Project Move Destination" in the file operation dialog
+    And I type "MOVE" to confirm in the file operation dialog
     Then the file operation apply button should be enabled
     When I confirm the project move in the file operation dialog
     Then I should not see the file operation dialog

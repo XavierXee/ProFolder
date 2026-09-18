@@ -18,6 +18,7 @@ vi.mock("../api/client.js", () => ({
   getStats: vi.fn(),
   getAllTags: vi.fn(),
   getCustomTabs: vi.fn(),
+  getPaginationSettings: vi.fn(),
 }));
 
 import * as api from "../api/client.js";
@@ -29,6 +30,7 @@ const mockGetLastScan = vi.mocked(api.getLastScan);
 const mockGetStats = vi.mocked(api.getStats);
 const mockGetAllTags = vi.mocked(api.getAllTags);
 const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
+const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -109,6 +111,7 @@ beforeEach(() => {
   mockGetStats.mockReset().mockResolvedValue(STATS);
   mockGetAllTags.mockReset().mockResolvedValue([]);
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
+  mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 });
 });
 
 function batchEditButton() {

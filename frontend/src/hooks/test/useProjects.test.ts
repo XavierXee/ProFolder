@@ -7,11 +7,13 @@ import { PAGE_SIZE } from "../../constants.js";
 
 vi.mock("../../api/client.js", () => ({
   getProjects: vi.fn(),
+  getPaginationSettings: vi.fn(),
 }));
 
 import * as api from "../../api/client.js";
 
 const mockGetProjects = vi.mocked(api.getProjects);
+const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 
 function makeProject(overrides: Partial<Project> = {}): Project & { audioFileCount: number } {
   return {
@@ -58,6 +60,11 @@ function deferred<T>() {
 
 beforeEach(() => {
   mockGetProjects.mockReset().mockResolvedValue(makePaged());
+  // Resolves to the same value as the hardcoded PAGE_SIZE default it seeds from, so it never
+  // produces a visible state change (and thus no extra updateFilters/getProjects call) for
+  // these tests -- the cross-instance-apply behavior itself is covered by
+  // hooks/test/useItemsPerPage.test.ts, not here.
+  mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: PAGE_SIZE });
 });
 
 describe("useProjects - initial state and shape", () => {

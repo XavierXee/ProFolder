@@ -25,6 +25,7 @@ vi.mock("../api/client.js", () => ({
   getAllTags: vi.fn(),
   getCustomTabs: vi.fn(),
   setMusicRoot: vi.fn(),
+  getPaginationSettings: vi.fn(),
 }));
 
 import * as api from "../api/client.js";
@@ -37,6 +38,7 @@ const mockGetStats = vi.mocked(api.getStats);
 const mockGetAllTags = vi.mocked(api.getAllTags);
 const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
 const mockSetMusicRoot = vi.mocked(api.setMusicRoot);
+const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 
 const THEME_KEY = "musicLibraryManager.theme";
 const LEGACY_THEME_KEY = "musicLibraryManager.isDark";
@@ -54,6 +56,7 @@ beforeEach(() => {
   mockGetAllTags.mockReset().mockResolvedValue([]);
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
   mockSetMusicRoot.mockReset();
+  mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 });
 });
 
 async function waitForMount() {

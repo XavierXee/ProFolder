@@ -2,22 +2,54 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SettingsPanel from "../SettingsPanel.js";
-import type { ScanSettings } from "../../api/client.js";
+import type { ConfirmationSettings, PaginationSettings, ScanSettings } from "../../api/client.js";
 
 vi.mock("../../api/client.js", () => ({
   getScanSettings: vi.fn(),
   setScanSettings: vi.fn(),
+  getConfirmationSettings: vi.fn(),
+  setConfirmationSettings: vi.fn(),
+  getPaginationSettings: vi.fn(),
+  setPaginationSettings: vi.fn(),
+}));
+
+vi.mock("../../hooks/useItemsPerPage.js", () => ({
+  setItemsPerPageGlobally: vi.fn(),
 }));
 
 import * as api from "../../api/client.js";
+import { setItemsPerPageGlobally } from "../../hooks/useItemsPerPage.js";
 
 const mockGetScanSettings = vi.mocked(api.getScanSettings);
 const mockSetScanSettings = vi.mocked(api.setScanSettings);
+const mockGetConfirmationSettings = vi.mocked(api.getConfirmationSettings);
+const mockSetConfirmationSettings = vi.mocked(api.setConfirmationSettings);
+const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
+const mockSetPaginationSettings = vi.mocked(api.setPaginationSettings);
+const mockSetItemsPerPageGlobally = vi.mocked(setItemsPerPageGlobally);
 
 function makeSettings(overrides: Partial<ScanSettings> = {}): ScanSettings {
   return {
     excludeSamplesFolders: false,
     excludeBackupFolders: false,
+    ...overrides,
+  };
+}
+
+function makeConfirmationSettings(overrides: Partial<ConfirmationSettings> = {}): ConfirmationSettings {
+  return {
+    confirmTagRemoval: true,
+    confirmTabDeletion: true,
+    confirmCopy: true,
+    confirmMove: true,
+    confirmDelete: true,
+    ...overrides,
+  };
+}
+
+function makePaginationSettings(overrides: Partial<PaginationSettings> = {}): PaginationSettings {
+  return {
+    itemsPerPage: 50,
     ...overrides,
   };
 }
@@ -34,6 +66,11 @@ function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0]> = {
 beforeEach(() => {
   mockGetScanSettings.mockReset().mockResolvedValue(makeSettings());
   mockSetScanSettings.mockReset().mockResolvedValue(makeSettings());
+  mockGetConfirmationSettings.mockReset().mockResolvedValue(makeConfirmationSettings());
+  mockSetConfirmationSettings.mockReset().mockResolvedValue(makeConfirmationSettings());
+  mockGetPaginationSettings.mockReset().mockResolvedValue(makePaginationSettings());
+  mockSetPaginationSettings.mockReset().mockResolvedValue(makePaginationSettings());
+  mockSetItemsPerPageGlobally.mockReset();
 });
 
 describe("SettingsPanel - load-on-open", () => {
@@ -54,6 +91,10 @@ describe("SettingsPanel - load-on-open", () => {
     renderPanel();
 
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    // Confirmation Settings resolves independently (its own mocked promise, not the one under
+    // test here) -- wait for it to settle first so the scan-settings "Loading…" text below is
+    // unambiguous rather than colliding with the confirmation section's own loading text.
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: /Confirm tag removal/ })).toBeInTheDocument());
     expect(screen.getByText("Loading…")).toBeInTheDocument();
 
     resolveSettings(makeSettings({ excludeSamplesFolders: true }));
@@ -173,5 +214,154 @@ describe("SettingsPanel - save state machine", () => {
 
     await waitFor(() => expect(screen.getByText("Failed to save")).toBeInTheDocument());
     expect(checkbox).toBeChecked();
+  });
+});
+
+describe("SettingsPanel - Confirmation Settings section", () => {
+  it("renders all 5 toggles with the correct initial checked state from getConfirmationSettings", async () => {
+    mockGetConfirmationSettings.mockReset().mockResolvedValue(
+      makeConfirmationSettings({
+        confirmTagRemoval: true,
+        confirmTabDeletion: false,
+        confirmCopy: true,
+        confirmMove: false,
+        confirmDelete: true,
+      })
+    );
+    renderPanel();
+
+    expect(await screen.findByRole("checkbox", { name: /Confirm tag removal/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Confirm tab deletion/ })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Confirm copy/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Confirm move/ })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Confirm delete/ })).toBeChecked();
+  });
+
+  it("calls setConfirmationSettings with the correct partial patch when a toggle is clicked", async () => {
+    let resolveSave!: (settings: ConfirmationSettings) => void;
+    mockSetConfirmationSettings.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSave = resolve;
+      })
+    );
+    const user = userEvent.setup();
+    renderPanel();
+
+    const checkbox = await screen.findByRole("checkbox", { name: /Confirm delete/ });
+    expect(checkbox).toBeChecked();
+
+    await user.click(checkbox);
+
+    expect(checkbox).not.toBeChecked();
+    expect(mockSetConfirmationSettings).toHaveBeenCalledWith({ confirmDelete: false });
+
+    resolveSave(makeConfirmationSettings({ confirmDelete: false }));
+    await waitFor(() => expect(screen.getByText("Saved")).toBeInTheDocument());
+  });
+});
+
+describe("SettingsPanel - Pagination section", () => {
+  it("renders the Items per page input pre-filled with the fetched value", async () => {
+    mockGetPaginationSettings.mockReset().mockResolvedValue(makePaginationSettings({ itemsPerPage: 75 }));
+    renderPanel();
+
+    const input = await screen.findByLabelText("Items per page");
+    expect(input).toHaveValue(75);
+  });
+
+  it("calls setPaginationSettings with the typed value when Apply is clicked", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const input = await screen.findByLabelText("Items per page");
+    await user.clear(input);
+    await user.type(input, "200");
+
+    const applyButton = screen.getByRole("button", { name: "Apply" });
+    await user.click(applyButton);
+
+    expect(mockSetPaginationSettings).toHaveBeenCalledWith({ itemsPerPage: 200 });
+  });
+
+  it("pushes the new value to every mounted tab via setItemsPerPageGlobally on a successful Apply", async () => {
+    mockSetPaginationSettings.mockResolvedValue(makePaginationSettings({ itemsPerPage: 200 }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    const input = await screen.findByLabelText("Items per page");
+    await user.clear(input);
+    await user.type(input, "200");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => expect(mockSetItemsPerPageGlobally).toHaveBeenCalledWith(200));
+  });
+
+  it("shows the Saved indicator after a successful Apply", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const input = await screen.findByLabelText("Items per page");
+    await user.clear(input);
+    await user.type(input, "100");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => expect(screen.getAllByText("Saved").length).toBeGreaterThan(0));
+  });
+
+  it("disables Apply when the input is out of range (below the minimum of 10)", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const input = await screen.findByLabelText("Items per page");
+    await user.clear(input);
+    await user.type(input, "5");
+
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+  });
+
+  it("disables Apply when the input is out of range (above the maximum of 500)", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const input = await screen.findByLabelText("Items per page");
+    await user.clear(input);
+    await user.type(input, "501");
+
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+  });
+
+  it("disables Apply when the input is empty", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const input = await screen.findByLabelText("Items per page");
+    await user.clear(input);
+
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+  });
+
+  it("disables Apply when the input is unchanged from the currently-applied value", async () => {
+    mockGetPaginationSettings.mockReset().mockResolvedValue(makePaginationSettings({ itemsPerPage: 50 }));
+    renderPanel();
+
+    const input = await screen.findByLabelText("Items per page");
+    expect(input).toHaveValue(50);
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+  });
+
+  it("does not call setItemsPerPageGlobally and shows an error when the save rejects", async () => {
+    mockSetPaginationSettings.mockRejectedValue(new Error("itemsPerPage must be an integer between 10 and 500"));
+    const user = userEvent.setup();
+    renderPanel();
+
+    const input = await screen.findByLabelText("Items per page");
+    await user.clear(input);
+    await user.type(input, "100");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("itemsPerPage must be an integer between 10 and 500")).toBeInTheDocument()
+    );
+    expect(mockSetItemsPerPageGlobally).not.toHaveBeenCalled();
   });
 });

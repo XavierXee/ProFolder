@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
-import type { BatchOpResult } from "../api/client.js";
+import type { BatchOpResult, ConfirmationSettings } from "../api/client.js";
+import { useConfirmationRequired } from "../hooks/useConfirmationRequired.js";
+import { useTypedConfirmation } from "../hooks/useTypedConfirmation.js";
+import ConfirmTextInput from "./ConfirmTextInput.js";
 import DestinationFolderPicker from "./DestinationFolderPicker.js";
 
 export type CopyMoveDeleteOperation = "copy" | "move" | "delete";
@@ -102,6 +105,21 @@ export function toRelativePath(musicRoot: string, absolutePath: string): string 
   return absolutePath.startsWith(prefix) ? absolutePath.slice(prefix.length) : absolutePath;
 }
 
+/** Maps an operation to its corresponding confirmation-settings field and the uppercase
+ * keyword the user must type to confirm it (per the double-text-confirmation feature's own
+ * wording). */
+function confirmationWord(operation: CopyMoveDeleteOperation): string {
+  if (operation === "copy") return "COPY";
+  if (operation === "move") return "MOVE";
+  return "DELETE";
+}
+
+function confirmationSettingField(operation: CopyMoveDeleteOperation): keyof ConfirmationSettings {
+  if (operation === "copy") return "confirmCopy";
+  if (operation === "move") return "confirmMove";
+  return "confirmDelete";
+}
+
 function applyButtonLabel(operation: CopyMoveDeleteOperation, busy: boolean): string {
   if (operation === "copy") return busy ? "Copying…" : "Copy";
   if (operation === "move") return busy ? "Moving…" : "Move";
@@ -169,6 +187,10 @@ export default function CopyMoveDeleteDialog({ open, operation, itemType, target
   const [error, setError] = useState<string | undefined>();
   const closeRef = useRef<HTMLButtonElement>(null);
 
+  const required = useConfirmationRequired(confirmationSettingField(operation), open);
+  const expectedWord = confirmationWord(operation);
+  const { value: confirmValue, setValue: setConfirmValue, satisfied, reset: resetConfirmation } = useTypedConfirmation(expectedWord, required);
+
   // A parent may keep this component mounted across opens/closes (toggling `open` rather
   // than mounting/unmounting the element), matching BatchEditPanel/ScanFolderPanel's
   // convention — so state must be explicitly reset here rather than relying on a fresh
@@ -178,7 +200,9 @@ export default function CopyMoveDeleteDialog({ open, operation, itemType, target
     setDestinationPath(null);
     setBusy(false);
     setError(undefined);
+    resetConfirmation();
     setTimeout(() => closeRef.current?.focus(), 50);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -193,7 +217,7 @@ export default function CopyMoveDeleteDialog({ open, operation, itemType, target
 
   const needsDestination = operation !== "delete";
   const isEmptyBatch = target.kind === "batch" && target.count === 0;
-  const canApply = !busy && (!needsDestination || destinationPath !== null) && !isEmptyBatch;
+  const canApply = !busy && (!needsDestination || destinationPath !== null) && !isEmptyBatch && satisfied;
 
   // A project can never be moved into itself or one of its own descendants (that would
   // nest it inside its own subtree), so the picker needs to disable that whole subtree —
@@ -274,6 +298,8 @@ export default function CopyMoveDeleteDialog({ open, operation, itemType, target
 
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
             <p className="text-sm">{explanation}</p>
+
+            {required && <ConfirmTextInput expectedText={expectedWord} value={confirmValue} onChange={setConfirmValue} disabled={busy} />}
 
             {error && <p className="text-sm text-red-400">{error}</p>}
 

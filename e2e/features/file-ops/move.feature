@@ -24,6 +24,7 @@ Feature: Copy/Move/Delete — moving a single file
     And I click "Move" in the file detail panel
     Then I should see the file operation dialog
     When I select destination folder "File Ops E2E Move Destination" in the file operation dialog
+    And I type "MOVE" to confirm in the file operation dialog
     Then the file operation apply button should be enabled
     When I confirm the move in the file operation dialog
     Then I should not see the file operation dialog

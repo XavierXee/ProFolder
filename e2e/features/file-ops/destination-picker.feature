@@ -21,6 +21,7 @@ Feature: Copy/Move/Delete — destination folder picker sanity check
     And I should see the destination folder tree
     And the file operation apply button should be disabled
     When I select destination folder "File Ops E2E Picker Destination" in the file operation dialog
+    And I type "COPY" to confirm in the file operation dialog
     Then the file operation apply button should be enabled
     When I click cancel in the file operation dialog
     Then I should not see the file operation dialog

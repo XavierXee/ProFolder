@@ -2,6 +2,11 @@ import { Router } from "express";
 import type Database from "better-sqlite3";
 import { getEffectiveMusicRoot, setMusicRootOverride } from "../../config/musicRoot.js";
 import { getScanSettings, setScanSettings } from "../../config/scanSettings.js";
+import {
+  getConfirmationSettings,
+  setConfirmationSettings,
+} from "../../config/confirmationSettings.js";
+import { getPaginationSettings, setPaginationSettings } from "../../config/paginationSettings.js";
 import type { FolderPickerService } from "../../services/FolderPickerService.js";
 import { asyncHandler } from "../asyncHandler.js";
 
@@ -65,6 +70,79 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
         return;
       }
       res.json(setScanSettings(db, { excludeSamplesFolders, excludeBackupFolders }));
+    })
+  );
+
+  router.get(
+    "/confirmation-settings",
+    asyncHandler(async (_req, res) => {
+      res.json(getConfirmationSettings(db));
+    })
+  );
+
+  router.put(
+    "/confirmation-settings",
+    asyncHandler(async (req, res) => {
+      const { confirmTagRemoval, confirmTabDeletion, confirmCopy, confirmMove, confirmDelete } =
+        req.body as {
+          confirmTagRemoval?: unknown;
+          confirmTabDeletion?: unknown;
+          confirmCopy?: unknown;
+          confirmMove?: unknown;
+          confirmDelete?: unknown;
+        };
+      if (confirmTagRemoval !== undefined && typeof confirmTagRemoval !== "boolean") {
+        res.status(400).json({ error: "confirmTagRemoval must be a boolean" });
+        return;
+      }
+      if (confirmTabDeletion !== undefined && typeof confirmTabDeletion !== "boolean") {
+        res.status(400).json({ error: "confirmTabDeletion must be a boolean" });
+        return;
+      }
+      if (confirmCopy !== undefined && typeof confirmCopy !== "boolean") {
+        res.status(400).json({ error: "confirmCopy must be a boolean" });
+        return;
+      }
+      if (confirmMove !== undefined && typeof confirmMove !== "boolean") {
+        res.status(400).json({ error: "confirmMove must be a boolean" });
+        return;
+      }
+      if (confirmDelete !== undefined && typeof confirmDelete !== "boolean") {
+        res.status(400).json({ error: "confirmDelete must be a boolean" });
+        return;
+      }
+      res.json(
+        setConfirmationSettings(db, {
+          confirmTagRemoval,
+          confirmTabDeletion,
+          confirmCopy,
+          confirmMove,
+          confirmDelete,
+        })
+      );
+    })
+  );
+
+  router.get(
+    "/pagination-settings",
+    asyncHandler(async (_req, res) => {
+      res.json(getPaginationSettings(db));
+    })
+  );
+
+  router.put(
+    "/pagination-settings",
+    asyncHandler(async (req, res) => {
+      const { itemsPerPage } = req.body as { itemsPerPage?: unknown };
+      if (itemsPerPage !== undefined && typeof itemsPerPage !== "number") {
+        res.status(400).json({ error: "itemsPerPage must be a number" });
+        return;
+      }
+      try {
+        res.json(setPaginationSettings(db, { itemsPerPage }));
+      } catch (err) {
+        res.status(400).json({ error: err instanceof Error ? err.message : "Invalid itemsPerPage" });
+      }
     })
   );
 

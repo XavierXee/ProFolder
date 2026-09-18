@@ -2,17 +2,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Project } from "../types.js";
 import { getProjects, type ProjectFilters } from "../api/client.js";
 import { PAGE_SIZE } from "../constants.js";
+import { useItemsPerPage } from "./useItemsPerPage.js";
 
 const DEFAULT_PAGE_SIZE = PAGE_SIZE;
 
 export function useProjects(initialFilters: Partial<Omit<ProjectFilters, "page" | "pageSize">> = {}) {
+  const itemsPerPage = useItemsPerPage();
   const [projects, setProjects] = useState<(Project & { audioFileCount: number })[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFiltersState] = useState<ProjectFilters>({
     ...initialFilters,
     page: 1,
-    pageSize: DEFAULT_PAGE_SIZE,
+    pageSize: itemsPerPage,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -30,6 +32,20 @@ export function useProjects(initialFilters: Partial<Omit<ProjectFilters, "page" 
       mountedRef.current = false;
     };
   }, []);
+
+  // Skips the very first render's value (already seeded into the initial filters state
+  // above) and only reacts to a genuine *change* -- e.g. the Settings panel's Apply button
+  // being clicked while this hook instance is already mounted. Goes through setFiltersState
+  // directly rather than `updateFilters` (whose patch type intentionally excludes `pageSize`)
+  // to avoid widening that helper's public type just for this one internal case.
+  const isFirstItemsPerPageRender = useRef(true);
+  useEffect(() => {
+    if (isFirstItemsPerPageRender.current) {
+      isFirstItemsPerPageRender.current = false;
+      return;
+    }
+    setFiltersState((prev) => ({ ...prev, pageSize: itemsPerPage, page: 1 }));
+  }, [itemsPerPage]);
 
   const refetch = useCallback(() => {
     const requestId = ++latestRequestId.current;
