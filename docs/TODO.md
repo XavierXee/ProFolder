@@ -239,14 +239,14 @@ for now just do the component showing with 1 second)
 - **Process incident, addressed directly**: mid-cycle, the same "killed a process it didn't start without asking" pattern flagged once already in the corrective cycle above recurred in a Developer dispatch during this cycle too — the Skill Builder added a standing rule to the local agent definitions/`tester.md` forbidding this outright (STOP and report instead) after this second occurrence.
 - **Auditor**: not triggered on any of the 8 tasks — pure client-side CSS/className/token work throughout, no new dependencies, no backend/security-relevant surface. Consistent with the user's own scoping choice for this cycle (Architect+Developer+Reviewer only).
 
-## 11. New feature, double confirmation for critical actions (text confirmation) [x] (implemented, not yet committed)
+## 11. New feature, double confirmation for critical actions (text confirmation) [x]
 
 - add text confirmation for non-undoable actions (removing tab, removing tag, removing status, moving, coping or deleting).
 To confirm deleting a tab or a tag user have to manually type the tab/tag/status name in an input field to make the final button not disable
 For Copy, Move or Delete, ask the user to simply type COPY, MOVE or DELETE
 - In settings add options to Enable or disable type confirmation for each of the actions that needs confirmation (removing tag, removing tab, removing status, Copying, Moving and Deleting projects or audio files)
 
-**Status**: shipped as scoped, minus status-removal (see "Found along the way" note above — deliberately descoped by the user, status has no real "remove" action today). 4 tasks: (1) backend `ConfirmationSettings` storage + route, (2) frontend foundation (`useTypedConfirmation`, `ConfirmTextInput`, Settings UI), (3) wired into tab-delete and copy/move/delete dialogs, (4) shared `useConfirmationRequired` hook extraction + new tag-removal confirmation dialog. All 4 tasks passed Tester + Reviewer gates (Auditor not triggered — no security-sensitive surface). `docs/REQUIREMENTS.md`/`docs/COVERAGE.md` are not yet updated to reflect this feature (see "Found along the way" note above) — left for a future documentation-closure task, matching this repo's established pattern. **Not yet committed** — this and the underlying code changes exist only in the current working tree.
+**Status**: shipped as scoped, minus status-removal (see "Found along the way" note above — deliberately descoped by the user, status has no real "remove" action today). 4 tasks: (1) backend `ConfirmationSettings` storage + route, (2) frontend foundation (`useTypedConfirmation`, `ConfirmTextInput`, Settings UI), (3) wired into tab-delete and copy/move/delete dialogs, (4) shared `useConfirmationRequired` hook extraction + new tag-removal confirmation dialog. All 4 tasks passed Tester + Reviewer gates (Auditor not triggered — no security-sensitive surface). `docs/REQUIREMENTS.md`/`docs/COVERAGE.md` are not yet updated to reflect this feature (see "Found along the way" note above) — left for a future documentation-closure task, matching this repo's established pattern. Committed in `a3a41e5`.
 
 ## 12. New settings
 
