@@ -18,7 +18,7 @@ function SortTh({
   filters,
   onSortChange,
   label,
-  className = "",
+  className = "text-left",
 }: {
   sortKey: SortKey;
   filters: FileFilters;
@@ -28,11 +28,11 @@ function SortTh({
 }) {
   const active = filters.sortBy === sortKey;
   return (
-    <th scope="col" aria-sort={active ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"} className={`px-4 py-3 text-left ${className}`}>
+    <th scope="col" aria-sort={active ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"} className={`px-4 py-3 ${className}`}>
       <button
         onClick={() => onSortChange(sortKey)}
         aria-label={`Sort by ${label}`}
-        className="flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted hover:text-ink focus:outline-none focus-visible:underline transition-colors"
+        className="inline-flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted hover:text-ink focus:outline-none focus-visible:underline transition-colors"
       >
         {label}
         {sortIndicator(filters, sortKey)}
@@ -89,7 +89,7 @@ export function FileTable({
   return (
     <table className="w-full border-collapse table-fixed" aria-label="Audio files">
       <caption className="sr-only">Scanned audio files, sortable by column</caption>
-      <thead className="border-b sticky top-0 z-10 bg-canvas border-border">
+      <thead className="border-b sticky top-0 z-10 bg-canvas border-divider">
         <tr>
           <th scope="col" className={`${thBase} text-center w-[4%]`}>
             <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible files" />
@@ -104,9 +104,9 @@ export function FileTable({
           <th scope="col" className={`${staticTh} w-[10%]`}>
             Project
           </th>
-          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} label="Score" className="w-[8%]" />
+          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} label="Score" className="text-center w-[8%]" />
           <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} label="Location" className="w-[16%]" />
-          <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} label="Modified" className="w-[10%]" />
+          <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} label="Modified" className="text-center w-[10%]" />
         </tr>
       </thead>
       <tbody>

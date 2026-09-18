@@ -163,7 +163,7 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
         role="dialog"
         aria-modal="true"
         aria-label={project ? `Folder detail: ${project.name}` : "Folder detail"}
-        className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col shadow-2xl transition-transform duration-250 ease-out ${panel} ${project ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col transition-transform duration-250 ease-out ${panel} ${project ? "translate-x-0 shadow-2xl" : "translate-x-full"}`}
       >
         {project && (
           <>

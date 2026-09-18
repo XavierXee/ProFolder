@@ -293,12 +293,12 @@ describe("FileTable - select-all checkbox", () => {
 });
 
 describe("FileTable - header token classes", () => {
-  it("gives the sticky header row the bg-canvas/border-border tokens", () => {
+  it("gives the sticky header row the bg-canvas/border-divider tokens", () => {
     const { container } = renderTable();
 
     const thead = container.querySelector("thead");
     expect(thead).toHaveClass("bg-canvas");
-    expect(thead).toHaveClass("border-border");
+    expect(thead).toHaveClass("border-divider");
   });
 
   it("gives sort-header buttons the text-ink-muted token with a hover:text-ink accent", () => {

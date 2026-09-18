@@ -151,7 +151,7 @@ export default function BatchEditPanel({
         role="dialog"
         aria-modal="true"
         aria-label={`Batch edit ${itemLabel}s`}
-        className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col shadow-2xl transition-transform duration-250 ease-out ${panel} ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col transition-transform duration-250 ease-out ${panel} ${open ? "translate-x-0 shadow-2xl" : "translate-x-full"}`}
       >
         <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
           <div className="min-w-0">
@@ -213,7 +213,7 @@ export default function BatchEditPanel({
               <button
                 onClick={() => handleAddTag(tagInput)}
                 disabled={tagSaving || !tagInput.trim()}
-                className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+                className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
               >
                 Add
               </button>

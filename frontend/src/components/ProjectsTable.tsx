@@ -34,7 +34,7 @@ function SortTh({
       <button
         onClick={() => onSortChange(sortKey)}
         aria-label={`Sort by ${label}`}
-        className="flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted hover:text-ink focus:outline-none focus-visible:underline transition-colors"
+        className="inline-flex items-center gap-1 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted hover:text-ink focus:outline-none focus-visible:underline transition-colors"
       >
         {label}
         {sortIndicator(filters, sortKey)}
@@ -98,7 +98,7 @@ export function ProjectsTable({
     <div className="flex flex-col flex-1 min-h-0">
       <main className={`flex-1 overflow-auto ${playerActive ? "pb-20" : ""}`} aria-live="polite" aria-label="Project folders">
         <table className="w-full border-collapse table-fixed" aria-label="Project folders">
-          <thead className="border-b sticky top-0 z-10 bg-canvas border-border">
+          <thead className="border-b sticky top-0 z-10 bg-canvas border-divider">
             <tr>
               <th scope="col" className={`${staticTh} w-[4%]`}>
                 <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible project folders" />

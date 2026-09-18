@@ -43,10 +43,8 @@ function loadStoredTheme(): Theme {
   return "profolder";
 }
 
-function tabRowClassName(sectionBorder: string, theme?: string): string {
+function tabRowClassName(sectionBorder: string): string {
   return `flex items-center gap-1 h-10 px-6 border-b ${sectionBorder}`;
-  // return `flex items-center gap-1 ${theme === 'profolder' ? "py-1.5" : ""} px-6 border-b ${sectionBorder}`;
-  // return `flex items-center gap-1 ${theme === 'profolder' ? "px-6" : ""} py-1.5 border-b ${sectionBorder}`;
 }
 
 /** Tab button classes for the default ("Project Folders"/"Audio Files") and custom tabs. Base
@@ -423,7 +421,7 @@ export default function App() {
   const sectionBorder = "border-border";
 
   return (
-    <div className="min-h-screen flex flex-col bg-canvas">
+    <div className="h-screen overflow-hidden flex flex-col bg-canvas">
       <SplashScreen />
 
       <header className="border-b border-border bg-chrome/90 px-6 py-4 flex items-center justify-between gap-4 sticky top-0 z-20 backdrop-blur-sm">
@@ -448,7 +446,7 @@ export default function App() {
               setShowProjectsBatchPanel(false);
               setShowScanPanel(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path
@@ -502,7 +500,7 @@ export default function App() {
       </header>
 
       <div className="bg-chrome-light flex flex-col flex-1 min-h-39">
-        <div className={tabRowClassName(sectionBorder, theme)}>
+        <div className={tabRowClassName(sectionBorder)}>
         {/*<div className={`flex items-center gap-1 ${theme === 'profolder' ? "px-6" : ""} py-1.5 border-b ${sectionBorder}`}>*/}
           <button
             onClick={() => setShowCreateTabModal(true)}

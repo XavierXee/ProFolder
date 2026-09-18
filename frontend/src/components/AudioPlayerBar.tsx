@@ -105,7 +105,7 @@ export default function AudioPlayerBar({ file, isPlaying, onPlayingChange, onClo
         <button
           onClick={() => onPlayingChange(!isPlaying)}
           aria-label={isPlaying ? "Pause" : "Play"}
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
         >
           {isPlaying ? (
             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">

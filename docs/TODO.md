@@ -238,23 +238,22 @@ for now just do the component showing with 1 second)
 
 ## 10. Minor UI/UX/CSS fixes
 
-- download used Fonts so they are served from static folder and not from CDN
-- SCORE header not centered
-- MODIFIED header not centered
-- profolder theme, blue buttons to be clear blue (same as selected row) with dark text and border
+- scrolling should only be the list itself, not the filter bar or tab header
+
+## 11. New feature, double confirmation for critical actions (text confimration)
+
 - add text confirmation for non-undoable actions (removing tab, removing tag, removing status, moving, coping or deleting).
 To confirm deleting a tab or a tag user have to manually type the tab/tag/status name in an input field to make the final button not disable
 For Copy, Move or Delete, ask the user to simply type COPY, MOVE or DELETE
-- scrolling should only be the list itself, not the filter bar or tab header
+- In settings add options to Enable or disable type confirmation for each of the actions that needs confirmation (removing tag, removing tab, removing status, Copying, Moving and Deleting projects or audio files)
 
-## 10. New settings
+## 12. New settings
 
 - edit statuses - give it a name and a color
 - edit tags, review list of all tags, ability to change their name or to remove them
-- Enable or disable type confirmation for each of the actions that needs confirmation (removing tag, removing tab, removing status, Copying, Moving and Deleting projects or audio files)
 - Number of items per page
 
-## 11. I now want to share this repository, making it open source, public and usable by others
+## 13. I now want to share this repository, making it open source, public and usable by others
 
 - Perform audit on the whole codebase for any cyber-security risk
 - Potential risk includes but not limited to credential stealing, API keys left in the codebase, dependency vulnerabilities

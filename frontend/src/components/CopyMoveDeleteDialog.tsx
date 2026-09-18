@@ -240,7 +240,8 @@ export default function CopyMoveDeleteDialog({ open, operation, itemType, target
   const title = dialogTitle(operation, itemType, target);
   const explanation = buildExplanationText(operation, itemType, target, destinationPath);
   const applyDangerCls = "bg-red-600 hover:bg-red-500 focus-visible:ring-red-500";
-  const applyPrimaryCls = "bg-blue-600 hover:bg-blue-500 focus-visible:ring-blue-500";
+  const applyPrimaryCls =
+    "bg-blue-600 hover:bg-blue-500 focus-visible:ring-blue-500 profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary";
 
   return (
     <>
