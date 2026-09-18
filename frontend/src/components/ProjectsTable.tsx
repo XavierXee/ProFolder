@@ -30,7 +30,7 @@ function SortTh({
 }) {
   const active = filters.sortBy === sortKey;
   return (
-    <th scope="col" aria-sort={active ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"} className={`px-4 py-3 ${className}`}>
+    <th scope="col" aria-sort={active ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"} className={`px-4 py-3 border-b border-divider ${className}`}>
       <button
         onClick={() => onSortChange(sortKey)}
         aria-label={`Sort by ${label}`}
@@ -89,7 +89,7 @@ export function ProjectsTable({
   playerActive?: boolean;
 }) {
   const meta = "text-ink-muted";
-  const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted";
+  const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted border-b border-divider";
   const staticTh = `${thBase} text-center`;
   const leftTh = `${thBase} text-left`;
   const allSelected = projects.length > 0 && projects.every((p) => selectedIds.has(p.id));
@@ -98,8 +98,8 @@ export function ProjectsTable({
     <div className="flex flex-col flex-1 min-h-0">
       <main className={`flex-1 overflow-auto ${playerActive ? "pb-20" : ""}`} aria-live="polite" aria-label="Project folders">
         <table className="w-full border-collapse table-fixed" aria-label="Project folders">
-          <thead className="border-b sticky top-0 z-10 bg-canvas border-divider">
-            <tr>
+          <thead className="sticky top-0 z-10 bg-canvas">
+            <tr className="relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-[var(--color-border)]">
               <th scope="col" className={`${staticTh} w-[4%]`}>
                 <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible project folders" />
               </th>

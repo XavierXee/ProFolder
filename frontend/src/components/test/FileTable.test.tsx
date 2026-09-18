@@ -293,19 +293,27 @@ describe("FileTable - select-all checkbox", () => {
 });
 
 describe("FileTable - header token classes", () => {
-  it("gives the sticky header row the bg-canvas/border-divider tokens", () => {
-    const { container } = renderTable();
-
-    const thead = container.querySelector("thead");
-    expect(thead).toHaveClass("bg-canvas");
-    expect(thead).toHaveClass("border-divider");
-  });
-
   it("gives sort-header buttons the text-ink-muted token with a hover:text-ink accent", () => {
     renderTable();
 
     const button = within(screen.getByRole("columnheader", { name: /Track \/ File/ })).getByRole("button");
     expect(button).toHaveClass("text-ink-muted");
     expect(button).toHaveClass("hover:text-ink");
+  });
+
+  it("gives each header cell a border-divider bottom border (not the <thead> itself)", () => {
+    const { container } = renderTable();
+
+    // border-collapse + position: sticky on <thead> causes browsers to silently drop any border
+    // declared on the <thead>/<tr> itself (confirmed: even an inline-style override has zero visual
+    // effect), so the divider must live on each <th> cell instead.
+    const thead = container.querySelector("thead");
+    expect(thead).toHaveClass("bg-canvas");
+    expect(thead).not.toHaveClass("border-b");
+
+    for (const th of container.querySelectorAll("thead th")) {
+      expect(th).toHaveClass("border-b");
+      expect(th).toHaveClass("border-divider");
+    }
   });
 });

@@ -28,7 +28,7 @@ function SortTh({
 }) {
   const active = filters.sortBy === sortKey;
   return (
-    <th scope="col" aria-sort={active ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"} className={`px-4 py-3 ${className}`}>
+    <th scope="col" aria-sort={active ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"} className={`px-4 py-3 border-b border-divider ${className}`}>
       <button
         onClick={() => onSortChange(sortKey)}
         aria-label={`Sort by ${label}`}
@@ -82,14 +82,14 @@ export function FileTable({
     }
   }, [flashId]);
 
-  const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted";
+  const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted border-b border-divider";
   const staticTh = `${thBase} text-left`;
   const allSelected = files.length > 0 && files.every((f) => selectedIds.has(f.id));
 
   return (
     <table className="w-full border-collapse table-fixed" aria-label="Audio files">
       <caption className="sr-only">Scanned audio files, sortable by column</caption>
-      <thead className="border-b sticky top-0 z-10 bg-canvas border-divider">
+      <thead className="sticky top-0 z-10 bg-canvas">
         <tr>
           <th scope="col" className={`${thBase} text-center w-[4%]`}>
             <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible files" />

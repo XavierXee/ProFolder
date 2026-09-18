@@ -240,6 +240,8 @@
 /* dark (also the unscoped :root default, matching today's default-dark behavior) */
 :root,
 [data-theme="dark"] {
+  --tw-border-style: solid;
+
   --rt-canvas: #0d0f14;
   --rt-surface: #181b24;
   /* hover/selected values below are byte-faithful translations of the existing row
@@ -253,7 +255,7 @@
   --rt-surface-hover: rgb(255 255 255 / 0.03);
   --rt-surface-selected: oklch(62.3% 0.214 259.815 / 0.08);
   --rt-border: rgba(255, 255, 255, 0.08);
-  --rt-divider: #B0B0B0; /* solid light grey, not a translucent overlay — a clearly-visible section divider (e.g. under a table's column-header row); --rt-border's 0.08 alpha is intentionally a near-invisible hairline for internal dividers, too subtle for a structural separator */
+  --rt-divider: #B0B0B0; /* solid light grey, deliberately NOT theme-relative alpha — a structural divider (e.g. under a table's column-header row) needs to actually be visible, unlike --rt-border's near-invisible 0.08 hairline. Same literal value in all 3 themes on purpose. */
   --rt-ink: #e2e8f0; /* matches the pre-existing dark `body { color: #e2e8f0 }` (Tailwind slate-200) */
   --rt-ink-muted: #64748b;
   /* byte-faithful transcription of ScoreBadge.tsx/ScoreEditor.tsx's `isDark ? "bg-slate-700" : ...` */
@@ -373,6 +375,8 @@
 
 /* light */
 [data-theme="light"] {
+  --tw-border-style: solid;
+
   --rt-canvas: #f4f6f9;
   --rt-surface: #ffffff;
   /* byte-faithful translations of hover:bg-black/3 and bg-blue-50 (FileRow.tsx / ProjectsTable.tsx) */
@@ -496,12 +500,14 @@
 
 /* profolder (new brand theme, default) */
 [data-theme="profolder"] {
+  --tw-border-style: solid;
+
   --rt-canvas: #f4f6f9;         /* matches Light theme's canvas, per user decision — main-element background only, not buttons/accents */
   --rt-surface: #ffffff;        /* matches Light theme's surface */
   --rt-surface-hover: rgb(0 0 0 / 0.03); /* matches Light theme's surface-hover */
   --rt-surface-selected: #D5F7FE; /* Ice Blue — unchanged */
   --rt-border: #B0B0B0;         /* hairline — unchanged */
-  --rt-divider: #B0B0B0;        /* profolder's border is already solid/visible — same value, see dark theme's --rt-divider comment */
+  --rt-divider: #B0B0B0;        /* same value as --rt-border here, since profolder's hairline is already solid/visible */
   --rt-ink: #1C1C1A;            /* Rack Black — main text on light backgrounds */
   --rt-ink-muted: #585858;      /* darkened from the old #6E6E6E — WCAG-verified: 5.86:1 on surface, 4.57:1 on canvas (both pass AA 4.5:1; the old value failed both, 4.20:1/3.27:1) */
   --rt-accent: #FADF82;         /* Clip Yellow — unchanged */
@@ -694,3 +700,4 @@ body {
   animation: shimmer 1.4s infinite;
   border-radius: 4px;
 }
+
