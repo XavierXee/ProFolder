@@ -1,0 +1,169 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import DeleteStatusConfirmDialog from "../DeleteStatusConfirmDialog.js";
+import type { ConfirmationSettings } from "../../api/client.js";
+
+vi.mock("../../api/client.js", () => ({
+  getConfirmationSettings: vi.fn(),
+}));
+
+import * as api from "../../api/client.js";
+
+const mockGetConfirmationSettings = vi.mocked(api.getConfirmationSettings);
+
+function makeSettings(overrides: Partial<ConfirmationSettings> = {}): ConfirmationSettings {
+  return {
+    confirmTabDeletion: false,
+    confirmCopy: false,
+    confirmMove: false,
+    confirmDelete: false,
+    confirmStatusDeletion: false,
+    confirmTagDeletion: false,
+    ...overrides,
+  };
+}
+
+function renderDialog(overrides: Partial<Parameters<typeof DeleteStatusConfirmDialog>[0]> = {}) {
+  const props = {
+    open: true,
+    statusName: "Draft",
+    onConfirm: vi.fn(),
+    onCancel: vi.fn(),
+    ...overrides,
+  };
+  return { ...render(<DeleteStatusConfirmDialog {...props} />), props };
+}
+
+beforeEach(() => {
+  // Default: confirmation off, matching this file's pre-existing "instant delete" tests.
+  mockGetConfirmationSettings.mockReset().mockResolvedValue(makeSettings());
+});
+
+describe("DeleteStatusConfirmDialog - open=false", () => {
+  it("renders nothing", () => {
+    renderDialog({ open: false });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("DeleteStatusConfirmDialog - open=true", () => {
+  it("renders the statusName in the confirmation text", () => {
+    renderDialog({ statusName: "Draft" });
+
+    expect(screen.getByRole("dialog", { name: "Delete status confirmation" })).toBeInTheDocument();
+    expect(screen.getByText('Remove the status "Draft"? This cannot be undone.')).toBeInTheDocument();
+  });
+
+  it("clicking Delete calls onConfirm and not onCancel", async () => {
+    const user = userEvent.setup();
+    const { props } = renderDialog();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).not.toBeDisabled());
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(props.onConfirm).toHaveBeenCalledTimes(1);
+    expect(props.onCancel).not.toHaveBeenCalled();
+  });
+
+  it("clicking Cancel calls onCancel and not onConfirm", async () => {
+    const user = userEvent.setup();
+    const { props } = renderDialog();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(props.onCancel).toHaveBeenCalledTimes(1);
+    expect(props.onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("calls onCancel when Escape is pressed", () => {
+    const { props } = renderDialog();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    expect(props.onCancel).toHaveBeenCalledTimes(1);
+    expect(props.onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("calls onCancel when the backdrop is clicked", () => {
+    const { props } = renderDialog();
+
+    // The dialog is portaled to document.body (see DeleteStatusConfirmDialog.tsx's own comment),
+    // so its backdrop is a sibling of RTL's `container`, not a descendant of it.
+    const backdrop = document.body.querySelector('[aria-hidden="true"]');
+    expect(backdrop).not.toBeNull();
+    fireEvent.click(backdrop as Element);
+
+    expect(props.onCancel).toHaveBeenCalledTimes(1);
+    expect(props.onConfirm).not.toHaveBeenCalled();
+  });
+});
+
+describe("DeleteStatusConfirmDialog - confirmStatusDeletion required (true)", () => {
+  beforeEach(() => {
+    mockGetConfirmationSettings.mockReset().mockResolvedValue(makeSettings({ confirmStatusDeletion: true }));
+  });
+
+  it("renders a confirmation input and disables Delete until the exact status name is typed", async () => {
+    const user = userEvent.setup();
+    const { props } = renderDialog({ statusName: "Draft" });
+
+    await waitFor(() => expect(screen.getByLabelText('Type "Draft" to confirm')).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Type "Draft" to confirm'), "Draft");
+
+    expect(screen.getByRole("button", { name: "Delete" })).not.toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    expect(props.onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps Delete disabled if the typed text doesn't exactly match (case-sensitive)", async () => {
+    const user = userEvent.setup();
+    renderDialog({ statusName: "Draft" });
+
+    await waitFor(() => expect(screen.getByLabelText('Type "Draft" to confirm')).toBeInTheDocument());
+    await user.type(screen.getByLabelText('Type "Draft" to confirm'), "draft");
+
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+  });
+
+  it("treats confirmation as required (renders the input, disables Delete) before settings have loaded yet, fail-safe", () => {
+    mockGetConfirmationSettings.mockReset().mockReturnValue(new Promise(() => {}));
+    renderDialog({ statusName: "Draft" });
+
+    expect(screen.getByLabelText('Type "Draft" to confirm')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+  });
+});
+
+describe("DeleteStatusConfirmDialog - confirmStatusDeletion disabled (false)", () => {
+  it("renders no confirmation input and Delete is immediately enabled once settings have loaded", async () => {
+    renderDialog();
+
+    await waitFor(() => expect(mockGetConfirmationSettings).toHaveBeenCalled());
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).not.toBeDisabled());
+  });
+});
+
+describe("DeleteStatusConfirmDialog - typed text resets between opens", () => {
+  it("does not leak a previously typed status name into confirming a different status's deletion", async () => {
+    mockGetConfirmationSettings.mockReset().mockResolvedValue(makeSettings({ confirmStatusDeletion: true }));
+    const user = userEvent.setup();
+    const { rerender } = render(<DeleteStatusConfirmDialog open={true} statusName="Alpha" onConfirm={vi.fn()} onCancel={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByLabelText('Type "Alpha" to confirm')).toBeInTheDocument());
+    await user.type(screen.getByLabelText('Type "Alpha" to confirm'), "Alpha");
+    expect(screen.getByRole("button", { name: "Delete" })).not.toBeDisabled();
+
+    // Close, then reopen the same mounted dialog instance for a different status.
+    rerender(<DeleteStatusConfirmDialog open={false} statusName="Alpha" onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    rerender(<DeleteStatusConfirmDialog open={true} statusName="Beta" onConfirm={vi.fn()} onCancel={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByLabelText('Type "Beta" to confirm')).toBeInTheDocument());
+    expect(screen.getByLabelText('Type "Beta" to confirm')).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+  });
+});
