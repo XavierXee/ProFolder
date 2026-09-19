@@ -7,7 +7,23 @@ describe("ConfirmTextInput - label", () => {
   it("renders the default label containing expectedText when no label prop is provided", () => {
     render(<ConfirmTextInput expectedText="DELETE" value="" onChange={() => {}} />);
 
-    expect(screen.getByText('Type "DELETE" to confirm')).toBeInTheDocument();
+    // The visible label's text is split across a nested element (see the next test) so its
+    // rendered content doesn't exactly match `getByText`'s default single-node matching — check
+    // the label's own aggregated textContent instead, which is what a sighted user actually sees.
+    const label = document.querySelector("label");
+    expect(label).toHaveTextContent('Type "DELETE" to confirm');
+  });
+
+  it("preserves expectedText's real casing in a normal-case span, even though the rest of the label is visually uppercased", () => {
+    render(<ConfirmTextInput expectedText="Draft" value="" onChange={() => {}} />);
+
+    const label = document.querySelector("label");
+    expect(label).toHaveClass("uppercase");
+    const preserved = screen.getByText("Draft");
+    expect(preserved.tagName).toBe("SPAN");
+    expect(preserved).toHaveClass("normal-case");
+    // Sanity check: nothing anywhere renders the misleadingly-uppercased "DRAFT" as text content.
+    expect(screen.queryByText("DRAFT")).not.toBeInTheDocument();
   });
 
   it("renders a custom label when provided, instead of the default", () => {

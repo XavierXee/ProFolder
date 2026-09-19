@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import StatusBadge from "./StatusBadge.js";
-import { UNKNOWN_STATUS_KEY } from "../types.js";
 import { useStatusCatalog } from "../contexts/StatusCatalogContext.js";
 import * as api from "../api/client.js";
 import type { StatusDef } from "../api/client.js";
@@ -51,6 +50,22 @@ function TrashIcon() {
   );
 }
 
+function CheckIcon() {
+  return (
+    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
 export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onStatusDeleted }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const { statuses, refetch: refetchStatuses } = useStatusCatalog();
@@ -83,6 +98,14 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
 
   useEffect(() => {
     function onPointerDown(e: MouseEvent) {
+      // While a delete-confirmation dialog is open, it owns all outside-click handling itself
+      // (its own backdrop click cancels just the dialog) — this panel must not also react to
+      // that same click. This check has to be state-based, not DOM-containment-based: both
+      // dialogs are portaled to document.body (so their `position: fixed` overlay escapes the
+      // header's backdrop-filter containing block — see those files' own comments), so their
+      // backdrop is a sibling of this panel in the DOM, not a descendant reachable via
+      // panelRef.current.contains(...) or an ancestor closest('[role="dialog"]') lookup from it.
+      if (deletingStatus !== null || deletingTag !== null) return;
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
     }
     function onKey(e: KeyboardEvent) {
@@ -94,7 +117,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
       document.removeEventListener("mousedown", onPointerDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, [onClose, deletingStatus, deletingTag]);
 
   function startAddStatus() {
     setAddStatusOpen(true);
@@ -244,16 +267,16 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
   const divider = "border-border";
   // Byte-faithful reuse of TagEditor.tsx's read-only chip styling.
   const chipCls = "bg-chip-surface text-ink-secondary";
-  const removeCls = "text-ink-muted hover:text-ink";
   const iconBtnCls =
-    "p-1 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover";
-  const outlineBtnCls =
-    "px-2 py-1 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover";
-  const primaryBtnCls =
-    "px-2 py-1 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed";
+    "p-1 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover flex-shrink-0";
+  // Square icon-button variant of the app's canonical primary/"save" blue (same color, hover, and
+  // profolder-theme override as the Scan Library header button in App.tsx), used for the inline
+  // Add/Save confirm actions instead of a rectangular text button.
+  const primaryIconBtnCls =
+    "p-1 rounded-[var(--rt-radius)] bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary flex-shrink-0";
   const textInputCls =
     "flex-1 min-w-0 px-2 py-1 text-xs rounded-[var(--rt-radius)] border border-border bg-canvas text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
-  const colorInputCls = "h-6 w-8 flex-shrink-0 rounded-[var(--rt-radius)] border border-border bg-canvas p-0.5 cursor-pointer";
+  const colorInputCls = "h-6 w-6 flex-shrink-0 rounded-[var(--rt-radius)] border border-border bg-canvas p-0.5 cursor-pointer";
 
   return (
     <div
@@ -276,8 +299,11 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
       </div>
 
       <div className={`px-4 py-3 border-b ${divider}`}>
-        <span className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Statuses</span>
-        <div className="flex flex-col gap-1.5 mt-2">
+        <span className={`text-xs font-mono uppercase tracking-wider ${meta}`}>
+          Statuses {statuses.length > 0 && `(${statuses.length})`}
+        </span>
+
+        <div className="mt-2">
           {!addStatusOpen ? (
             <button type="button" onClick={startAddStatus} aria-label="Add status" className={`self-start ${iconBtnCls}`}>
               <PlusIcon />
@@ -300,28 +326,25 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
                   onChange={(e) => setNewStatusColor(e.target.value)}
                   className={colorInputCls}
                 />
-              </div>
-              {addStatusError && <p className="text-xs text-red-400">{addStatusError}</p>}
-              <div className="flex justify-end gap-1.5">
-                <button type="button" onClick={cancelAddStatus} className={outlineBtnCls}>
-                  Cancel
+                <button type="button" onClick={cancelAddStatus} aria-label="Cancel" className={iconBtnCls}>
+                  <XIcon />
                 </button>
                 <button
                   type="button"
                   onClick={submitAddStatus}
                   disabled={!newStatusName.trim() || addStatusSaving}
-                  className={primaryBtnCls}
+                  aria-label="Add"
+                  className={primaryIconBtnCls}
                 >
-                  Add
+                  <CheckIcon />
                 </button>
               </div>
+              {addStatusError && <p className="text-xs text-red-400">{addStatusError}</p>}
             </div>
           )}
+        </div>
 
-          <div className="flex items-center">
-            <StatusBadge status={UNKNOWN_STATUS_KEY} />
-          </div>
-
+        <div className="flex flex-col gap-1.5 mt-2 max-h-64 overflow-y-auto">
           {statuses.map((status) =>
             editingStatusKey === status.key ? (
               <div key={status.key} className="flex flex-col gap-1.5">
@@ -340,21 +363,20 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
                     onChange={(e) => setEditStatusColor(e.target.value)}
                     className={colorInputCls}
                   />
-                </div>
-                {editStatusError && <p className="text-xs text-red-400">{editStatusError}</p>}
-                <div className="flex justify-end gap-1.5">
-                  <button type="button" onClick={cancelEditStatus} className={outlineBtnCls}>
-                    Cancel
+                  <button type="button" onClick={cancelEditStatus} aria-label="Cancel" className={iconBtnCls}>
+                    <XIcon />
                   </button>
                   <button
                     type="button"
                     onClick={() => submitEditStatus(status.key)}
                     disabled={!editStatusName.trim() || editStatusSaving}
-                    className={primaryBtnCls}
+                    aria-label="Save"
+                    className={primaryIconBtnCls}
                   >
-                    Save
+                    <CheckIcon />
                   </button>
                 </div>
+                {editStatusError && <p className="text-xs text-red-400">{editStatusError}</p>}
               </div>
             ) : (
               <div key={status.key} className="flex items-center justify-between gap-1.5">
@@ -395,28 +417,29 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
             </button>
           ) : (
             <div className="flex flex-col gap-1.5 mb-2">
-              <input
-                type="text"
-                aria-label="New tag name"
-                placeholder="Tag name"
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                className={textInputCls}
-              />
-              {addTagError && <p className="text-xs text-red-400">{addTagError}</p>}
-              <div className="flex justify-end gap-1.5">
-                <button type="button" onClick={cancelAddTag} className={outlineBtnCls}>
-                  Cancel
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  aria-label="New tag name"
+                  placeholder="Tag name"
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  className={textInputCls}
+                />
+                <button type="button" onClick={cancelAddTag} aria-label="Cancel" className={iconBtnCls}>
+                  <XIcon />
                 </button>
                 <button
                   type="button"
                   onClick={submitAddTag}
                   disabled={!newTagName.trim() || addTagSaving}
-                  className={primaryBtnCls}
+                  aria-label="Add"
+                  className={primaryIconBtnCls}
                 >
-                  Add
+                  <CheckIcon />
                 </button>
               </div>
+              {addTagError && <p className="text-xs text-red-400">{addTagError}</p>}
             </div>
           )}
         </div>
@@ -424,11 +447,11 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
         {allTags.length === 0 ? (
           <p className={`text-sm mt-2 ${meta}`}>No tags yet.</p>
         ) : (
-          <div className="flex flex-wrap gap-1.5 mt-2 max-h-64 overflow-y-auto">
+          <div className="flex flex-col gap-1.5 mt-2 max-h-64 overflow-y-auto">
             {allTags.map((tag) =>
               renamingTag === tag ? (
-                <div key={tag} className="flex flex-col gap-1 w-full">
-                  <div className="flex items-center gap-1">
+                <div key={tag} className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-1.5">
                     <input
                       type="text"
                       aria-label={`Rename tag ${tag}`}
@@ -436,37 +459,43 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
                       onChange={(e) => setRenameTagValue(e.target.value)}
                       className={textInputCls}
                     />
+                    <button type="button" onClick={cancelRenameTag} aria-label="Cancel" className={iconBtnCls}>
+                      <XIcon />
+                    </button>
                     <button
                       type="button"
                       onClick={() => submitRenameTag(tag)}
                       disabled={!renameTagValue.trim() || renameTagSaving}
-                      className={primaryBtnCls}
+                      aria-label="Save"
+                      className={primaryIconBtnCls}
                     >
-                      Save
-                    </button>
-                    <button type="button" onClick={cancelRenameTag} className={outlineBtnCls}>
-                      Cancel
+                      <CheckIcon />
                     </button>
                   </div>
                   {renameTagError && <p className="text-xs text-red-400">{renameTagError}</p>}
                 </div>
               ) : (
-                <span
-                  key={tag}
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${chipCls}`}
-                >
-                  <button type="button" aria-label={`Rename tag ${tag}`} onClick={() => startRenameTag(tag)} className="hover:underline">
-                    {tag}
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Delete tag ${tag}`}
-                    onClick={() => setDeletingTag(tag)}
-                    className={`leading-none transition-colors ${removeCls}`}
-                  >
-                    ×
-                  </button>
-                </span>
+                <div key={tag} className="flex items-center justify-between gap-1.5">
+                  <span className={`text-xs font-mono truncate ${chipCls} px-2 py-0.5 rounded-[var(--rt-radius)]`}>{tag}</span>
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <button
+                      type="button"
+                      aria-label={`Edit tag ${tag}`}
+                      onClick={() => startRenameTag(tag)}
+                      className={iconBtnCls}
+                    >
+                      <PencilIcon />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Delete tag ${tag}`}
+                      onClick={() => setDeletingTag(tag)}
+                      className={iconBtnCls}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+                </div>
               )
             )}
           </div>

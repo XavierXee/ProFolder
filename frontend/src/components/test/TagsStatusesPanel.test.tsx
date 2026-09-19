@@ -83,21 +83,32 @@ beforeEach(() => {
 });
 
 describe("TagsStatusesPanel - statuses section (read-only rendering)", () => {
-  it("renders the unknown sentinel and every catalog status by name", async () => {
+  it("renders every catalog status by name, and never the unknown sentinel", async () => {
     renderPanel();
 
-    expect(screen.getByText("Unknown")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Draft")).toBeInTheDocument());
     expect(screen.getByText("Need Mixing")).toBeInTheDocument();
+
+    // "Unknown" is a blank/default sentinel, not a real catalog row — the panel deliberately
+    // omits it from the list entirely (nothing to add/edit/delete/color for it).
+    expect(screen.queryByText("Unknown")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit status Unknown" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete status Unknown" })).not.toBeInTheDocument();
   });
 
-  it("never renders edit/delete affordances for the unknown status", async () => {
+  it("shows the catalog status count alongside the section label", async () => {
+    renderPanel();
+
+    await waitFor(() => expect(screen.getByText("Statuses (2)")).toBeInTheDocument());
+  });
+
+  it("scopes the status list to a scrollable container, matching the Tags section's own bound", async () => {
     renderPanel();
 
     await waitFor(() => expect(screen.getByText("Draft")).toBeInTheDocument());
 
-    expect(screen.queryByRole("button", { name: "Edit status Unknown" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Delete status Unknown" })).not.toBeInTheDocument();
+    const statusList = screen.getByText("Draft").closest("div")?.parentElement;
+    expect(statusList).toHaveClass("max-h-64", "overflow-y-auto");
   });
 
   it("renders edit/delete affordances for every non-unknown catalog status", async () => {
@@ -241,7 +252,7 @@ describe("TagsStatusesPanel - delete status", () => {
 
     await user.click(screen.getByRole("button", { name: "Delete status Draft" }));
     expect(screen.getByRole("dialog", { name: "Delete status confirmation" })).toBeInTheDocument();
-    expect(screen.getByText(/Delete the status "Draft"\?/)).toBeInTheDocument();
+    expect(screen.getByText(/Remove the status "Draft"\?/)).toBeInTheDocument();
 
     mockGetStatuses.mockResolvedValue([CATALOG_STATUSES[1]]);
     await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).not.toBeDisabled());
@@ -350,13 +361,13 @@ describe("TagsStatusesPanel - add tag", () => {
 });
 
 describe("TagsStatusesPanel - rename tag", () => {
-  it("clicking a tag chip converts it to an inline input, and Save calls renameTag + onTagsChanged", async () => {
+  it("clicking the edit icon converts the tag row to an inline input, and Save calls renameTag + onTagsChanged", async () => {
     mockRenameTag.mockResolvedValue({ name: "vocal-fx" });
     const onTagsChanged = vi.fn();
     const user = userEvent.setup();
     renderPanel({ onTagsChanged, allTags: ["vocals"] });
 
-    await user.click(screen.getByRole("button", { name: "Rename tag vocals" }));
+    await user.click(screen.getByRole("button", { name: "Edit tag vocals" }));
     expect(screen.getByLabelText("Rename tag vocals")).toHaveValue("vocals");
 
     await user.clear(screen.getByLabelText("Rename tag vocals"));
@@ -371,7 +382,7 @@ describe("TagsStatusesPanel - rename tag", () => {
     const user = userEvent.setup();
     renderPanel({ allTags: ["vocals"] });
 
-    await user.click(screen.getByRole("button", { name: "Rename tag vocals" }));
+    await user.click(screen.getByRole("button", { name: "Edit tag vocals" }));
     await user.clear(screen.getByLabelText("Rename tag vocals"));
     await user.type(screen.getByLabelText("Rename tag vocals"), "discarded");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -385,7 +396,7 @@ describe("TagsStatusesPanel - rename tag", () => {
     const user = userEvent.setup();
     renderPanel({ allTags: ["vocals"] });
 
-    await user.click(screen.getByRole("button", { name: "Rename tag vocals" }));
+    await user.click(screen.getByRole("button", { name: "Edit tag vocals" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(screen.getByText("Tag name already in use")).toBeInTheDocument());
@@ -402,7 +413,7 @@ describe("TagsStatusesPanel - delete tag", () => {
 
     await user.click(screen.getByRole("button", { name: "Delete tag vocals" }));
     expect(screen.getByRole("dialog", { name: "Delete tag confirmation" })).toBeInTheDocument();
-    expect(screen.getByText(/Delete the tag "vocals"\?/)).toBeInTheDocument();
+    expect(screen.getByText(/Remove the tag "vocals"\?/)).toBeInTheDocument();
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).not.toBeDisabled());
     await user.click(screen.getByRole("button", { name: "Delete" }));
@@ -499,14 +510,17 @@ describe("TagsStatusesPanel - dismiss behavior", () => {
     renderPanel({ onClose, allTags: ["vocals"] });
 
     fireEvent.click(screen.getByRole("button", { name: "Delete tag vocals" }));
-    const dialog = screen.getByRole("dialog", { name: "Delete tag confirmation" });
-    const backdrop = dialog.parentElement?.parentElement?.querySelector('[aria-hidden="true"]');
+    expect(screen.getByRole("dialog", { name: "Delete tag confirmation" })).toBeInTheDocument();
+
+    // The dialog is portaled to document.body (see DeleteCatalogTagConfirmDialog.tsx's own
+    // comment), so its backdrop is a sibling of this panel in the DOM, not a descendant reachable
+    // via panelRef — the panel's outside-click check must instead gate on `deletingTag` being
+    // set, not DOM containment, to avoid closing this panel out from under the dialog.
+    const backdrop = document.body.querySelector('[aria-hidden="true"]');
     expect(backdrop).toBeTruthy();
 
     fireEvent.mouseDown(backdrop as Element);
 
-    // The backdrop is a DOM descendant of the panel's own ref'd container, so the panel's
-    // outside-click check (`panelRef.current.contains(e.target)`) must not treat it as "outside".
     expect(onClose).not.toHaveBeenCalled();
   });
 });

@@ -17,7 +17,28 @@ export default function ConfirmTextInput({
 }) {
   const inputId = useId();
   const inputBg = "bg-canvas border-border text-ink placeholder-ink-muted";
-  const resolvedLabel = label ?? `Type "${expectedText}" to confirm`;
+  const defaultLabelText = `Type "${expectedText}" to confirm`;
+  // The label's own `uppercase` class (below) is purely decorative styling for the "Type"/"to
+  // confirm" boilerplate — but naively uppercasing `expectedText` along with it would visually
+  // suggest the user should type it in all caps, when the actual comparison in
+  // useTypedConfirmation is exact/case-sensitive against the real-cased value. Wrapping just the
+  // interpolated text in `normal-case` preserves its real casing regardless of the parent's
+  // `uppercase` class. Splitting the label's visible content across a nested element like this
+  // changes how browsers compute an accessible name FROM CONTENT (the accname spec joins each
+  // child's text alternative with an inserted space, e.g. `Type " DELETE " to confirm`) — so the
+  // `<input>` below gets an explicit `aria-label` with the original, unsplit string, which takes
+  // priority over content-based label computation and keeps the accessible name exactly as it
+  // was (matching every existing `getByLabelText`/label-associated `getByRole` query). The
+  // `aria-label` must live on the `<input>`, not the `<label>` — putting it on the `<label>`
+  // itself makes `getByLabelText` also match the `<label>` element directly (as if it were a
+  // second labelled control), producing an ambiguous multi-match.
+  const resolvedLabel = label ?? (
+    <>
+      Type &quot;
+      <span className="normal-case">{expectedText}</span>
+      &quot; to confirm
+    </>
+  );
 
   return (
     <div>
@@ -30,6 +51,7 @@ export default function ConfirmTextInput({
       <input
         id={inputId}
         type="text"
+        aria-label={label ?? defaultLabelText}
         autoFocus={autoFocus}
         disabled={disabled}
         value={value}
