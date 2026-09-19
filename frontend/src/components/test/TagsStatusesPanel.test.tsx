@@ -38,7 +38,6 @@ const CATALOG_STATUSES: StatusDef[] = [
 
 function makeConfirmSettings(overrides: Partial<ConfirmationSettings> = {}): ConfirmationSettings {
   return {
-    confirmTagRemoval: false,
     confirmTabDeletion: false,
     confirmCopy: false,
     confirmMove: false,

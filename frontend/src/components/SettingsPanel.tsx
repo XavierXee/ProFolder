@@ -283,13 +283,6 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
           ) : confirmSettings ? (
             <div className="divide-y divide-border">
               <SettingRow
-                label="Confirm tag removal"
-                description="Require typing the tag's exact name before it can be removed."
-                checked={confirmSettings.confirmTagRemoval}
-                disabled={confirmSaveState === "saving"}
-                onChange={(checked) => handleConfirmChange({confirmTagRemoval: checked})}
-              />
-              <SettingRow
                 label="Confirm tab deletion"
                 description="Require typing the tab's exact name before it can be deleted."
                 checked={confirmSettings.confirmTabDeletion}

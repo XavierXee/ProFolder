@@ -1,7 +1,6 @@
 import type Database from "better-sqlite3";
 import { getSetting, setSetting } from "../database/repositories/appSettingsRepository.js";
 
-const CONFIRM_TAG_REMOVAL_KEY = "confirmTagRemoval";
 const CONFIRM_TAB_DELETION_KEY = "confirmTabDeletion";
 const CONFIRM_COPY_KEY = "confirmCopy";
 const CONFIRM_MOVE_KEY = "confirmMove";
@@ -10,18 +9,18 @@ const CONFIRM_STATUS_DELETION_KEY = "confirmStatusDeletion";
 const CONFIRM_TAG_DELETION_KEY = "confirmTagDeletion";
 
 export type ConfirmationSettings = {
-  confirmTagRemoval: boolean;
   confirmTabDeletion: boolean;
   confirmCopy: boolean;
   confirmMove: boolean;
   confirmDelete: boolean;
-  /** Require typing the status's exact name before deleting it from the catalog. Distinct
-   * from `confirmTagRemoval` (removing one tag from one file/project) and `confirmTabDeletion`
-   * (deleting a custom tab) — this is about deleting a status from the global catalog forever. */
+  /** Require typing the status's exact name before deleting it from the catalog — this is about
+   * deleting a status from the global catalog forever, distinct from `confirmTabDeletion`
+   * (deleting a custom tab). */
   confirmStatusDeletion: boolean;
   /** Require typing the tag's exact name before deleting it from the catalog forever (every
-   * file/project that has it loses it). Distinct from `confirmTagRemoval`, which is about
-   * removing one tag from one file/project's tag list, not deleting the tag globally. */
+   * file/project that has it loses it). Removing a single tag from one file/project's own tag
+   * list is a lightweight, easily-reversible edit and deliberately has no confirmation of its
+   * own — only this global, destructive catalog deletion does. */
   confirmTagDeletion: boolean;
 };
 
@@ -33,7 +32,6 @@ function readBooleanSetting(db: Database.Database, key: string, defaultValue: bo
 /** Double text-confirmation toggles for critical actions, persisted so they're remembered across sessions. */
 export function getConfirmationSettings(db: Database.Database): ConfirmationSettings {
   return {
-    confirmTagRemoval: readBooleanSetting(db, CONFIRM_TAG_REMOVAL_KEY, true),
     confirmTabDeletion: readBooleanSetting(db, CONFIRM_TAB_DELETION_KEY, true),
     confirmCopy: readBooleanSetting(db, CONFIRM_COPY_KEY, true),
     confirmMove: readBooleanSetting(db, CONFIRM_MOVE_KEY, true),
@@ -47,9 +45,6 @@ export function setConfirmationSettings(
   db: Database.Database,
   patch: Partial<ConfirmationSettings>
 ): ConfirmationSettings {
-  if (patch.confirmTagRemoval !== undefined) {
-    setSetting(db, CONFIRM_TAG_REMOVAL_KEY, String(patch.confirmTagRemoval));
-  }
   if (patch.confirmTabDeletion !== undefined) {
     setSetting(db, CONFIRM_TAB_DELETION_KEY, String(patch.confirmTabDeletion));
   }

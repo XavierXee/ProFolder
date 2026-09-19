@@ -128,7 +128,6 @@ beforeEach(() => {
   // feature and doesn't exercise its typed-confirmation gating (see
   // DeleteTabConfirmDialog.test.tsx for that coverage).
   mockGetConfirmationSettings.mockReset().mockResolvedValue({
-    confirmTagRemoval: false,
     confirmTabDeletion: false,
     confirmCopy: false,
     confirmMove: false,

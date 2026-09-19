@@ -84,7 +84,6 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
     "/confirmation-settings",
     asyncHandler(async (req, res) => {
       const {
-        confirmTagRemoval,
         confirmTabDeletion,
         confirmCopy,
         confirmMove,
@@ -92,7 +91,6 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
         confirmStatusDeletion,
         confirmTagDeletion,
       } = req.body as {
-        confirmTagRemoval?: unknown;
         confirmTabDeletion?: unknown;
         confirmCopy?: unknown;
         confirmMove?: unknown;
@@ -100,10 +98,6 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
         confirmStatusDeletion?: unknown;
         confirmTagDeletion?: unknown;
       };
-      if (confirmTagRemoval !== undefined && typeof confirmTagRemoval !== "boolean") {
-        res.status(400).json({ error: "confirmTagRemoval must be a boolean" });
-        return;
-      }
       if (confirmTabDeletion !== undefined && typeof confirmTabDeletion !== "boolean") {
         res.status(400).json({ error: "confirmTabDeletion must be a boolean" });
         return;
@@ -130,7 +124,6 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
       }
       res.json(
         setConfirmationSettings(db, {
-          confirmTagRemoval,
           confirmTabDeletion,
           confirmCopy,
           confirmMove,

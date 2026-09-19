@@ -360,7 +360,6 @@ export function setScanSettings(patch: Partial<ScanSettings>): Promise<ScanSetti
 }
 
 export type ConfirmationSettings = {
-  confirmTagRemoval: boolean;
   confirmTabDeletion: boolean;
   confirmCopy: boolean;
   confirmMove: boolean;

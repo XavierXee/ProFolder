@@ -553,30 +553,21 @@ Then("the file detail panel should show exactly these tags: {string}", async ({ 
 
 // --- Reverse cascade: file -> project live recompute (Task 5b.3) -----------------------------
 //
-// TagEditor.tsx's remove-chip button no longer removes the tag directly on click — it opens
-// RemoveTagConfirmDialog.tsx first (double-text-confirmation feature, Task 4), which then goes
-// through the exact same onChange -> onSaveTags -> PATCH .../tags flow as adding a tag (see
+// TagEditor.tsx's remove-chip button removes the tag directly on click (no confirmation — see
+// TagEditor.tsx's own doc comment: removing a single tag from one file/project's tag list is a
+// lightweight, easily-reversible edit, unlike deleting a tag from the global catalog), going
+// straight through the onChange -> onSaveTags -> PATCH .../tags flow, same as adding a tag (see
 // TagEditor.tsx's `onChange` prop, wired to `handleTagsChange` in FileDetailPanel.tsx) — so this
 // waits on the same PATCH + `/api/projects` refetch pair as the add-tag steps above, needed for
 // the reverse-cascade scenario's "lower the score, remove the tag" half, which proves live
 // recompute (a value that's no longer any file's max/no longer any file's tag drops off the
-// project) rather than a sticky additive cascade. confirmTagRemoval defaults to true (see
-// src/config/confirmationSettings.ts) on this suite's fresh scratch DB, so the dialog renders a
-// "type the tag name to confirm" input that must be filled before Remove is enabled — filled
-// defensively (only if present) so this step still works unchanged if that setting is ever off.
+// project) rather than a sticky additive cascade.
 When("I remove the file tag {string}", async ({ page }, tag: string) => {
   const dialog = fileDetailPanel(page);
-  await dialog.getByRole("button", { name: `Remove tag ${tag}` }).click();
-
-  const confirmDialog = page.getByRole("dialog", { name: "Remove tag confirmation" });
-  const confirmInput = confirmDialog.getByLabel(`Type "${tag}" to confirm`);
-  if ((await confirmInput.count()) > 0) {
-    await confirmInput.fill(tag);
-  }
   await Promise.all([
     isPatchTo(page, "/tags"),
     isProjectsRefetch(page),
-    confirmDialog.getByRole("button", { name: "Remove" }).click(),
+    dialog.getByRole("button", { name: `Remove tag ${tag}` }).click(),
   ]);
 });
 

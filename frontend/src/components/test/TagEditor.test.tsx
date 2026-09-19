@@ -1,37 +1,8 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it } from "vitest";
 import { useState } from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TagEditor, computeAddTag } from "../TagEditor.js";
-import type { ConfirmationSettings } from "../../api/client.js";
-
-vi.mock("../../api/client.js", () => ({
-  getConfirmationSettings: vi.fn(),
-}));
-
-import * as api from "../../api/client.js";
-
-const mockGetConfirmationSettings = vi.mocked(api.getConfirmationSettings);
-
-function makeSettings(overrides: Partial<ConfirmationSettings> = {}): ConfirmationSettings {
-  return {
-    confirmTagRemoval: false,
-    confirmTabDeletion: false,
-    confirmCopy: false,
-    confirmMove: false,
-    confirmDelete: false,
-    confirmStatusDeletion: false,
-    confirmTagDeletion: false,
-    ...overrides,
-  };
-}
-
-beforeEach(() => {
-  // Default: confirmation off, matching this file's pre-existing "instant-once-confirmed"
-  // remove-tag tests below (RemoveTagConfirmDialog.tsx is now rendered unconditionally by
-  // TagEditor, so every test that touches the DOM around a tag triggers its settings fetch).
-  mockGetConfirmationSettings.mockReset().mockResolvedValue(makeSettings());
-});
 
 function Harness({ initialTags = [], allTags = [] }: { initialTags?: string[]; allTags?: string[] }) {
   const [tags, setTags] = useState<string[]>(initialTags);
@@ -153,40 +124,18 @@ describe("TagEditor", () => {
     expect(screen.queryByLabelText(/Remove tag/)).not.toBeInTheDocument();
   });
 
-  it("removes a tag once its removal is confirmed in the dialog", async () => {
+  // Removing a single tag from one file/project's own tag list is a lightweight, easily-
+  // reversible edit (re-adding it is one keystroke away) and deliberately has no confirmation
+  // dialog — unlike deleting a tag from the global catalog (DeleteCatalogTagConfirmDialog.tsx),
+  // which is destructive across every file/project that has it.
+  it("removes a tag immediately when its remove button is clicked, with no confirmation step", async () => {
     const user = userEvent.setup();
     render(<Harness initialTags={["rock", "jazz"]} />);
 
     await user.click(screen.getByLabelText("Remove tag rock"));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Remove" })).not.toBeDisabled());
-    await user.click(screen.getByRole("button", { name: "Remove" }));
-
-    expect(screen.queryByText("rock")).not.toBeInTheDocument();
-    expect(screen.getByText("jazz")).toBeInTheDocument();
-  });
-
-  it("clicking a tag's remove button opens the confirm dialog rather than removing it immediately", async () => {
-    const user = userEvent.setup();
-    render(<Harness initialTags={["rock"]} />);
-
-    await user.click(screen.getByLabelText("Remove tag rock"));
-
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText('Remove the tag "rock"? This cannot be undone.')).toBeInTheDocument();
-    // The chip itself (with its own "rock" text node, separate from the dialog message above)
-    // is still present -- clicking "x" opens the dialog rather than removing the tag outright.
-    expect(screen.getByLabelText("Remove tag rock")).toBeInTheDocument();
-  });
-
-  it("cancelling the confirm dialog leaves the tag untouched", async () => {
-    const user = userEvent.setup();
-    render(<Harness initialTags={["rock", "jazz"]} />);
-
-    await user.click(screen.getByLabelText("Remove tag rock"));
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByText("rock")).toBeInTheDocument();
+    expect(screen.queryByText("rock")).not.toBeInTheDocument();
     expect(screen.getByText("jazz")).toBeInTheDocument();
   });
 

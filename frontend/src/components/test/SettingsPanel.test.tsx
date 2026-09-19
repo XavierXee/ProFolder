@@ -38,7 +38,6 @@ function makeSettings(overrides: Partial<ScanSettings> = {}): ScanSettings {
 
 function makeConfirmationSettings(overrides: Partial<ConfirmationSettings> = {}): ConfirmationSettings {
   return {
-    confirmTagRemoval: true,
     confirmTabDeletion: true,
     confirmCopy: true,
     confirmMove: true,
@@ -96,7 +95,7 @@ describe("SettingsPanel - load-on-open", () => {
     // Confirmation Settings resolves independently (its own mocked promise, not the one under
     // test here) -- wait for it to settle first so the scan-settings "Loading…" text below is
     // unambiguous rather than colliding with the confirmation section's own loading text.
-    await waitFor(() => expect(screen.getByRole("checkbox", { name: /Confirm tag removal/ })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: /Confirm tab deletion/ })).toBeInTheDocument());
     expect(screen.getByText("Loading…")).toBeInTheDocument();
 
     resolveSettings(makeSettings({ excludeSamplesFolders: true }));
@@ -220,10 +219,9 @@ describe("SettingsPanel - save state machine", () => {
 });
 
 describe("SettingsPanel - Confirmation Settings section", () => {
-  it("renders all 7 toggles with the correct initial checked state from getConfirmationSettings", async () => {
+  it("renders all 6 toggles with the correct initial checked state from getConfirmationSettings", async () => {
     mockGetConfirmationSettings.mockReset().mockResolvedValue(
       makeConfirmationSettings({
-        confirmTagRemoval: true,
         confirmTabDeletion: false,
         confirmCopy: true,
         confirmMove: false,
@@ -234,8 +232,7 @@ describe("SettingsPanel - Confirmation Settings section", () => {
     );
     renderPanel();
 
-    expect(await screen.findByRole("checkbox", { name: /Confirm tag removal/ })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: /Confirm tab deletion/ })).not.toBeChecked();
+    expect(await screen.findByRole("checkbox", { name: /Confirm tab deletion/ })).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: /Confirm copy/ })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: /Confirm move/ })).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: /Confirm delete/ })).toBeChecked();

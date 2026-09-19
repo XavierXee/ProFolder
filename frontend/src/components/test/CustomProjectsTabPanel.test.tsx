@@ -167,7 +167,6 @@ beforeEach(() => {
   // feature and don't exercise its typed-confirmation gating (see CopyMoveDeleteDialog.test.tsx
   // for that coverage).
   mockGetConfirmationSettings.mockReset().mockResolvedValue({
-    confirmTagRemoval: false,
     confirmTabDeletion: false,
     confirmCopy: false,
     confirmMove: false,

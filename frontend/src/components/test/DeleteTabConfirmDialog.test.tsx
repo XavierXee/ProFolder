@@ -14,7 +14,6 @@ const mockGetConfirmationSettings = vi.mocked(api.getConfirmationSettings);
 
 function makeSettings(overrides: Partial<ConfirmationSettings> = {}): ConfirmationSettings {
   return {
-    confirmTagRemoval: false,
     confirmTabDeletion: false,
     confirmCopy: false,
     confirmMove: false,

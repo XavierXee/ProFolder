@@ -15,9 +15,8 @@ afterEach(() => {
 });
 
 describe("confirmationSettings", () => {
-  it("defaults all seven confirmation toggles to true when nothing has been saved", () => {
+  it("defaults all six confirmation toggles to true when nothing has been saved", () => {
     expect(getConfirmationSettings(db)).toEqual({
-      confirmTagRemoval: true,
       confirmTabDeletion: true,
       confirmCopy: true,
       confirmMove: true,
@@ -28,11 +27,10 @@ describe("confirmationSettings", () => {
   });
 
   it("persists a partial update and leaves the other settings untouched", () => {
-    setConfirmationSettings(db, { confirmTagRemoval: false });
+    setConfirmationSettings(db, { confirmTabDeletion: false });
 
     expect(getConfirmationSettings(db)).toEqual({
-      confirmTagRemoval: false,
-      confirmTabDeletion: true,
+      confirmTabDeletion: false,
       confirmCopy: true,
       confirmMove: true,
       confirmDelete: true,
@@ -41,11 +39,10 @@ describe("confirmationSettings", () => {
     });
   });
 
-  it("persists a partial update covering only the 2 new fields and leaves the other five untouched", () => {
+  it("persists a partial update covering only the 2 catalog-deletion fields and leaves the others untouched", () => {
     setConfirmationSettings(db, { confirmStatusDeletion: false, confirmTagDeletion: false });
 
     expect(getConfirmationSettings(db)).toEqual({
-      confirmTagRemoval: true,
       confirmTabDeletion: true,
       confirmCopy: true,
       confirmMove: true,
@@ -55,9 +52,8 @@ describe("confirmationSettings", () => {
     });
   });
 
-  it("persists all seven settings and survives being re-read", () => {
+  it("persists all six settings and survives being re-read", () => {
     setConfirmationSettings(db, {
-      confirmTagRemoval: false,
       confirmTabDeletion: false,
       confirmCopy: false,
       confirmMove: false,
@@ -67,7 +63,6 @@ describe("confirmationSettings", () => {
     });
 
     expect(getConfirmationSettings(db)).toEqual({
-      confirmTagRemoval: false,
       confirmTabDeletion: false,
       confirmCopy: false,
       confirmMove: false,

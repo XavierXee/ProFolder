@@ -13,7 +13,6 @@ const mockGetConfirmationSettings = vi.mocked(api.getConfirmationSettings);
 
 function makeSettings(overrides: Partial<ConfirmationSettings> = {}): ConfirmationSettings {
   return {
-    confirmTagRemoval: false,
     confirmTabDeletion: false,
     confirmCopy: false,
     confirmMove: false,
@@ -31,14 +30,14 @@ beforeEach(() => {
 describe("useConfirmationRequired - fail-safe while loading", () => {
   it("returns true (required) while the fetch is still in flight", () => {
     mockGetConfirmationSettings.mockReturnValue(new Promise(() => {}));
-    const { result } = renderHook(() => useConfirmationRequired("confirmTagRemoval", true));
+    const { result } = renderHook(() => useConfirmationRequired("confirmTabDeletion", true));
 
     expect(result.current).toBe(true);
   });
 
   it("does not call the API at all while active is false", () => {
     mockGetConfirmationSettings.mockResolvedValue(makeSettings());
-    renderHook(() => useConfirmationRequired("confirmTagRemoval", false));
+    renderHook(() => useConfirmationRequired("confirmTabDeletion", false));
 
     expect(mockGetConfirmationSettings).not.toHaveBeenCalled();
   });
@@ -46,15 +45,15 @@ describe("useConfirmationRequired - fail-safe while loading", () => {
 
 describe("useConfirmationRequired - resolved value", () => {
   it("returns true once settings resolve with the field true", async () => {
-    mockGetConfirmationSettings.mockResolvedValue(makeSettings({ confirmTagRemoval: true }));
-    const { result } = renderHook(() => useConfirmationRequired("confirmTagRemoval", true));
+    mockGetConfirmationSettings.mockResolvedValue(makeSettings({ confirmTabDeletion: true }));
+    const { result } = renderHook(() => useConfirmationRequired("confirmTabDeletion", true));
 
     await waitFor(() => expect(result.current).toBe(true));
   });
 
   it("returns false once settings resolve with the field false", async () => {
-    mockGetConfirmationSettings.mockResolvedValue(makeSettings({ confirmTagRemoval: false }));
-    const { result } = renderHook(() => useConfirmationRequired("confirmTagRemoval", true));
+    mockGetConfirmationSettings.mockResolvedValue(makeSettings({ confirmTabDeletion: false }));
+    const { result } = renderHook(() => useConfirmationRequired("confirmTabDeletion", true));
 
     await waitFor(() => expect(result.current).toBe(false));
   });
@@ -62,8 +61,8 @@ describe("useConfirmationRequired - resolved value", () => {
 
 describe("useConfirmationRequired - re-fetch on active transition", () => {
   it("re-fetches fresh every time active transitions from false back to true, not just once ever", async () => {
-    mockGetConfirmationSettings.mockResolvedValueOnce(makeSettings({ confirmTagRemoval: false }));
-    const { result, rerender } = renderHook(({ active }) => useConfirmationRequired("confirmTagRemoval", active), {
+    mockGetConfirmationSettings.mockResolvedValueOnce(makeSettings({ confirmTabDeletion: false }));
+    const { result, rerender } = renderHook(({ active }) => useConfirmationRequired("confirmTabDeletion", active), {
       initialProps: { active: true },
     });
 
@@ -73,7 +72,7 @@ describe("useConfirmationRequired - re-fetch on active transition", () => {
     // Deactivate, then reactivate — should trigger a fresh fetch reflecting a settings change
     // made in between (e.g. via the Settings panel), not the stale first-fetch value.
     rerender({ active: false });
-    mockGetConfirmationSettings.mockResolvedValueOnce(makeSettings({ confirmTagRemoval: true }));
+    mockGetConfirmationSettings.mockResolvedValueOnce(makeSettings({ confirmTabDeletion: true }));
     rerender({ active: true });
 
     await waitFor(() => expect(result.current).toBe(true));
@@ -81,8 +80,8 @@ describe("useConfirmationRequired - re-fetch on active transition", () => {
   });
 
   it("returns to the fail-safe true value immediately upon reactivation, before the fresh fetch resolves", async () => {
-    mockGetConfirmationSettings.mockResolvedValueOnce(makeSettings({ confirmTagRemoval: false }));
-    const { result, rerender } = renderHook(({ active }) => useConfirmationRequired("confirmTagRemoval", active), {
+    mockGetConfirmationSettings.mockResolvedValueOnce(makeSettings({ confirmTabDeletion: false }));
+    const { result, rerender } = renderHook(({ active }) => useConfirmationRequired("confirmTabDeletion", active), {
       initialProps: { active: true },
     });
 

@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import RemoveTagConfirmDialog from "./RemoveTagConfirmDialog.js";
 import { TagAutocompleteInput } from "./TagAutocompleteInput.js";
 
 /**
@@ -23,7 +22,6 @@ export function TagEditor({
   allTags?: string[];
 }) {
   const [input, setInput] = useState("");
-  const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
 
   function addTag(raw: string) {
     const next = computeAddTag(tags, raw);
@@ -59,7 +57,7 @@ export function TagEditor({
           {tags.map((tag) => (
             <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono ${chipCls}`}>
               {tag}
-              <button type="button" aria-label={`Remove tag ${tag}`} onClick={() => setPendingRemoval(tag)} className={`leading-none transition-colors ${removeCls}`}>
+              <button type="button" aria-label={`Remove tag ${tag}`} onClick={() => removeTag(tag)} className={`leading-none transition-colors ${removeCls}`}>
                 ×
               </button>
             </span>
@@ -73,15 +71,6 @@ export function TagEditor({
         onBlur={() => addTag(input)}
         suggestions={suggestions}
         placeholder="Add tag, press Enter…"
-      />
-      <RemoveTagConfirmDialog
-        open={pendingRemoval !== null}
-        tagName={pendingRemoval ?? ""}
-        onConfirm={() => {
-          if (pendingRemoval) removeTag(pendingRemoval);
-          setPendingRemoval(null);
-        }}
-        onCancel={() => setPendingRemoval(null)}
       />
     </div>
   );
