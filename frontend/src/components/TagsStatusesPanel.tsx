@@ -305,12 +305,12 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
 
         <div className="mt-2">
           {!addStatusOpen ? (
-            <button type="button" onClick={startAddStatus} aria-label="Add status" className={`self-start ${iconBtnCls}`}>
+            <button type="button" onClick={startAddStatus} aria-label="Add status" className={`py-0.5 px-1 self-start ${iconBtnCls}`}>
               <PlusIcon />
             </button>
           ) : (
             <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5">
+              <div className="py-0.5 px-1 flex items-center gap-1.5">
                 <input
                   type="text"
                   aria-label="New status name"
@@ -348,7 +348,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
           {statuses.map((status) =>
             editingStatusKey === status.key ? (
               <div key={status.key} className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-1.5">
+                <div className="py-0.5 px-1 flex items-center gap-1.5">
                   <input
                     type="text"
                     aria-label={`Edit name for ${status.name}`}
@@ -379,7 +379,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
                 {editStatusError && <p className="text-xs text-red-400">{editStatusError}</p>}
               </div>
             ) : (
-              <div key={status.key} className="flex items-center justify-between gap-1.5">
+              <div key={status.key} className="py-1 px-1 flex items-center justify-between gap-1.5">
                 <StatusBadge status={status.key} />
                 <div className="flex items-center gap-0.5 flex-shrink-0">
                   <button
@@ -417,7 +417,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
             </button>
           ) : (
             <div className="flex flex-col gap-1.5 mb-2">
-              <div className="flex items-center gap-1.5">
+              <div className="py-1 px-1 flex items-center gap-1.5">
                 <input
                   type="text"
                   aria-label="New tag name"
@@ -450,7 +450,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
           <div className="flex flex-col gap-1.5 mt-2 max-h-64 overflow-y-auto">
             {allTags.map((tag) =>
               renamingTag === tag ? (
-                <div key={tag} className="flex flex-col gap-1.5">
+                <div key={tag} className="py-0.5 px-1 flex flex-col gap-1.5">
                   <div className="flex items-center gap-1.5">
                     <input
                       type="text"
@@ -475,7 +475,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
                   {renameTagError && <p className="text-xs text-red-400">{renameTagError}</p>}
                 </div>
               ) : (
-                <div key={tag} className="flex items-center justify-between gap-1.5">
+                <div key={tag} className="py-1 px-1 flex items-center justify-between gap-1.5">
                   <span className={`text-xs font-mono truncate ${chipCls} px-2 py-0.5 rounded-[var(--rt-radius)]`}>{tag}</span>
                   <div className="flex items-center gap-0.5 flex-shrink-0">
                     <button

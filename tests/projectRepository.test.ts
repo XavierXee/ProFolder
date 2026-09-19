@@ -14,6 +14,7 @@ import {
   loadActiveProjectIds,
   getProjectStats,
 } from "../src/database/repositories/projectRepository.js";
+import { insertAudioFile, type AudioFileUpsertInput } from "../src/database/repositories/audioFileRepository.js";
 import type { Project } from "../src/models/Project.js";
 import { UNKNOWN_STATUS_KEY } from "../src/models/AudioFile.js";
 import { findAll as findAllStatuses } from "../src/database/repositories/statusRepository.js";
@@ -30,6 +31,25 @@ function makeProject(overrides: Partial<Omit<Project, "status" | "isRemoved" | "
     hasVideo: false,
     hasImage: false,
     contentModifiedAt: null,
+    ...overrides,
+  };
+}
+
+/** Minimal audio-file fixture, for the one test here that needs real files to exercise the
+ * "audioFileCount" sort key (mirrors audioFileRepository.test.ts's own makeFile). */
+function makeFile(overrides: Partial<AudioFileUpsertInput> & { id: string }): AudioFileUpsertInput {
+  const now = new Date().toISOString();
+  return {
+    path: `/Music/${overrides.id}`,
+    relativePath: overrides.id,
+    filename: overrides.id,
+    extension: ".wav",
+    size: 100,
+    modifiedAt: now,
+    containingFolder: "/Music",
+    firstSeenAt: now,
+    lastSeenAt: now,
+    isRemoved: false,
     ...overrides,
   };
 }
@@ -186,6 +206,34 @@ describe("projectRepository.findAllActivePaged", () => {
   it("defaults to sorting by name when sortBy is omitted", () => {
     const { items } = findAllActivePaged(db, { limit: 3, offset: 0 });
     expect(items.map((p) => p.name)).toEqual(["Project 00", "Project 01", "Project 02"]);
+  });
+
+  it("sorts by status, type, tags, and audioFileCount (the 4 new sort keys)", () => {
+    upsertProject(db, makeProject({ id: "SortKeys A", dawType: "ableton" }));
+    upsertProject(db, makeProject({ id: "SortKeys B", dawType: "cubase" }));
+    upsertProject(db, makeProject({ id: "SortKeys C" })); // no dawType
+    setTags(db, "SortKeys A", ["aardvark"]);
+    setTags(db, "SortKeys B", ["mango"]);
+    // SortKeys C stays untagged
+    updateStatus(db, "SortKeys A", "done");
+    updateStatus(db, "SortKeys B", "draft");
+    // SortKeys C keeps its default status (UNKNOWN_STATUS_KEY = "unknown")
+    insertAudioFile(db, makeFile({ id: "sk-1.wav", projectId: "SortKeys A" }));
+    insertAudioFile(db, makeFile({ id: "sk-2.wav", projectId: "SortKeys B" }));
+    insertAudioFile(db, makeFile({ id: "sk-3.wav", projectId: "SortKeys B" }));
+    // SortKeys C has 0 audio files
+
+    const byStatus = findAllActivePaged(db, { search: "SortKeys", sortBy: "status", sortDir: "asc", limit: 10, offset: 0 });
+    expect(byStatus.items.map((p) => p.id)).toEqual(["SortKeys A", "SortKeys B", "SortKeys C"]); // done < draft < unknown
+
+    const byType = findAllActivePaged(db, { search: "SortKeys", sortBy: "type", sortDir: "asc", limit: 10, offset: 0 });
+    expect(byType.items.map((p) => p.id)).toEqual(["SortKeys C", "SortKeys A", "SortKeys B"]); // null, "ableton", "cubase"
+
+    const byTags = findAllActivePaged(db, { search: "SortKeys", sortBy: "tags", sortDir: "asc", limit: 10, offset: 0 });
+    expect(byTags.items.map((p) => p.id)).toEqual(["SortKeys C", "SortKeys A", "SortKeys B"]); // null sorts first, then "aardvark" < "mango"
+
+    const byCount = findAllActivePaged(db, { search: "SortKeys", sortBy: "audioFileCount", sortDir: "asc", limit: 10, offset: 0 });
+    expect(byCount.items.map((p) => p.id)).toEqual(["SortKeys C", "SortKeys A", "SortKeys B"]); // 0, 1, 2
   });
 });
 

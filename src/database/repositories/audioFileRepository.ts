@@ -36,7 +36,7 @@ export type AudioFileFilters = {
   /** OR'd together (has any of these tags); omit/empty means no tag filter. */
   tags?: string[];
   projectId?: string;
-  sortBy?: "name" | "modifiedAt" | "folder" | "score";
+  sortBy?: "name" | "modifiedAt" | "folder" | "score" | "status" | "project" | "tags";
   sortDir?: "asc" | "desc";
   limit?: number;
   offset?: number;
@@ -207,10 +207,19 @@ function tagsForFiles(db: Database.Database, audioFileIds: string[]): Map<string
   return tagsById;
 }
 
+/** "tags"/"project" have no directly-sortable column: tags live in a junction table (sorted by
+ * each file's alphabetically-first tag, via a correlated subquery — files with no tags sort via
+ * SQL's default NULL ordering), and "project" sorts by the raw project_id string (no join to the
+ * project's display name, to keep this a single-table query like every other sort key here). */
 function sortColumnFor(sortBy: AudioFileFilters["sortBy"]): string {
   if (sortBy === "modifiedAt") return "modified_at";
   if (sortBy === "folder") return "containing_folder";
   if (sortBy === "score") return "score";
+  if (sortBy === "status") return "status";
+  if (sortBy === "project") return "project_id";
+  if (sortBy === "tags") {
+    return `(SELECT MIN(t.name) FROM audio_file_tags aft JOIN tags t ON t.id = aft.tag_id WHERE aft.audio_file_id = audio_files.id)`;
+  }
   return "filename";
 }
 

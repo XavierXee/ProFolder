@@ -13,7 +13,7 @@ export type ProjectFilters = {
   scores?: (number | null)[];
   /** OR'd together (has any of these tags); omit/empty means no tag filter. */
   tags?: string[];
-  sortBy?: "name" | "modifiedAt" | "score";
+  sortBy?: "name" | "modifiedAt" | "score" | "status" | "type" | "tags" | "audioFileCount";
   sortDir?: "asc" | "desc";
   limit?: number;
   offset?: number;
@@ -179,9 +179,23 @@ function buildProjectWhereClause(filters: ProjectFilters): { where: string; para
   return { where: clauses.join(" AND "), params };
 }
 
+/** "tags"/"audioFileCount" have no directly-sortable column, so both use a correlated subquery
+ * (mirroring audioFileRepository.ts's identical "tags" sort): tags sort by each project's
+ * alphabetically-first tag (projects with no tags sort via SQL's default NULL ordering), and
+ * audioFileCount sorts by a live count of that project's active audio files — recomputed here
+ * rather than reusing `countActiveGroupedByProject`'s post-query map, since sorting has to happen
+ * in SQL before pagination slices the result set. */
 function sortColumnFor(sortBy: ProjectFilters["sortBy"]): string {
   if (sortBy === "modifiedAt") return "content_modified_at";
   if (sortBy === "score") return "score";
+  if (sortBy === "status") return "status";
+  if (sortBy === "type") return "daw_type";
+  if (sortBy === "tags") {
+    return `(SELECT MIN(t.name) FROM project_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.project_id = projects.id)`;
+  }
+  if (sortBy === "audioFileCount") {
+    return `(SELECT COUNT(*) FROM audio_files af WHERE af.project_id = projects.id AND af.is_removed = 0)`;
+  }
   return "name";
 }
 

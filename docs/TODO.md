@@ -148,29 +148,6 @@ Per user decision: unexported/module-private functions needed for direct testing
 
 **Standing convention** (see `e2e/steps/common.steps.ts` and the project notes): scenarios share one running app/DB instance for the whole suite run (not reset per-scenario), so fixture names/tags must be scenario-unique and step definitions must filter down to a scenario's own fixture before asserting — never assert raw global counts.
 
-## 2. New feature: Add custom tabs [x]
-
-- User can create custom tabs. A custom tab will be defined by a name and a set of filters/status/score
-- Custom tab will be kept in database an consistent from session to session
-- Custom tab will be displayed in the tab selector next to the 2 defaults tabs "Project Folders" and "Audio Files"
-- A + button at the left-most part of the tabs row can be clicked to create a new tab
-- Upon clicking the + button, a popup shows up asking the user to choose the type of the new tab 
-(can be either project folder or audio files type) along with the tags/status/score definition
-- a custom tab can be deleted. Deleting is done by clicking a X button next to the custom tab name in the
-tabs row. A confirmation popup should show up before applying deletion
-- add all necessary test (unit test and playwright) to make sure the feature is properly covered
-- update REQUIREMENTS.md with the changes made
-
-## 3. UI Improvements [x]
-
-I want you to do a few small UI improvements, no need to spawn all the agents for that, only developer should be enough. 
- - #1  the + button to add a new tab, I want it to have border to make it stand out a   
-bit more, keep the corner raduis similar to the other buttons on the UI to keep it consistent. 
- - #2 I really want the elements in the filter bar to have consistent sizes when navigating from tab to tab of  
-modifying the filter. To achieve that, from left to right, clear filter button must have fixed size (already implemented), Batch Edit button
-must have fixed size too (already implemented), n of n files/projects must have fixed size (accommodate for 3 digits per number),
-Sort, Tags, Score and Status already have fixed size. Only the general search bar should adjust size to fill the remaining space
-within the filter bar
 
 ## 4. Sorting improvements [x]
 

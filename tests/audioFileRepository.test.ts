@@ -179,6 +179,32 @@ describe("findAllActivePaged", () => {
       "file-03.wav", // null sorts last descending
     ]);
   });
+
+  it("sorts by status, project, and tags (the 3 new sort keys)", () => {
+    // 3 dedicated fresh files (not the 25 seeded ones), each with the exact combination of
+    // status/projectId/tags needed to exercise all 3 new keys off one small setup. project_id
+    // has a FK to projects, so the referenced rows must exist first.
+    upsertProject(db, makeProject("proj-a"));
+    upsertProject(db, makeProject("proj-b"));
+    insertAudioFile(db, makeFile({ id: "sort-a.wav", filename: "sort-a.wav", projectId: "proj-a" }));
+    insertAudioFile(db, makeFile({ id: "sort-b.wav", filename: "sort-b.wav", projectId: "proj-b" }));
+    insertAudioFile(db, makeFile({ id: "sort-c.wav", filename: "sort-c.wav" })); // no project
+    setTags(db, "sort-a.wav", ["sort-key-test", "aardvark"]);
+    setTags(db, "sort-b.wav", ["sort-key-test", "mango"]);
+    setTags(db, "sort-c.wav", ["sort-key-test"]);
+    updateStatus(db, "sort-a.wav", "done");
+    updateStatus(db, "sort-b.wav", "draft");
+    // sort-c.wav keeps its default status (UNKNOWN_STATUS_KEY = "unknown")
+
+    const byStatus = findAllActivePaged(db, { tags: ["sort-key-test"], sortBy: "status", sortDir: "asc", limit: 10, offset: 0 });
+    expect(byStatus.items.map((f) => f.id)).toEqual(["sort-a.wav", "sort-b.wav", "sort-c.wav"]); // done < draft < unknown
+
+    const byProject = findAllActivePaged(db, { tags: ["sort-key-test"], sortBy: "project", sortDir: "asc", limit: 10, offset: 0 });
+    expect(byProject.items.map((f) => f.id)).toEqual(["sort-c.wav", "sort-a.wav", "sort-b.wav"]); // null, "proj-a", "proj-b"
+
+    const byTags = findAllActivePaged(db, { tags: ["sort-key-test"], sortBy: "tags", sortDir: "asc", limit: 10, offset: 0 });
+    expect(byTags.items.map((f) => f.id)).toEqual(["sort-a.wav", "sort-b.wav", "sort-c.wav"]); // "aardvark" < "mango" < "sort-key-test"
+  });
 });
 
 describe("getFileStats", () => {

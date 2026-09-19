@@ -83,7 +83,6 @@ export function FileTable({
   }, [flashId]);
 
   const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted border-b border-divider";
-  const staticTh = `${thBase} text-left`;
   const allSelected = files.length > 0 && files.every((f) => selectedIds.has(f.id));
 
   return (
@@ -94,18 +93,12 @@ export function FileTable({
           <th scope="col" className={`${thBase} text-center w-[4%]`}>
             <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible files" />
           </th>
-          <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} label="Track / File" className="w-[24%]" />
-          <th scope="col" className={`${staticTh} w-[12%]`}>
-            Status
-          </th>
-          <th scope="col" className={`${staticTh} w-[16%]`}>
-            Tags
-          </th>
-          <th scope="col" className={`${staticTh} w-[10%]`}>
-            Project
-          </th>
+          <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} label="Track / File" className="text-left w-[24%]" />
+          <SortTh sortKey="status" filters={filters} onSortChange={onSortChange} label="Status" className="text-center w-[12%]" />
+          <SortTh sortKey="tags" filters={filters} onSortChange={onSortChange} label="Tags" className="text-left w-[16%]" />
+          <SortTh sortKey="project" filters={filters} onSortChange={onSortChange} label="Project" className="text-left w-[10%]" />
           <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} label="Score" className="text-center w-[8%]" />
-          <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} label="Location" className="w-[16%]" />
+          <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} label="Location" className="text-left w-[16%]" />
           <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} label="Modified" className="text-center w-[10%]" />
         </tr>
       </thead>

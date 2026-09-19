@@ -84,7 +84,7 @@ export function FileRow({
           </div>
         </div>
       </td>
-      <td className="px-4 py-3.5 w-32">
+      <td className="px-4 py-3.5 w-32 text-center">
         <StatusBadge status={file.status} />
       </td>
       <td className="px-4 py-3.5 max-w-40">
@@ -106,7 +106,7 @@ export function FileRow({
       <td className="px-4 py-3.5">
         <span className="block truncate text-xs font-mono text-ink-muted">{file.projectId ?? "—"}</span>
       </td>
-      <td className="px-4 py-3.5 min-w-28">
+      <td className="px-4 py-3.5 min-w-28 text-center">
         <ScoreBadge score={file.score} />
       </td>
       <td className="px-4 py-3.5 max-w-xs">
@@ -114,7 +114,7 @@ export function FileRow({
           {location}
         </p>
       </td>
-      <td className="px-4 py-3.5 whitespace-nowrap">
+      <td className="px-4 py-3.5 whitespace-nowrap text-center">
         <span className="text-xs font-mono text-ink-muted">{formatTime(file.modifiedAt)}</span>
       </td>
     </tr>

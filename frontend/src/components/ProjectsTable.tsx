@@ -87,7 +87,6 @@ export function ProjectsTable({
   const meta = "text-ink-muted";
   const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted border-b border-divider";
   const staticTh = `${thBase} text-center`;
-  const leftTh = `${thBase} text-left`;
   const allSelected = projects.length > 0 && projects.every((p) => selectedIds.has(p.id));
 
   return (
@@ -100,19 +99,16 @@ export function ProjectsTable({
                 <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible project folders" />
               </th>
               <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} label="Project Folder" className="text-left w-[24%]" />
-              <th scope="col" className={`${staticTh} w-[9%]`}>
-                Type
-              </th>
-              <th scope="col" className={`${staticTh} w-[11%]`}>
-                Status
-              </th>
-              <th scope="col" className={`${leftTh} w-[15%]`}>
-                Tags
-              </th>
+              <SortTh sortKey="type" filters={filters} onSortChange={onSortChange} label="Type" className="text-center w-[9%]" />
+              <SortTh sortKey="status" filters={filters} onSortChange={onSortChange} label="Status" className="text-center w-[11%]" />
+              <SortTh sortKey="tags" filters={filters} onSortChange={onSortChange} label="Tags" className="text-left w-[15%]" />
               <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} className="text-center w-[9%]" label="Score" />
-              <th scope="col" className={`${staticTh} w-[9%]`}>
-                Audio Files
-              </th>
+              {/* Labeled "Files", not "Audio Files": this SortTh button's accessible name
+                  ("Sort by Audio Files") would otherwise substring-collide with the top-level
+                  "Audio Files" tab-switcher button under Playwright's default non-exact
+                  getByRole name matching (the same collision class the project notes already documents
+                  for other SortTh/picker labels). */}
+              <SortTh sortKey="audioFileCount" filters={filters} onSortChange={onSortChange} label="Files" className="text-center w-[9%]" />
               <th scope="col" className={`${staticTh} w-[8%]`}>
                 Media
               </th>

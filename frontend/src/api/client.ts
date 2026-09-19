@@ -20,7 +20,7 @@ export type FileFilters = {
   scores?: (number | "unscored")[];
   /** OR'd together (has any of these tags). */
   tags?: string[];
-  sortBy?: "name" | "modifiedAt" | "folder" | "score";
+  sortBy?: "name" | "modifiedAt" | "folder" | "score" | "status" | "project" | "tags";
   sortDir?: "asc" | "desc";
   page?: number;
   pageSize?: number;
@@ -179,7 +179,7 @@ export type ProjectFilters = {
   scores?: (number | "unscored")[];
   /** OR'd together (has any of these tags). */
   tags?: string[];
-  sortBy?: "name" | "modifiedAt" | "score";
+  sortBy?: "name" | "modifiedAt" | "score" | "status" | "type" | "tags" | "audioFileCount";
   sortDir?: "asc" | "desc";
   page?: number;
   pageSize?: number;

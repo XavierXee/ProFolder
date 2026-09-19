@@ -84,7 +84,7 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
         statuses: statuses.length > 0 ? statuses : undefined,
         scores: parseScoreListQueryParam(toStringArray(score)),
         tags: tags.length > 0 ? tags : undefined,
-        sortBy: sortBy as "name" | "modifiedAt" | "folder" | "score" | undefined,
+        sortBy: sortBy as "name" | "modifiedAt" | "folder" | "score" | "status" | "project" | "tags" | undefined,
         sortDir: sortDir as "asc" | "desc" | undefined,
         limit: pageSizeNum,
         offset: (pageNum - 1) * pageSizeNum,
