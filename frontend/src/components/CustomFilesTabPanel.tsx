@@ -254,8 +254,9 @@ export default function CustomFilesTabPanel({
           onPlayClick={onPlayClick}
         />
       </main>
-
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={handlePageChange} />
+      <footer>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={handlePageChange} />
+      </footer>
 
       <FileDetailPanel
         file={selectedFile}

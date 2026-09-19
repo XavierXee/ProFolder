@@ -672,8 +672,9 @@ export default function App() {
                   onPlayClick={handlePlayClick}
                 />
               </main>
-
-              <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={handleFilesPageChange} />
+              <footer>
+                <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={handleFilesPageChange} />
+              </footer>
             </>
           ) : (
             activeCustomTab &&
@@ -815,11 +816,6 @@ export default function App() {
           onConfirm={handleDeleteTabConfirm}
           onCancel={() => setDeletingTab(null)}
         />
-
-        <footer className="border-t bg-chrome-lighter px-6 py-2 flex items-center justify-between border-chrome-border-faint sticky bottom-0 z-20">
-          <span className="text-xs font-mono text-chrome-ink-faint">ProFolder · Local, read-only scanner</span>
-          <span className="text-xs font-mono text-chrome-ink-faint">Score and tag your tracks · Track what's ready to release</span>
-        </footer>
       </div>
     </StatusCatalogProvider>
   );

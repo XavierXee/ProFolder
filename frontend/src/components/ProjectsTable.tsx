@@ -253,8 +253,9 @@ export function ProjectsTable({
           </tbody>
         </table>
       </main>
-
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={onPageChange} />
+      <footer>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={onPageChange} />
+      </footer>
     </div>
   );
 }
