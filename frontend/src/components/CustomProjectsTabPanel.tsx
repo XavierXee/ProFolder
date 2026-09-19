@@ -33,12 +33,6 @@ type Props = {
   /** Changes whenever a scan completes (App.tsx's scan-completion counter). This panel's own
    * local `useProjects` instance has no other way to hear about a scan finishing. */
   scanCompletionSignal: number | null;
-  /** Whether the persistent (fixed-to-viewport) audio player bar is currently showing, so
-   * `ProjectsTable` can add bottom padding and keep its last rows from being hidden behind
-   * it — mirrors App.tsx's `playerActive={playingFile !== null}` for the default Projects
-   * tab (App.tsx passes this straight through to `ProjectsTable`, which applies the padding
-   * internally). */
-  playerActive: boolean;
   /** App-level banner setter (App.tsx's `setBanner`), used to surface a reveal failure the
    * same way App.tsx's own `handleReveal` does — see that function for the exact message. */
   setBanner: (message: string) => void;
@@ -57,7 +51,6 @@ export default function CustomProjectsTabPanel({
   refreshTags,
   refetchFiles,
   scanCompletionSignal,
-  playerActive,
   setBanner,
   musicRoot,
 }: Props) {
@@ -238,7 +231,6 @@ export default function CustomProjectsTabPanel({
         onToggleSelect={toggleProjectSelect}
         onToggleSelectAll={toggleAllProjectSelect}
         onSortChange={handleSortChange}
-        playerActive={playerActive}
       />
 
       <ProjectDetailPanel

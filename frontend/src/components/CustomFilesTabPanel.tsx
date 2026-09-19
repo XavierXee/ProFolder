@@ -233,10 +233,7 @@ export default function CustomFilesTabPanel({
         </div>
       )}
 
-      {/* Mirrors App.tsx's `playingFile ? "pb-20" : ""` (App.tsx:487): the player bar shows
-          whenever a file is loaded into it, whether playing or paused, so the padding tracks
-          `playingFileId` presence — not `isPlaying` — same as App.tsx's `playingFile` check. */}
-      <main className={`flex-1 overflow-auto ${playingFileId ? "pb-20" : ""}`} aria-live="polite" aria-label={`${tab.name} files`}>
+      <main className="flex-1 overflow-auto" aria-live="polite" aria-label={`${tab.name} files`}>
         <FileTable
           files={files}
           filters={filters}

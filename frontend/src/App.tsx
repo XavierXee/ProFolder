@@ -631,7 +631,6 @@ export default function App() {
                 onToggleSelect={toggleProjectSelect}
                 onToggleSelectAll={toggleAllProjectSelect}
                 onSortChange={handleProjectSortChange}
-                playerActive={playingFile !== null}
               />
             </>
           ) : activeTab === "files" ? (
@@ -654,7 +653,7 @@ export default function App() {
                 </div>
               )}
 
-              <main className={`flex-1 overflow-auto ${playingFile ? "pb-20" : ""}`} aria-live="polite" aria-label="Audio file library">
+              <main className="flex-1 overflow-auto" aria-live="polite" aria-label="Audio file library">
                 <FileTable
                   files={files}
                   filters={filters}
@@ -702,7 +701,6 @@ export default function App() {
                 refreshTags={refreshTags}
                 refetchFiles={refetch}
                 scanCompletionSignal={lastScanChanges}
-                playerActive={playingFile !== null}
                 setBanner={setBanner}
                 musicRoot={musicRoot}
               />

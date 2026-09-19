@@ -68,7 +68,6 @@ export function ProjectsTable({
   onToggleSelect,
   onToggleSelectAll,
   onSortChange,
-  playerActive = false,
 }: {
   projects: ProjectRow[];
   total: number;
@@ -84,9 +83,6 @@ export function ProjectsTable({
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: () => void;
   onSortChange: (sortBy: SortKey) => void;
-  /** Whether the persistent (fixed-to-viewport) audio player bar is currently showing,
-   * so the last rows don't end up permanently hidden behind it. */
-  playerActive?: boolean;
 }) {
   const meta = "text-ink-muted";
   const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted border-b border-divider";
@@ -96,7 +92,7 @@ export function ProjectsTable({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <main className={`flex-1 overflow-auto ${playerActive ? "pb-20" : ""}`} aria-live="polite" aria-label="Project folders">
+      <main className="flex-1 overflow-auto" aria-live="polite" aria-label="Project folders">
         <table className="w-full border-collapse table-fixed" aria-label="Project folders">
           <thead className="sticky top-0 z-10 bg-canvas">
             <tr className="relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-[var(--color-border)]">

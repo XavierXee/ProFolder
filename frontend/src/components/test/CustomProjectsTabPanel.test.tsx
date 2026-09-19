@@ -135,7 +135,6 @@ function renderPanel(overrides: Partial<Parameters<typeof CustomProjectsTabPanel
     refreshTags: vi.fn(),
     refetchFiles: vi.fn(),
     scanCompletionSignal: null as number | null,
-    playerActive: false,
     setBanner: vi.fn(),
     musicRoot: "/music",
     ...overrides,
@@ -453,7 +452,6 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
-        playerActive={false}
         setBanner={() => {}}
         musicRoot="/music"
         scanCompletionSignal={null}
@@ -469,7 +467,6 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
-        playerActive={false}
         setBanner={() => {}}
         musicRoot="/music"
         scanCompletionSignal={3}
@@ -494,7 +491,6 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
-        playerActive={false}
         setBanner={() => {}}
         musicRoot="/music"
         scanCompletionSignal={5}
@@ -512,7 +508,6 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
-        playerActive={false}
         setBanner={() => {}}
         musicRoot="/music"
         scanCompletionSignal={6}
@@ -686,22 +681,3 @@ describe("CustomProjectsTabPanel - batch Copy/Move/Delete wiring", () => {
   });
 });
 
-describe("CustomProjectsTabPanel - bottom padding while the player bar is visible (§11.4)", () => {
-  it("passes playerActive={true} through to ProjectsTable, which adds pb-20 to its content area", async () => {
-    renderPanel({ playerActive: true });
-
-    await waitFor(() => expect(mockGetProjects).toHaveBeenCalledTimes(1));
-
-    const main = screen.getByRole("main");
-    expect(main.className).toContain("pb-20");
-  });
-
-  it("passes playerActive={false} through to ProjectsTable, which omits pb-20", async () => {
-    renderPanel({ playerActive: false });
-
-    await waitFor(() => expect(mockGetProjects).toHaveBeenCalledTimes(1));
-
-    const main = screen.getByRole("main");
-    expect(main.className).not.toContain("pb-20");
-  });
-});

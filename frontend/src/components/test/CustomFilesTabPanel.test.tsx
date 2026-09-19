@@ -606,26 +606,6 @@ describe("CustomFilesTabPanel - batch Copy/Move/Delete wiring", () => {
   });
 });
 
-describe("CustomFilesTabPanel - bottom padding while the player bar is visible (§11.4)", () => {
-  it("adds pb-20 to the main content area when a file is loaded into the player (playingFileId set)", async () => {
-    renderPanel({ playingFileId: "f1", isPlaying: false });
-
-    await waitFor(() => expect(mockGetFiles).toHaveBeenCalledTimes(1));
-
-    const main = screen.getByRole("main");
-    expect(main.className).toContain("pb-20");
-  });
-
-  it("does not add pb-20 when no file is loaded into the player", async () => {
-    renderPanel({ playingFileId: null });
-
-    await waitFor(() => expect(mockGetFiles).toHaveBeenCalledTimes(1));
-
-    const main = screen.getByRole("main");
-    expect(main.className).not.toContain("pb-20");
-  });
-});
-
 describe("CustomFilesTabPanel - playback pass-through (App-level/global, not local state)", () => {
   it("renders the matching row as playing (Pause) only when playingFileId matches AND isPlaying is true", async () => {
     const file = makeFile({ id: "f1", filename: "kick.wav" });

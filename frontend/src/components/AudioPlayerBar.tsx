@@ -58,8 +58,8 @@ export default function AudioPlayerBar({ file, isPlaying, onPlayingChange, onClo
 
   // Token-driven: reuses the established "floating panel on canvas" role (bg-surface
   // border-border) shared by FileDetailPanel.tsx/BatchEditPanel.tsx/etc.'s own `panel` const,
-  // since this bar is the same kind of persistent overlay chrome, just docked to the bottom
-  // edge instead of a side/center panel.
+  // since this bar is the same kind of persistent chrome, just docked to the bottom edge instead
+  // of a side/center panel.
   const border = "border-border bg-surface";
   const meta = "text-slate-500";
   // Reuses ThemeSelector.tsx's established bordered-icon-button idle/hover pattern (border
@@ -77,8 +77,13 @@ export default function AudioPlayerBar({ file, isPlaying, onPlayingChange, onClo
   // the contrast finding is specifically about the icon's rendered fill color, not the border.
   const iconBtn = "border-border text-ink-secondary hover:text-ink hover:border-ink-muted";
 
+  // Deliberately NOT `position: fixed` — this renders as a normal flex child at the end of
+  // App.tsx's root flex column, directly after the active tab's own footer (which is itself a
+  // normal-flow element, not fixed). That flex column's `flex-1` scrollable content area shrinks
+  // automatically to make room, so the two stack (footer, then this bar) at the bottom of the
+  // page with no manual height math or z-index layering needed.
   return (
-    <div className={`fixed bottom-0 left-0 right-0 z-40 border-t px-6 py-3 flex items-center gap-4 shadow-2xl ${border}`}>
+    <div className={`flex-shrink-0 border-t px-6 py-3 flex items-center gap-4 shadow-2xl ${border}`}>
       <audio
         ref={audioRef}
         src={getFileAudioUrl(file.id)}
