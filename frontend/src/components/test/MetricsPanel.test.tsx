@@ -1,8 +1,27 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import MetricsPanel from "../MetricsPanel.js";
 import type { LibraryStats } from "../../api/client.js";
+import { StatusCatalogProvider } from "../../contexts/StatusCatalogContext.js";
+import type { StatusDef } from "../../api/client.js";
+
+vi.mock("../../api/client.js", () => ({
+  getStatuses: vi.fn(),
+}));
+
+import * as api from "../../api/client.js";
+
+const mockGetStatuses = vi.mocked(api.getStatuses);
+
+// Matches the pre-catalog fixed 5-status list (unknown + these 4), so the pre-existing
+// count-based assertions ("12 zeroed tiles", etc.) keep meaning what they did before Task 4.
+const CATALOG_STATUSES: StatusDef[] = [
+  { key: "draft", name: "Draft", color: "#a1b2c3", sortOrder: 1, createdAt: "2024-01-01T00:00:00.000Z" },
+  { key: "needs_mixing", name: "Need Mixing", color: "#b2c3a1", sortOrder: 2, createdAt: "2024-01-01T00:00:00.000Z" },
+  { key: "done", name: "Done", color: "#c3a1b2", sortOrder: 3, createdAt: "2024-01-01T00:00:00.000Z" },
+  { key: "released", name: "Released", color: "#a1c3b2", sortOrder: 4, createdAt: "2024-01-01T00:00:00.000Z" },
+];
 
 // Values are deliberately all distinct across both entities/every status so each can be
 // asserted on unambiguously via getByText without needing to scope into a section container.
@@ -24,18 +43,29 @@ function renderPanel(overrides: Partial<Parameters<typeof MetricsPanel>[0]> = {}
     onClose: vi.fn(),
     ...overrides,
   };
-  return { ...render(<MetricsPanel {...props} />), props };
+  return {
+    ...render(
+      <StatusCatalogProvider>
+        <MetricsPanel {...props} />
+      </StatusCatalogProvider>
+    ),
+    props,
+  };
 }
 
+beforeEach(() => {
+  mockGetStatuses.mockReset().mockResolvedValue(CATALOG_STATUSES);
+});
+
 describe("MetricsPanel - stats fallback", () => {
-  it("renders zeroed tiles for both sections when stats is undefined (not yet loaded)", () => {
+  it("renders zeroed tiles for both sections when stats is undefined (not yet loaded)", async () => {
     renderPanel({ stats: undefined });
 
     expect(screen.getAllByText("Projects")).toHaveLength(1);
     expect(screen.getAllByText("Audio Files")).toHaveLength(1);
     expect(screen.getAllByText("Total")).toHaveLength(2);
-    // 2 sections x (Total + 5 statuses) = 12 zeroed tiles.
-    expect(screen.getAllByText("0")).toHaveLength(12);
+    // 2 sections x (Total + 5 statuses [unknown + 4 catalog]) = 12 zeroed tiles.
+    await waitFor(() => expect(screen.getAllByText("0")).toHaveLength(12));
   });
 });
 
@@ -49,33 +79,33 @@ describe("MetricsPanel - two-section per-status breakdown", () => {
     expect(filesIdx).toBeGreaterThan(projectsIdx);
   });
 
-  it("renders the Projects total and per-status counts", () => {
+  it("renders the Projects total and per-status counts", async () => {
     renderPanel();
 
     expect(screen.getByText("100")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("2")).toBeInTheDocument());
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
-  it("renders the Audio Files total and per-status counts", () => {
+  it("renders the Audio Files total and per-status counts", async () => {
     renderPanel();
 
     expect(screen.getByText("200")).toBeInTheDocument();
     expect(screen.getByText("6")).toBeInTheDocument();
-    expect(screen.getByText("7")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("7")).toBeInTheDocument());
     expect(screen.getByText("8")).toBeInTheDocument();
     expect(screen.getByText("9")).toBeInTheDocument();
     expect(screen.getByText("10")).toBeInTheDocument();
   });
 
-  it("uses STATUS_LABELS display text for each status row, once per section", () => {
+  it("uses the catalog status name (or STATUS_LABELS.unknown for the sentinel) for each status row, once per section", async () => {
     renderPanel();
 
     expect(screen.getAllByText("Unknown")).toHaveLength(2);
-    expect(screen.getAllByText("Draft")).toHaveLength(2);
+    await waitFor(() => expect(screen.getAllByText("Draft")).toHaveLength(2));
     expect(screen.getAllByText("Need Mixing")).toHaveLength(2);
     expect(screen.getAllByText("Done")).toHaveLength(2);
     expect(screen.getAllByText("Released")).toHaveLength(2);
@@ -85,6 +115,23 @@ describe("MetricsPanel - two-section per-status breakdown", () => {
     renderPanel();
 
     expect(screen.queryByText(/unscored/i)).not.toBeInTheDocument();
+  });
+
+  it("renders a custom (non-default) catalog status's breakdown tile, reading its count via a defensive `?? 0` lookup", async () => {
+    mockGetStatuses.mockReset().mockResolvedValue([
+      { key: "mastering", name: "Mastering", color: "#123456", sortOrder: 1, createdAt: "2024-01-01T00:00:00.000Z" },
+    ]);
+    const stats: LibraryStats = {
+      projects: { total: 3, byStatus: { unknown: 1, mastering: 2 } },
+      files: { total: 0, byStatus: {} },
+    };
+    renderPanel({ stats });
+
+    await waitFor(() => expect(screen.getAllByText("Mastering")).toHaveLength(2));
+    expect(screen.getByText("2")).toBeInTheDocument();
+    // The Audio Files section has no "mastering" entry in its byStatus at all — the `?? 0`
+    // fallback must render "0" rather than blowing up on `undefined`.
+    expect(screen.getAllByText("0").length).toBeGreaterThan(0);
   });
 });
 

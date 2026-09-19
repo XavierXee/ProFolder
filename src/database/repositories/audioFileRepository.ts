@@ -1,8 +1,9 @@
 import path from "node:path";
 import type Database from "better-sqlite3";
-import { ALL_TRACK_STATUSES, type AudioFile, type EntityStats, type TrackStatus } from "../../models/AudioFile.js";
+import { UNKNOWN_STATUS_KEY, type AudioFile, type EntityStats, type TrackStatus } from "../../models/AudioFile.js";
 import { loadActiveDawProjectIds } from "./projectRepository.js";
 import { syncProjectFromFiles } from "./linkSync.js";
+import { findAll as findAllStatuses } from "./statusRepository.js";
 
 export type AudioFileUpsertInput = Omit<AudioFile, "tags" | "status" | "score"> & {
   status?: TrackStatus;
@@ -249,30 +250,31 @@ export function findAllActive(db: Database.Database, filters: AudioFileFilters =
 }
 
 /** Library-wide aggregate counts (unfiltered, ignores pagination) for the Metrics panel.
- * Deliberately a single aggregate query with no GROUP BY, so it always returns exactly one
- * row (even over an empty table) with every status present — a GROUP BY-based approach
- * would silently omit any status with zero matching rows. */
+ * Uses a plain parameterized `GROUP BY` (status values are now user-created catalog
+ * strings, not a compile-time-constant set, so the previous approach of string-interpolating
+ * each status into a column alias would be SQL-injection-shaped) and then zero-fills the
+ * result in JS for every currently-known status key — "unknown" plus every row in the
+ * `statuses` catalog table — so the returned shape still has an entry for every known
+ * status even if its count is 0, matching this function's previous zero-fill guarantee. */
 export function getFileStats(db: Database.Database): EntityStats {
-  const statusClauses = ALL_TRACK_STATUSES.map(
-    (status) => `SUM(CASE WHEN status = '${status}' THEN 1 ELSE 0 END) AS ${status}`
-  ).join(",\n        ");
+  const totalRow = db
+    .prepare(`SELECT COUNT(*) AS total FROM audio_files WHERE is_removed = 0`)
+    .get() as { total: number };
 
-  const row = db
+  const rows = db
     .prepare(
-      `SELECT
-        COUNT(*) AS total,
-        ${statusClauses}
-      FROM audio_files
-      WHERE is_removed = 0`
+      `SELECT status, COUNT(*) AS count FROM audio_files WHERE is_removed = 0 GROUP BY status`
     )
-    .get() as { total: number } & Record<TrackStatus, number | null>;
+    .all() as { status: TrackStatus; count: number }[];
+  const countsByStatus = new Map(rows.map((r) => [r.status, r.count]));
 
-  const byStatus = {} as Record<TrackStatus, number>;
-  for (const status of ALL_TRACK_STATUSES) {
-    byStatus[status] = row[status] ?? 0;
+  const byStatus: Record<string, number> = {};
+  byStatus[UNKNOWN_STATUS_KEY] = countsByStatus.get(UNKNOWN_STATUS_KEY) ?? 0;
+  for (const status of findAllStatuses(db)) {
+    byStatus[status.key] = countsByStatus.get(status.key) ?? 0;
   }
 
-  return { total: row.total, byStatus };
+  return { total: totalRow.total, byStatus };
 }
 
 /** Active file counts per project in a single aggregate query, avoiding a full-table load just to count. */

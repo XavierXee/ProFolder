@@ -3,14 +3,27 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CreateCustomTabModal from "../CreateCustomTabModal.js";
 import type { CustomTab } from "../../types.js";
+import { StatusCatalogProvider } from "../../contexts/StatusCatalogContext.js";
+import type { StatusDef } from "../../api/client.js";
 
 vi.mock("../../api/client.js", () => ({
   createCustomTab: vi.fn(),
+  getStatuses: vi.fn(),
 }));
 
 import * as api from "../../api/client.js";
 
 const mockCreateCustomTab = vi.mocked(api.createCustomTab);
+const mockGetStatuses = vi.mocked(api.getStatuses);
+
+// Matches the pre-catalog fixed 5-status list (unknown + these 4), so the existing
+// Draft/Done-picking tests keep the same meaning as before Task 4.
+const CATALOG_STATUSES: StatusDef[] = [
+  { key: "draft", name: "Draft", color: "#a1b2c3", sortOrder: 1, createdAt: "2024-01-01T00:00:00.000Z" },
+  { key: "needs_mixing", name: "Need Mixing", color: "#b2c3a1", sortOrder: 2, createdAt: "2024-01-01T00:00:00.000Z" },
+  { key: "done", name: "Done", color: "#c3a1b2", sortOrder: 3, createdAt: "2024-01-01T00:00:00.000Z" },
+  { key: "released", name: "Released", color: "#a1c3b2", sortOrder: 4, createdAt: "2024-01-01T00:00:00.000Z" },
+];
 
 function makeTab(overrides: Partial<CustomTab> = {}): CustomTab {
   return {
@@ -33,11 +46,19 @@ function renderModal(overrides: Partial<Parameters<typeof CreateCustomTabModal>[
     onCreated: vi.fn(),
     ...overrides,
   };
-  return { ...render(<CreateCustomTabModal {...props} />), props };
+  return {
+    ...render(
+      <StatusCatalogProvider>
+        <CreateCustomTabModal {...props} />
+      </StatusCatalogProvider>
+    ),
+    props,
+  };
 }
 
 beforeEach(() => {
   mockCreateCustomTab.mockReset().mockResolvedValue(makeTab());
+  mockGetStatuses.mockReset().mockResolvedValue(CATALOG_STATUSES);
 });
 
 describe("CreateCustomTabModal - open=false", () => {
@@ -134,6 +155,33 @@ describe("CreateCustomTabModal - submit payload", () => {
         name: "Simple Tab",
         type: "projects",
         statuses: [],
+        scores: [],
+        tags: [],
+      })
+    );
+  });
+});
+
+describe("CreateCustomTabModal - dynamic status catalog", () => {
+  it("shows a custom (non-default) catalog status in the Status dropdown and includes it in the submit payload", async () => {
+    mockGetStatuses.mockReset().mockResolvedValue([
+      ...CATALOG_STATUSES,
+      { key: "mastering", name: "Mastering", color: "#123456", sortOrder: 5, createdAt: "2024-01-01T00:00:00.000Z" },
+    ]);
+    const user = userEvent.setup({ delay: null });
+    renderModal();
+
+    await user.type(screen.getByLabelText("Name"), "Custom Status Tab");
+    await user.click(screen.getByRole("button", { name: "Status" }));
+    const masteringCheckbox = await screen.findByRole("checkbox", { name: "Mastering" });
+    await user.click(masteringCheckbox);
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(mockCreateCustomTab).toHaveBeenCalledWith({
+        name: "Custom Status Tab",
+        type: "projects",
+        statuses: ["mastering"],
         scores: [],
         tags: [],
       })

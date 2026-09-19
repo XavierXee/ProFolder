@@ -135,6 +135,8 @@ beforeEach(() => {
     confirmCopy: false,
     confirmMove: false,
     confirmDelete: false,
+    confirmStatusDeletion: false,
+    confirmTagDeletion: false,
   });
   mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: PAGE_SIZE });
 });
@@ -249,9 +251,12 @@ describe("CustomFilesTabPanel - editing status inside the panel", () => {
 
     const dialog = screen.getByRole("dialog", { name: "File detail: kick.wav" });
     const callsBefore = mockGetFiles.mock.calls.length;
-    await user.click(within(dialog).getByRole("button", { name: "Done" }));
+    // "Unknown" is the one status option always present regardless of the (dynamic, catalog-
+    // sourced) rest of the list — see StatusCatalogContext.tsx — so this doesn't need a
+    // StatusCatalogProvider/mocked catalog just to exercise an actual status change here.
+    await user.click(within(dialog).getByRole("button", { name: "Unknown" }));
 
-    await waitFor(() => expect(mockUpdateStatus).toHaveBeenCalledWith("f1", "done"));
+    await waitFor(() => expect(mockUpdateStatus).toHaveBeenCalledWith("f1", "unknown"));
     await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(callsBefore + 1));
     expect(props.refreshStats).toHaveBeenCalledTimes(1);
     expect(props.refetchProjects).not.toHaveBeenCalled();

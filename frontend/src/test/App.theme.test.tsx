@@ -23,6 +23,7 @@ vi.mock("../api/client.js", () => ({
   getLastScan: vi.fn(),
   getStats: vi.fn(),
   getAllTags: vi.fn(),
+  getStatuses: vi.fn(),
   getCustomTabs: vi.fn(),
   setMusicRoot: vi.fn(),
   getPaginationSettings: vi.fn(),
@@ -36,6 +37,7 @@ const mockGetConfig = vi.mocked(api.getConfig);
 const mockGetLastScan = vi.mocked(api.getLastScan);
 const mockGetStats = vi.mocked(api.getStats);
 const mockGetAllTags = vi.mocked(api.getAllTags);
+const mockGetStatuses = vi.mocked(api.getStatuses);
 const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
 const mockSetMusicRoot = vi.mocked(api.setMusicRoot);
 const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
@@ -54,6 +56,7 @@ beforeEach(() => {
     projects: { total: 0, byStatus: { unknown: 0, draft: 0, needs_mixing: 0, done: 0, released: 0 } },
   });
   mockGetAllTags.mockReset().mockResolvedValue([]);
+  mockGetStatuses.mockReset().mockResolvedValue([]);
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
   mockSetMusicRoot.mockReset();
   mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 });

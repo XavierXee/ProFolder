@@ -19,6 +19,7 @@ vi.mock("../api/client.js", () => ({
   getLastScan: vi.fn(),
   getStats: vi.fn(),
   getAllTags: vi.fn(),
+  getStatuses: vi.fn(),
   getCustomTabs: vi.fn(),
   getFileAudioUrl: vi.fn((id: string) => `/api/files/${id}/audio`),
   getPaginationSettings: vi.fn(),
@@ -32,6 +33,7 @@ const mockGetConfig = vi.mocked(api.getConfig);
 const mockGetLastScan = vi.mocked(api.getLastScan);
 const mockGetStats = vi.mocked(api.getStats);
 const mockGetAllTags = vi.mocked(api.getAllTags);
+const mockGetStatuses = vi.mocked(api.getStatuses);
 const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
 const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 
@@ -86,6 +88,7 @@ beforeEach(() => {
   mockGetLastScan.mockReset().mockResolvedValue(undefined);
   mockGetStats.mockReset().mockResolvedValue(STATS);
   mockGetAllTags.mockReset().mockResolvedValue([]);
+  mockGetStatuses.mockReset().mockResolvedValue([]);
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
   mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 });
 });

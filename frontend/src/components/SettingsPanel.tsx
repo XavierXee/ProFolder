@@ -317,6 +317,20 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
                 disabled={confirmSaveState === "saving"}
                 onChange={(checked) => handleConfirmChange({confirmDelete: checked})}
               />
+              <SettingRow
+                label="Confirm status deletion"
+                description="Require typing the status's exact name before it can be deleted from the catalog."
+                checked={confirmSettings.confirmStatusDeletion}
+                disabled={confirmSaveState === "saving"}
+                onChange={(checked) => handleConfirmChange({confirmStatusDeletion: checked})}
+              />
+              <SettingRow
+                label="Confirm tag deletion"
+                description="Require typing the tag's exact name before it can be deleted from the catalog."
+                checked={confirmSettings.confirmTagDeletion}
+                disabled={confirmSaveState === "saving"}
+                onChange={(checked) => handleConfirmChange({confirmTagDeletion: checked})}
+              />
             </div>
           ) : null}
         </div>

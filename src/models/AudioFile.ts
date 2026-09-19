@@ -1,12 +1,18 @@
-export type TrackStatus = "unknown" | "draft" | "needs_mixing" | "done" | "released";
+/** A status is now a free-form catalog key (see `statusRepository`/`statuses` table) rather
+ * than a fixed union — any string a user has created (or the hardcoded "unknown" sentinel,
+ * which is never a real catalog row) is valid. Validity is checked at the application layer
+ * via `statusRepository.isKnownStatusKey`, not by the type system. */
+export type TrackStatus = string;
 
-export const ALL_TRACK_STATUSES: TrackStatus[] = ["unknown", "draft", "needs_mixing", "done", "released"];
+/** Hardcoded sentinel meaning "no status assigned" — always valid, never a real row in the
+ * `statuses` catalog table, never editable/deletable. */
+export const UNKNOWN_STATUS_KEY = "unknown";
 
-/** Total count plus a full per-status breakdown (every `TrackStatus` key always present,
+/** Total count plus a full per-status breakdown (every currently-known status key present,
  * zero-filled if no rows match), used for the Metrics panel's file/project stat blocks. */
 export type EntityStats = {
   total: number;
-  byStatus: Record<TrackStatus, number>;
+  byStatus: Record<string, number>;
 };
 
 export type AudioFile = {

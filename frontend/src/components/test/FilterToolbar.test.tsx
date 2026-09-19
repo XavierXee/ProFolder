@@ -1,8 +1,22 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 import { useState } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import FilterToolbar, { type FilterToolbarFilters, type FilterToolbarPatch } from "../FilterToolbar.js";
+import { StatusCatalogProvider } from "../../contexts/StatusCatalogContext.js";
+import type { StatusDef } from "../../api/client.js";
+
+vi.mock("../../api/client.js", () => ({
+  getStatuses: vi.fn(),
+}));
+
+import * as api from "../../api/client.js";
+
+const mockGetStatuses = vi.mocked(api.getStatuses);
+
+beforeEach(() => {
+  mockGetStatuses.mockReset().mockResolvedValue([]);
+});
 
 function Harness({
   initialFilters = {},
@@ -235,6 +249,69 @@ describe("FilterToolbar - result label and status/score/tag dropdowns", () => {
     render(<Harness allTags={["indie", "lofi"]} initialFilters={{ tags: ["indie"] }} />);
 
     expect(screen.getByRole("button", { name: "Tags (1)" })).toBeInTheDocument();
+  });
+});
+
+describe("FilterToolbar - dynamic status catalog", () => {
+  it("shows the Unknown sentinel plus every catalog status (in sortOrder) in the Status dropdown, including a custom non-default status", async () => {
+    const catalogStatuses: StatusDef[] = [
+      { key: "draft", name: "Draft", color: "#a1b2c3", sortOrder: 1, createdAt: "2024-01-01T00:00:00.000Z" },
+      { key: "mastering", name: "Mastering", color: "#123456", sortOrder: 2, createdAt: "2024-01-01T00:00:00.000Z" },
+    ];
+    mockGetStatuses.mockReset().mockResolvedValue(catalogStatuses);
+    const user = userEvent.setup();
+
+    render(
+      <StatusCatalogProvider>
+        <Harness />
+      </StatusCatalogProvider>
+    );
+
+    await user.click(screen.getByRole("button", { name: "Status" }));
+    const listbox = await screen.findByRole("listbox", { name: "Filter by status" });
+
+    expect(await screen.findByRole("checkbox", { name: "Unknown" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "Draft" })).toBeInTheDocument());
+    expect(screen.getByRole("checkbox", { name: "Mastering" })).toBeInTheDocument();
+    expect(listbox).toBeInTheDocument();
+  });
+
+  it("selecting a custom catalog status emits it in the onChange patch", async () => {
+    const catalogStatuses: StatusDef[] = [
+      { key: "mastering", name: "Mastering", color: "#123456", sortOrder: 1, createdAt: "2024-01-01T00:00:00.000Z" },
+    ];
+    mockGetStatuses.mockReset().mockResolvedValue(catalogStatuses);
+    const onChangeSpy = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <StatusCatalogProvider>
+        <Harness onChangeSpy={onChangeSpy} />
+      </StatusCatalogProvider>
+    );
+
+    await user.click(screen.getByRole("button", { name: "Status" }));
+    const masteringCheckbox = await screen.findByRole("checkbox", { name: "Mastering" });
+    await user.click(masteringCheckbox);
+
+    expect(onChangeSpy).toHaveBeenCalledWith({ statuses: ["mastering"] });
+  });
+
+  it("reserves the Status trigger label width based on the live catalog size (Unknown + every catalog status)", async () => {
+    const catalogStatuses: StatusDef[] = [
+      { key: "draft", name: "Draft", color: "#a1b2c3", sortOrder: 1, createdAt: "2024-01-01T00:00:00.000Z" },
+      { key: "mastering", name: "Mastering", color: "#123456", sortOrder: 2, createdAt: "2024-01-01T00:00:00.000Z" },
+    ];
+    mockGetStatuses.mockReset().mockResolvedValue(catalogStatuses);
+
+    render(
+      <StatusCatalogProvider>
+        <Harness initialFilters={{ statuses: ["draft", "mastering"] }} />
+      </StatusCatalogProvider>
+    );
+
+    // 3 total selectable statuses (Unknown + draft + mastering); reserve label reflects that.
+    await waitFor(() => expect(screen.getByText("Status (3)")).toBeInTheDocument());
   });
 });
 

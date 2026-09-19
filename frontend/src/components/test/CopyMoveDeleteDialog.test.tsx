@@ -50,6 +50,8 @@ function makeConfirmationSettings(overrides: Partial<ConfirmationSettings> = {})
     confirmCopy: false,
     confirmMove: false,
     confirmDelete: false,
+    confirmStatusDeletion: false,
+    confirmTagDeletion: false,
     ...overrides,
   };
 }

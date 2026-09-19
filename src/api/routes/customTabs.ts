@@ -1,7 +1,8 @@
 import { Router } from "express";
 import type Database from "better-sqlite3";
 import { findAll, create, deleteById } from "../../database/repositories/customTabRepository.js";
-import { ALL_TRACK_STATUSES, type TrackStatus } from "../../models/AudioFile.js";
+import { isKnownStatusKey } from "../../database/repositories/statusRepository.js";
+import { type TrackStatus } from "../../models/AudioFile.js";
 import { isValidScore } from "../../models/Score.js";
 import { asyncHandler } from "../asyncHandler.js";
 
@@ -44,7 +45,7 @@ export function createCustomTabsRouter(db: Database.Database): Router {
       }
 
       const validStatuses = Array.isArray(statuses)
-        ? statuses.filter((s): s is TrackStatus => ALL_TRACK_STATUSES.includes(s as TrackStatus))
+        ? statuses.filter((s): s is TrackStatus => typeof s === "string" && isKnownStatusKey(db, s))
         : [];
       const validScores = Array.isArray(scores)
         ? scores.filter(

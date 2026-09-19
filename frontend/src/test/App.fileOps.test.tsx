@@ -19,6 +19,7 @@ vi.mock("../api/client.js", () => ({
   getLastScan: vi.fn(),
   getStats: vi.fn(),
   getAllTags: vi.fn(),
+  getStatuses: vi.fn(),
   getCustomTabs: vi.fn(),
   getProjectDetail: vi.fn(),
   getProjectDuplicates: vi.fn(),
@@ -47,6 +48,7 @@ const mockGetConfig = vi.mocked(api.getConfig);
 const mockGetLastScan = vi.mocked(api.getLastScan);
 const mockGetStats = vi.mocked(api.getStats);
 const mockGetAllTags = vi.mocked(api.getAllTags);
+const mockGetStatuses = vi.mocked(api.getStatuses);
 const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
 const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 const mockGetProjectDetail = vi.mocked(api.getProjectDetail);
@@ -168,6 +170,7 @@ beforeEach(() => {
   mockGetLastScan.mockReset().mockResolvedValue(undefined);
   mockGetStats.mockReset().mockResolvedValue(STATS);
   mockGetAllTags.mockReset().mockResolvedValue([]);
+  mockGetStatuses.mockReset().mockResolvedValue([]);
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
   mockGetProjectDetail.mockReset().mockResolvedValue(makeDetail());
   mockGetProjectDuplicates.mockReset().mockResolvedValue(makeDuplicatesResult());
@@ -193,6 +196,8 @@ beforeEach(() => {
     confirmCopy: false,
     confirmMove: false,
     confirmDelete: false,
+    confirmStatusDeletion: false,
+    confirmTagDeletion: false,
   });
   mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 });
 });

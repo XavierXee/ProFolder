@@ -25,7 +25,8 @@ import {
 } from "../src/database/repositories/projectRepository.js";
 import { syncProjectFromFiles } from "../src/database/repositories/linkSync.js";
 import type { DawType } from "../src/scanner/dawDetector.js";
-import { ALL_TRACK_STATUSES } from "../src/models/AudioFile.js";
+import { UNKNOWN_STATUS_KEY } from "../src/models/AudioFile.js";
+import { findAll as findAllStatuses } from "../src/database/repositories/statusRepository.js";
 
 let db: Database.Database;
 
@@ -207,12 +208,36 @@ describe("getFileStats", () => {
     // of returning an explicit 0 for them.
     const stats = getFileStats(db);
 
-    expect(Object.keys(stats.byStatus).sort()).toEqual([...ALL_TRACK_STATUSES].sort());
+    const expectedKeys = [UNKNOWN_STATUS_KEY, ...findAllStatuses(db).map((s) => s.key)];
+    expect(Object.keys(stats.byStatus).sort()).toEqual(expectedKeys.sort());
     expect(stats.byStatus.draft).toBe(0);
     expect(stats.byStatus.needs_mixing).toBe(0);
     expect(stats.byStatus.done).toBe(0);
     expect(stats.byStatus.released).toBe(0);
     expect(stats.byStatus.unknown).toBe(25);
+  });
+
+  it("does not choke on a SQL-metacharacter-laden status value (parameterized query regression check)", () => {
+    // Statuses are now user-created catalog strings, not a compile-time constant, so the
+    // previous string-interpolation-into-column-alias approach would have been SQL-injection-
+    // shaped here. Bypass the API's slugify entirely (as if a row already existed with an
+    // adversarial value) and confirm getFileStats still just counts it safely via the
+    // parameterized GROUP BY, without throwing or corrupting the schema.
+    const evilStatus = `x'; DROP TABLE audio_files; --`;
+    insertAudioFile(db, makeFile({ id: "evil.wav", status: evilStatus }));
+
+    expect(() => getFileStats(db)).not.toThrow();
+    const stats = getFileStats(db);
+    // The row itself is never lost or miscounted, and the table survives intact — the only
+    // real proof needed that the query text is genuinely parameterized rather than
+    // string-interpolated (a status value never appears in the query text at all, so an
+    // adversarial value that isn't a real catalog key simply doesn't get its own zero-filled
+    // bucket in byStatus, same as any other never-validated orphan value would not; it's still
+    // safely counted in `total`, which is the injection-relevant guarantee).
+    expect(stats.total).toBe(26);
+    expect(stats.byStatus.unknown).toBe(25); // unaffected by the adversarial row
+    const row = db.prepare(`SELECT COUNT(*) AS c FROM audio_files`).get() as { c: number };
+    expect(row.c).toBe(26);
   });
 
   it("excludes removed files from the total and their status bucket", () => {

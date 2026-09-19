@@ -1,9 +1,51 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import FileDetailPanel, { formatBytes, formatFull } from "../FileDetailPanel.js";
 import type { AudioFile } from "../../types.js";
 import { STATUS_PILL, STATUS_PILL_UNSELECTED } from "../../statusStyles.js";
+import { statusPillStyle } from "../../statusColor.js";
+import { StatusCatalogProvider } from "../../contexts/StatusCatalogContext.js";
+import type { StatusDef } from "../../api/client.js";
+
+vi.mock("../../api/client.js", () => ({
+  getStatuses: vi.fn(),
+}));
+
+import * as api from "../../api/client.js";
+
+const mockGetStatuses = vi.mocked(api.getStatuses);
+
+// Matches the pre-catalog fixed 5-status list (unknown + these 4), so the existing
+// Draft/Done/Released-picking tests keep the same meaning as before Task 4.
+const CATALOG_STATUSES: StatusDef[] = [
+  { key: "draft", name: "Draft", color: "#a1b2c3", sortOrder: 1, createdAt: "2024-01-01T00:00:00.000Z" },
+  { key: "needs_mixing", name: "Need Mixing", color: "#b2c3a1", sortOrder: 2, createdAt: "2024-01-01T00:00:00.000Z" },
+  { key: "done", name: "Done", color: "#c3a1b2", sortOrder: 3, createdAt: "2024-01-01T00:00:00.000Z" },
+  { key: "released", name: "Released", color: "#a1c3b2", sortOrder: 4, createdAt: "2024-01-01T00:00:00.000Z" },
+];
+
+/** Wraps FileDetailPanel with a StatusCatalogProvider carrying the CATALOG_STATUSES fixture above,
+ * so both the initial `renderPanel()` mount and any raw `rerender(...)` calls a test performs
+ * preserve the same resolved catalog (rerendering the same Provider element/position doesn't
+ * remount it or re-trigger its mount-only fetch effect). */
+function withCatalog(children: ReactNode) {
+  return <StatusCatalogProvider>{children}</StatusCatalogProvider>;
+}
+
+/**
+ * jsdom's CSSOM normalizes a plain-hex literal assigned to `borderColor`/`backgroundColor` to
+ * its `rgb()` equivalent (verified empirically: `color`, which mixes in `var(--color-ink)`,
+ * and `boxShadow`, a shorthand property, are both left as the literal color-mix() string
+ * instead) — see StatusColor.test-adjacent probing for this component's `statusPillStyle`.
+ */
+function hexToRgb(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -37,8 +79,12 @@ function renderPanel(overrides: Partial<Parameters<typeof FileDetailPanel>[0]> =
     onFileOperation: vi.fn(),
     ...overrides,
   };
-  return { ...render(<FileDetailPanel {...props} />), props };
+  return { ...render(withCatalog(<FileDetailPanel {...props} />)), props };
 }
+
+beforeEach(() => {
+  mockGetStatuses.mockReset().mockResolvedValue(CATALOG_STATUSES);
+});
 
 describe("formatBytes", () => {
   it("renders whole bytes below the 1024 threshold", () => {
@@ -171,7 +217,9 @@ describe("FileDetailPanel - status optimistic update", () => {
     const user = userEvent.setup();
     renderPanel({ file: makeFile({ status: "draft" }), onSaveStatus });
 
-    const doneBtn = screen.getByRole("button", { name: "Done" });
+    // Status buttons only appear once the catalog fetch resolves, so this is a `findByRole`
+    // (not `getByRole`) since it's the first status-picker lookup after mount.
+    const doneBtn = await screen.findByRole("button", { name: "Done" });
     await user.click(doneBtn);
 
     expect(doneBtn).toHaveAttribute("aria-pressed", "true");
@@ -185,7 +233,7 @@ describe("FileDetailPanel - status optimistic update", () => {
     const user = userEvent.setup();
     renderPanel({ file: makeFile({ status: "draft" }), onSaveStatus });
 
-    const draftBtn = screen.getByRole("button", { name: "Draft" });
+    const draftBtn = await screen.findByRole("button", { name: "Draft" });
     const doneBtn = screen.getByRole("button", { name: "Done" });
     await user.click(doneBtn);
 
@@ -199,9 +247,27 @@ describe("FileDetailPanel - status optimistic update", () => {
     const user = userEvent.setup();
     renderPanel({ file: makeFile({ status: "draft" }), onSaveStatus });
 
-    await user.click(screen.getByRole("button", { name: "Draft" }));
+    const draftBtn = await screen.findByRole("button", { name: "Draft" });
+    await user.click(draftBtn);
 
     expect(onSaveStatus).not.toHaveBeenCalled();
+  });
+
+  it("renders a custom (non-default) catalog status as a selectable pill, using its own color via statusPillStyle when selected", async () => {
+    mockGetStatuses.mockReset().mockResolvedValue([
+      ...CATALOG_STATUSES,
+      { key: "mastering", name: "Mastering", color: "#123456", sortOrder: 5, createdAt: "2024-01-01T00:00:00.000Z" },
+    ]);
+    const onSaveStatus = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderPanel({ file: makeFile({ status: "draft" }), onSaveStatus });
+
+    const masteringBtn = await screen.findByRole("button", { name: "Mastering" });
+    await user.click(masteringBtn);
+
+    expect(onSaveStatus).toHaveBeenCalledWith("f1", "mastering");
+    await waitFor(() => expect(masteringBtn).toHaveAttribute("aria-pressed", "true"));
+    expect(masteringBtn.style.borderColor).toBe(`color-mix(in oklch, ${hexToRgb("#123456")} 40%, transparent)`);
   });
 });
 
@@ -311,7 +377,8 @@ describe("FileDetailPanel - Saving… indicator", () => {
     renderPanel({ file: makeFile({ status: "draft" }), onSaveStatus });
 
     expect(screen.queryByText("Saving…")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    const doneBtn = await screen.findByRole("button", { name: "Done" });
+    await user.click(doneBtn);
 
     expect(screen.getByText("Saving…")).toBeInTheDocument();
   });
@@ -350,20 +417,26 @@ describe("FileDetailPanel - re-sync on file id change", () => {
     const fileB = makeFile({ id: "f2", status: "released", tags: ["ambient"], score: 1 });
     const { rerender } = renderPanel({ file: fileA, onSaveStatus });
 
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    const doneBtn = await screen.findByRole("button", { name: "Done" });
+    await user.click(doneBtn);
     expect(screen.getByRole("button", { name: "Done" })).toHaveAttribute("aria-pressed", "true");
 
+    // Re-wrapping with the same StatusCatalogProvider element (same position in the tree)
+    // preserves its already-resolved catalog state instead of remounting/refetching, so the
+    // status buttons below are available synchronously.
     rerender(
-      <FileDetailPanel
-        file={fileB}
-        allTags={[]}
-        onClose={() => {}}
-        onSaveStatus={onSaveStatus}
-        onSaveTags={vi.fn().mockResolvedValue(undefined)}
-        onSaveScore={vi.fn().mockResolvedValue(undefined)}
-        onReveal={() => {}}
-        onFileOperation={vi.fn()}
-      />
+      withCatalog(
+        <FileDetailPanel
+          file={fileB}
+          allTags={[]}
+          onClose={() => {}}
+          onSaveStatus={onSaveStatus}
+          onSaveTags={vi.fn().mockResolvedValue(undefined)}
+          onSaveScore={vi.fn().mockResolvedValue(undefined)}
+          onReveal={() => {}}
+          onFileOperation={vi.fn()}
+        />
+      )
     );
 
     expect(screen.getByRole("button", { name: "Released" })).toHaveAttribute("aria-pressed", "true");
@@ -377,18 +450,39 @@ describe("FileDetailPanel - re-sync on file id change", () => {
 // index.css's [data-theme] blocks), so these tests assert the token classes themselves are
 // present rather than any isDark-branch selection (removed from this file entirely).
 describe("FileDetailPanel - token-driven classes", () => {
-  it("applies STATUS_PILL's per-status classes to the selected status button and STATUS_PILL_UNSELECTED to the rest", () => {
+  it("applies a statusPillStyle-derived inline style to the selected (catalog) status button, and STATUS_PILL_UNSELECTED to the rest", async () => {
     renderPanel({ file: makeFile({ status: "draft" }) });
 
-    const draftBtn = screen.getByRole("button", { name: "Draft" });
+    const draftBtn = await screen.findByRole("button", { name: "Draft" });
     const doneBtn = screen.getByRole("button", { name: "Done" });
 
-    for (const cls of STATUS_PILL.draft.split(" ")) {
-      expect(draftBtn.className).toContain(cls);
-    }
+    const draftEntry = CATALOG_STATUSES.find((s) => s.key === "draft")!;
+    const expectedStyle = statusPillStyle(draftEntry.color);
+    // `color` (mixes in var(--color-ink)) and `boxShadow` (a shorthand) stay literal
+    // color-mix() strings, but `borderColor` gets its embedded hex normalized to rgb() by
+    // jsdom's CSSOM (verified empirically) — see the `hexToRgb` helper above.
+    expect(draftBtn.style.color).toBe(expectedStyle.color);
+    expect(draftBtn.style.borderColor).toBe(`color-mix(in oklch, ${hexToRgb(draftEntry.color)} 40%, transparent)`);
+    expect(draftBtn.style.boxShadow).toBe(expectedStyle.boxShadow);
+    // "unknown" is the only status still styled via the fixed STATUS_PILL Tailwind classes,
+    // not statusPillStyle — a catalog status like "draft" must not use those classes.
+    expect(draftBtn.className).not.toContain(STATUS_PILL.unknown.split(" ")[0]);
+
     for (const cls of STATUS_PILL_UNSELECTED.split(" ")) {
       expect(doneBtn.className).toContain(cls);
     }
+  });
+
+  it("keeps the 'unknown' status pill on the fixed STATUS_PILL.unknown classes (no inline style) when selected", async () => {
+    renderPanel({ file: makeFile({ status: "unknown" }) });
+
+    const unknownBtn = await screen.findByRole("button", { name: "Unknown" });
+
+    for (const cls of STATUS_PILL.unknown.split(" ")) {
+      expect(unknownBtn.className).toContain(cls);
+    }
+    expect(unknownBtn.style.borderColor).toBe("");
+    expect(unknownBtn.style.boxShadow).toBe("");
   });
 
   it("applies the danger-token classes to the Delete button", () => {

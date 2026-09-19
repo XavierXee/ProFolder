@@ -83,14 +83,23 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
   router.put(
     "/confirmation-settings",
     asyncHandler(async (req, res) => {
-      const { confirmTagRemoval, confirmTabDeletion, confirmCopy, confirmMove, confirmDelete } =
-        req.body as {
-          confirmTagRemoval?: unknown;
-          confirmTabDeletion?: unknown;
-          confirmCopy?: unknown;
-          confirmMove?: unknown;
-          confirmDelete?: unknown;
-        };
+      const {
+        confirmTagRemoval,
+        confirmTabDeletion,
+        confirmCopy,
+        confirmMove,
+        confirmDelete,
+        confirmStatusDeletion,
+        confirmTagDeletion,
+      } = req.body as {
+        confirmTagRemoval?: unknown;
+        confirmTabDeletion?: unknown;
+        confirmCopy?: unknown;
+        confirmMove?: unknown;
+        confirmDelete?: unknown;
+        confirmStatusDeletion?: unknown;
+        confirmTagDeletion?: unknown;
+      };
       if (confirmTagRemoval !== undefined && typeof confirmTagRemoval !== "boolean") {
         res.status(400).json({ error: "confirmTagRemoval must be a boolean" });
         return;
@@ -111,6 +120,14 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
         res.status(400).json({ error: "confirmDelete must be a boolean" });
         return;
       }
+      if (confirmStatusDeletion !== undefined && typeof confirmStatusDeletion !== "boolean") {
+        res.status(400).json({ error: "confirmStatusDeletion must be a boolean" });
+        return;
+      }
+      if (confirmTagDeletion !== undefined && typeof confirmTagDeletion !== "boolean") {
+        res.status(400).json({ error: "confirmTagDeletion must be a boolean" });
+        return;
+      }
       res.json(
         setConfirmationSettings(db, {
           confirmTagRemoval,
@@ -118,6 +135,8 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
           confirmCopy,
           confirmMove,
           confirmDelete,
+          confirmStatusDeletion,
+          confirmTagDeletion,
         })
       );
     })

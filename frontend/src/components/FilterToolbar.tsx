@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { TrackStatus } from "../types.js";
-import { ALL_STATUSES, STATUS_LABELS } from "../statusStyles.js";
+import { buildStatusOptions } from "../statusStyles.js";
+import { useStatusCatalog } from "../contexts/StatusCatalogContext.js";
 import { SCORE_DOT_COLORS } from "../scoreStyles.js";
 import { MultiSelectDropdown } from "./MultiSelectDropdown.js";
 import { PAGE_SIZE } from "../constants.js";
@@ -29,12 +30,6 @@ export type FilterToolbarPatch = {
   sortBy?: "modifiedAt";
   sortDir?: "asc" | "desc";
 };
-
-/** Exported for reuse by CreateCustomTabModal, which needs the same Status options
- * (and reserved trigger-label width) for its own Status filter picker. */
-export const STATUS_OPTIONS = ALL_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }));
-/** Widest realistic "Status" trigger label: every status selected at once. */
-export const STATUS_RESERVE_LABEL = `Status (${ALL_STATUSES.length})`;
 
 /** Exported for reuse by CreateCustomTabModal, which needs the same Score options
  * (five-dot rendering included) for its own Score filter picker. */
@@ -99,6 +94,10 @@ export default function FilterToolbar({
   locked?: boolean;
 }) {
   const [searchInput, setSearchInput] = useState(filters.search ?? "");
+  const { statuses: catalogStatuses } = useStatusCatalog();
+  const statusOptions = buildStatusOptions(catalogStatuses);
+  /** Widest realistic "Status" trigger label: every status (including "Unknown") selected at once. */
+  const statusReserveLabel = `Status (${statusOptions.length})`;
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -160,10 +159,10 @@ export default function FilterToolbar({
           <>
             <MultiSelectDropdown
               label="Status"
-              options={STATUS_OPTIONS}
+              options={statusOptions}
               selected={statuses}
               onChange={(next) => onChange({ statuses: next })}
-              reserveLabel={STATUS_RESERVE_LABEL}
+              reserveLabel={statusReserveLabel}
             />
             <MultiSelectDropdown
               label="Score"

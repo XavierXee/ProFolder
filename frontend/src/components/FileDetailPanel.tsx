@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { AudioFile, TrackStatus } from "../types.js";
+import { UNKNOWN_STATUS_KEY } from "../types.js";
 import type { CopyMoveDeleteOperation } from "./CopyMoveDeleteDialog.js";
 import StatusBadge from "./StatusBadge.js";
 import ScoreBadge from "./ScoreBadge.js";
 import { ScoreEditor } from "./ScoreEditor.js";
 import { TagEditor } from "./TagEditor.js";
-import { ALL_STATUSES, STATUS_LABELS, STATUS_PILL, STATUS_PILL_UNSELECTED } from "../statusStyles.js";
+import { buildStatusOptions, STATUS_PILL, STATUS_PILL_UNSELECTED } from "../statusStyles.js";
+import { statusPillStyle } from "../statusColor.js";
+import { useStatusCatalog } from "../contexts/StatusCatalogContext.js";
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -39,6 +42,7 @@ type Props = {
 };
 
 export default function FileDetailPanel({ file, allTags = [], onClose, onSaveStatus, onSaveTags, onSaveScore, onReveal, onFileOperation }: Props) {
+  const { statuses: catalogStatuses } = useStatusCatalog();
   const [status, setStatus] = useState<TrackStatus>("unknown");
   const [tags, setTags] = useState<string[]>([]);
   const [score, setScore] = useState<number | null>(null);
@@ -214,19 +218,22 @@ export default function FileDetailPanel({ file, allTags = [], onClose, onSaveSta
                   {statusSaving && <span className="normal-case tracking-normal">Saving…</span>}
                 </p>
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Select status">
-                  {ALL_STATUSES.map((s) => {
-                    const selected = status === s;
+                  {buildStatusOptions(catalogStatuses).map((opt) => {
+                    const selected = status === opt.value;
+                    const isUnknown = opt.value === UNKNOWN_STATUS_KEY;
+                    const catalogEntry = isUnknown ? undefined : catalogStatuses.find((s) => s.key === opt.value);
                     return (
                       <button
-                        key={s}
-                        onClick={() => handleStatusChange(s)}
+                        key={opt.value}
+                        onClick={() => handleStatusChange(opt.value)}
                         disabled={statusSaving}
                         aria-pressed={selected}
+                        style={selected && catalogEntry ? statusPillStyle(catalogEntry.color) : undefined}
                         className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed ${
-                          selected ? `ring-1 ${STATUS_PILL[s]}` : STATUS_PILL_UNSELECTED
+                          selected ? (isUnknown ? `ring-1 ${STATUS_PILL.unknown}` : "") : STATUS_PILL_UNSELECTED
                         }`}
                       >
-                        {STATUS_LABELS[s]}
+                        {opt.label}
                       </button>
                     );
                   })}

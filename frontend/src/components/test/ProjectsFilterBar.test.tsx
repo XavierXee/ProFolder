@@ -56,8 +56,11 @@ describe("ProjectsFilterBar", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Status" }));
-    await user.click(screen.getByRole("checkbox", { name: "Draft" }));
+    // "Unknown" is the one status option always present regardless of the (dynamic, catalog-
+    // sourced) rest of the list — see StatusCatalogContext.tsx — so this doesn't need a
+    // StatusCatalogProvider/mocked catalog just to verify plain onChange forwarding.
+    await user.click(screen.getByRole("checkbox", { name: "Unknown" }));
 
-    expect(onChange).toHaveBeenCalledWith({ statuses: ["draft"] });
+    expect(onChange).toHaveBeenCalledWith({ statuses: ["unknown"] });
   });
 });

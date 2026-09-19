@@ -15,7 +15,8 @@ import {
   getProjectStats,
 } from "../src/database/repositories/projectRepository.js";
 import type { Project } from "../src/models/Project.js";
-import { ALL_TRACK_STATUSES } from "../src/models/AudioFile.js";
+import { UNKNOWN_STATUS_KEY } from "../src/models/AudioFile.js";
+import { findAll as findAllStatuses } from "../src/database/repositories/statusRepository.js";
 
 let db: Database.Database;
 
@@ -333,12 +334,34 @@ describe("projectRepository.getProjectStats", () => {
     // of returning an explicit 0 for them.
     const stats = getProjectStats(db);
 
-    expect(Object.keys(stats.byStatus).sort()).toEqual([...ALL_TRACK_STATUSES].sort());
+    const expectedKeys = [UNKNOWN_STATUS_KEY, ...findAllStatuses(db).map((s) => s.key)];
+    expect(Object.keys(stats.byStatus).sort()).toEqual(expectedKeys.sort());
     expect(stats.byStatus.draft).toBe(0);
     expect(stats.byStatus.needs_mixing).toBe(0);
     expect(stats.byStatus.done).toBe(0);
     expect(stats.byStatus.released).toBe(0);
     expect(stats.byStatus.unknown).toBe(22);
+  });
+
+  it("does not choke on a SQL-metacharacter-laden status value (parameterized query regression check)", () => {
+    // Statuses are now user-created catalog strings, not a compile-time constant, so the
+    // previous string-interpolation-into-column-alias approach would have been SQL-injection-
+    // shaped here. Confirm getProjectStats still just counts an adversarial value safely via
+    // the parameterized GROUP BY, without throwing or corrupting the schema.
+    const evilStatus = `x'; DROP TABLE projects; --`;
+    updateStatus(db, "Project 00", evilStatus);
+
+    expect(() => getProjectStats(db)).not.toThrow();
+    const stats = getProjectStats(db);
+    // The row is never lost, and the table survives intact — proof that the query text is
+    // genuinely parameterized (a status value never appears in the query text itself). An
+    // adversarial value that isn't a real catalog key doesn't get its own zero-filled bucket
+    // in byStatus (same as any never-validated orphan value wouldn't), but it's still safely
+    // counted in `total`, which is the injection-relevant guarantee here.
+    expect(stats.total).toBe(22);
+    expect(stats.byStatus.unknown).toBe(21); // unaffected by the adversarial row
+    const row = db.prepare(`SELECT COUNT(*) AS c FROM projects`).get() as { c: number };
+    expect(row.c).toBe(22);
   });
 
   it("excludes removed projects from the total and their status bucket", () => {

@@ -155,7 +155,7 @@ describe("batch route registration order and validation", () => {
 
       expect(res.status).toBe(400);
       expect(res.body).toEqual({
-        error: "status must be one of unknown, draft, needs_mixing, done, released",
+        error: 'status must be a known status key (got "bogus")',
       });
     });
   });
@@ -170,7 +170,7 @@ describe("batch route registration order and validation", () => {
 
       expect(res.status).toBe(400);
       expect(res.body).toEqual({
-        error: "status must be one of unknown, draft, needs_mixing, done, released",
+        error: 'status must be a known status key (got "bogus")',
       });
     });
   });

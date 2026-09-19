@@ -365,6 +365,8 @@ export type ConfirmationSettings = {
   confirmCopy: boolean;
   confirmMove: boolean;
   confirmDelete: boolean;
+  confirmStatusDeletion: boolean;
+  confirmTagDeletion: boolean;
 };
 
 export function getConfirmationSettings(): Promise<ConfirmationSettings> {
@@ -408,6 +410,43 @@ export function getFolderTree(): Promise<FolderNode> {
 export async function getAllTags(): Promise<string[]> {
   const result = await request<{ tags: string[] }>(`/tags`);
   return result.tags;
+}
+
+export type StatusDef = { key: string; name: string; color: string; sortOrder: number; createdAt: string };
+
+export async function getStatuses(): Promise<StatusDef[]> {
+  const result = await request<{ statuses: StatusDef[] }>(`/statuses`);
+  return result.statuses;
+}
+
+export function createStatus(name: string, color: string): Promise<StatusDef> {
+  return request<StatusDef>(`/statuses`, { method: "POST", body: JSON.stringify({ name, color }) });
+}
+
+export function editStatus(key: string, patch: { name?: string; color?: string }): Promise<StatusDef> {
+  return request<StatusDef>(`/statuses/${encodeURIComponent(key)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteStatus(key: string): Promise<void> {
+  await request(`/statuses/${encodeURIComponent(key)}`, { method: "DELETE" });
+}
+
+export function createTag(name: string): Promise<{ id: number; name: string }> {
+  return request<{ id: number; name: string }>(`/tags`, { method: "POST", body: JSON.stringify({ name }) });
+}
+
+export function renameTag(oldName: string, newName: string): Promise<{ name: string }> {
+  return request<{ name: string }>(`/tags/${encodeURIComponent(oldName)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name: newName }),
+  });
+}
+
+export async function deleteTag(name: string): Promise<void> {
+  await request(`/tags/${encodeURIComponent(name)}`, { method: "DELETE" });
 }
 
 export function getExclusions(): Promise<{ excludedPaths: string[] }> {

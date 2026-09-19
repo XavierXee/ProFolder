@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
 import type { CustomTab, CustomTabType, TrackStatus } from "../types.js";
 import { MultiSelectDropdown } from "./MultiSelectDropdown.js";
-import { STATUS_OPTIONS, STATUS_RESERVE_LABEL, SCORE_OPTIONS, SCORE_RESERVE_LABEL, TAGS_RESERVE_LABEL } from "./FilterToolbar.js";
+import { SCORE_OPTIONS, SCORE_RESERVE_LABEL, TAGS_RESERVE_LABEL } from "./FilterToolbar.js";
+import { buildStatusOptions } from "../statusStyles.js";
+import { useStatusCatalog } from "../contexts/StatusCatalogContext.js";
 
 type ScoreOption = number | "unscored";
 
@@ -14,6 +16,10 @@ type Props = {
 };
 
 export default function CreateCustomTabModal({ open, allTags, onClose, onCreated }: Props) {
+  const { statuses: catalogStatuses } = useStatusCatalog();
+  const statusOptions = buildStatusOptions(catalogStatuses);
+  /** Widest realistic "Status" trigger label: every status (including "Unknown") selected at once. */
+  const statusReserveLabel = `Status (${statusOptions.length})`;
   const [name, setName] = useState("");
   const [type, setType] = useState<CustomTabType>("projects");
   const [statuses, setStatuses] = useState<TrackStatus[]>([]);
@@ -161,10 +167,10 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
               <div className="flex flex-wrap gap-2">
                 <MultiSelectDropdown
                   label="Status"
-                  options={STATUS_OPTIONS}
+                  options={statusOptions}
                   selected={statuses}
                   onChange={setStatuses}
-                  reserveLabel={STATUS_RESERVE_LABEL}
+                  reserveLabel={statusReserveLabel}
                 />
                 <MultiSelectDropdown
                   label="Score"

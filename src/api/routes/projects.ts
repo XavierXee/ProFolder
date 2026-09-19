@@ -26,7 +26,8 @@ import { walkDirectory } from "../../scanner/walk.js";
 import { classifyFolders } from "../../scanner/dawDetector.js";
 import { collectSampleFiles, findDuplicateMatches } from "../../scanner/duplicateDetector.js";
 import { getScanSettings } from "../../config/scanSettings.js";
-import { ALL_TRACK_STATUSES, type TrackStatus } from "../../models/AudioFile.js";
+import { type TrackStatus } from "../../models/AudioFile.js";
+import { isKnownStatusKey } from "../../database/repositories/statusRepository.js";
 import { isValidScore, parseScoreListQueryParam } from "../../models/Score.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { toStringArray } from "../queryParams.js";
@@ -97,9 +98,7 @@ export function createProjectsRouter(db: Database.Database): Router {
       const pageNum = parsePositiveInt(page, 1);
       const pageSizeNum = parsePositiveInt(pageSize, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
 
-      const statuses = toStringArray(status).filter((s): s is TrackStatus =>
-        ALL_TRACK_STATUSES.includes(s as TrackStatus)
-      );
+      const statuses = toStringArray(status).filter((s) => isKnownStatusKey(db, s));
       const tags = toStringArray(tag);
 
       const { items, total } = findAllActivePaged(db, {
@@ -329,8 +328,8 @@ export function createProjectsRouter(db: Database.Database): Router {
     asyncHandler(async (req, res) => {
       const id = req.params.id!;
       const { status } = req.body as { status: TrackStatus };
-      if (!ALL_TRACK_STATUSES.includes(status)) {
-        res.status(400).json({ error: `status must be one of ${ALL_TRACK_STATUSES.join(", ")}` });
+      if (typeof status !== "string" || !isKnownStatusKey(db, status)) {
+        res.status(400).json({ error: `status must be a known status key (got "${status}")` });
         return;
       }
       if (!findById(db, id)) {

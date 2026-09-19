@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import type { LibraryStats } from "../api/client.js";
 import type { EntityStats } from "../types.js";
-import { ALL_STATUSES, STATUS_LABELS } from "../statusStyles.js";
+import { buildStatusOptions } from "../statusStyles.js";
+import { useStatusCatalog } from "../contexts/StatusCatalogContext.js";
 
 type Props = {
   stats: LibraryStats | undefined;
@@ -11,10 +12,12 @@ type Props = {
 
 const EMPTY_ENTITY_STATS: EntityStats = {
   total: 0,
-  byStatus: { unknown: 0, draft: 0, needs_mixing: 0, done: 0, released: 0 },
+  byStatus: {},
 };
 
 export default function MetricsPanel({ stats, lastScanChanges, onClose }: Props) {
+  const { statuses: catalogStatuses } = useStatusCatalog();
+  const statusOptions = buildStatusOptions(catalogStatuses);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,12 +55,10 @@ export default function MetricsPanel({ stats, lastScanChanges, onClose }: Props)
             <span className={`text-xs font-mono uppercase tracking-wider mb-0.5 ${meta}`}>Total</span>
             <span className="text-xl font-semibold tabular-nums font-mono text-ink">{entity.total}</span>
           </div>
-          {ALL_STATUSES.map((status) => (
-            <div key={status} className="flex flex-col justify-center px-4 py-3">
-              <span className={`text-xs font-mono uppercase tracking-wider mb-0.5 ${meta}`}>
-                {STATUS_LABELS[status]}
-              </span>
-              <span className="text-xl font-semibold tabular-nums font-mono text-ink">{entity.byStatus[status]}</span>
+          {statusOptions.map((opt) => (
+            <div key={opt.value} className="flex flex-col justify-center px-4 py-3">
+              <span className={`text-xs font-mono uppercase tracking-wider mb-0.5 ${meta}`}>{opt.label}</span>
+              <span className="text-xl font-semibold tabular-nums font-mono text-ink">{entity.byStatus[opt.value] ?? 0}</span>
             </div>
           ))}
         </div>

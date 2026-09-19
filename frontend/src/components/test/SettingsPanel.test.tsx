@@ -43,6 +43,8 @@ function makeConfirmationSettings(overrides: Partial<ConfirmationSettings> = {})
     confirmCopy: true,
     confirmMove: true,
     confirmDelete: true,
+    confirmStatusDeletion: true,
+    confirmTagDeletion: true,
     ...overrides,
   };
 }
@@ -218,7 +220,7 @@ describe("SettingsPanel - save state machine", () => {
 });
 
 describe("SettingsPanel - Confirmation Settings section", () => {
-  it("renders all 5 toggles with the correct initial checked state from getConfirmationSettings", async () => {
+  it("renders all 7 toggles with the correct initial checked state from getConfirmationSettings", async () => {
     mockGetConfirmationSettings.mockReset().mockResolvedValue(
       makeConfirmationSettings({
         confirmTagRemoval: true,
@@ -226,6 +228,8 @@ describe("SettingsPanel - Confirmation Settings section", () => {
         confirmCopy: true,
         confirmMove: false,
         confirmDelete: true,
+        confirmStatusDeletion: false,
+        confirmTagDeletion: true,
       })
     );
     renderPanel();
@@ -235,6 +239,8 @@ describe("SettingsPanel - Confirmation Settings section", () => {
     expect(screen.getByRole("checkbox", { name: /Confirm copy/ })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: /Confirm move/ })).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: /Confirm delete/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Confirm status deletion/ })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Confirm tag deletion/ })).toBeChecked();
   });
 
   it("calls setConfirmationSettings with the correct partial patch when a toggle is clicked", async () => {
@@ -257,6 +263,62 @@ describe("SettingsPanel - Confirmation Settings section", () => {
 
     resolveSave(makeConfirmationSettings({ confirmDelete: false }));
     await waitFor(() => expect(screen.getByText("Saved")).toBeInTheDocument());
+  });
+
+  it("calls setConfirmationSettings with { confirmStatusDeletion: false } when the status-deletion toggle is clicked", async () => {
+    let resolveSave!: (settings: ConfirmationSettings) => void;
+    mockSetConfirmationSettings.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSave = resolve;
+      })
+    );
+    const user = userEvent.setup();
+    renderPanel();
+
+    const checkbox = await screen.findByRole("checkbox", { name: /Confirm status deletion/ });
+    expect(checkbox).toBeChecked();
+
+    await user.click(checkbox);
+
+    expect(checkbox).not.toBeChecked();
+    expect(mockSetConfirmationSettings).toHaveBeenCalledWith({ confirmStatusDeletion: false });
+
+    resolveSave(makeConfirmationSettings({ confirmStatusDeletion: false }));
+    await waitFor(() => expect(screen.getByText("Saved")).toBeInTheDocument());
+  });
+
+  it("calls setConfirmationSettings with { confirmTagDeletion: false } when the tag-deletion toggle is clicked", async () => {
+    let resolveSave!: (settings: ConfirmationSettings) => void;
+    mockSetConfirmationSettings.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSave = resolve;
+      })
+    );
+    const user = userEvent.setup();
+    renderPanel();
+
+    const checkbox = await screen.findByRole("checkbox", { name: /Confirm tag deletion/ });
+    expect(checkbox).toBeChecked();
+
+    await user.click(checkbox);
+
+    expect(checkbox).not.toBeChecked();
+    expect(mockSetConfirmationSettings).toHaveBeenCalledWith({ confirmTagDeletion: false });
+
+    resolveSave(makeConfirmationSettings({ confirmTagDeletion: false }));
+    await waitFor(() => expect(screen.getByText("Saved")).toBeInTheDocument());
+  });
+
+  it("shows 'Saving…' then 'Failed to save' for the new toggles the same way the existing ones do", async () => {
+    mockSetConfirmationSettings.mockRejectedValue(new Error("save failed"));
+    const user = userEvent.setup();
+    renderPanel();
+
+    const checkbox = await screen.findByRole("checkbox", { name: /Confirm status deletion/ });
+    await user.click(checkbox);
+
+    await waitFor(() => expect(screen.getByText("Failed to save")).toBeInTheDocument());
+    expect(checkbox).not.toBeChecked();
   });
 });
 

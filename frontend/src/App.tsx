@@ -26,6 +26,7 @@ import type { CopyMoveDeleteOperation, CopyMoveDeleteOutcome, CopyMoveDeleteTarg
 import * as api from "./api/client.js";
 import type { FileFilters, LibraryStats, ProjectFilters, ScanStats } from "./api/client.js";
 import type { AudioFile, CustomTab, Project, Theme, TrackStatus } from "./types.js";
+import { StatusCatalogProvider } from "./contexts/StatusCatalogContext.js";
 
 type Tab = "projects" | "files" | number;
 
@@ -146,6 +147,25 @@ export default function App() {
 
   function refreshTags() {
     api.getAllTags().then(setAllTags).catch(() => {});
+  }
+
+  // Tag rename/delete can leave already-fetched file/project rows' `tags` arrays stale
+  // (rename: old name string still shown; delete: cascaded tag still shown until refetched).
+  // Tag create is a harmless extra fetch, consistent with this file's over-fetch-for-simplicity convention.
+  function handleTagCatalogChanged() {
+    refreshTags();
+    refetch();
+    refetchProjects();
+  }
+
+  // Status delete reassigns any row holding that key to "unknown" server-side; already-fetched
+  // rows still show the old (now-deleted) key until refetched. Status create/edit only ever change
+  // the catalog entry's name/color, which StatusBadge/pickers already read live from Context, so no
+  // row-level refetch is needed there (and none is wired for it).
+  function handleStatusDeleted() {
+    refetch();
+    refetchProjects();
+    refreshStats();
   }
 
   useEffect(() => {
@@ -423,377 +443,384 @@ export default function App() {
   const sectionBorder = "border-border";
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-canvas">
-      <SplashScreen />
+    <StatusCatalogProvider>
+      <div className="h-screen overflow-hidden flex flex-col bg-canvas">
+        <SplashScreen />
 
-      <header className="border-b border-border bg-chrome/90 px-6 py-4 flex items-center justify-between gap-4 sticky top-0 z-20 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <Logo size={28} />
-          <div>
-            <h1 className="text-sm font-semibold text-chrome-ink">ProFolder</h1>
+        <header className="border-b border-border bg-chrome/90 px-6 py-4 flex items-center justify-between gap-4 sticky top-0 z-20 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <Logo size={28} />
+            <div>
+              <h1 className="text-sm font-semibold text-chrome-ink">ProFolder</h1>
+            </div>
+
+            <div className={`border-l pl-3 ${sectionBorder}`}>
+              <RootPathControl musicRoot={musicRoot} onSave={handleRootPathSave} />
+            </div>
           </div>
 
-          <div className={`border-l pl-3 ${sectionBorder}`}>
-            <RootPathControl musicRoot={musicRoot} onSave={handleRootPathSave} />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => {
-              setSelectedId(null);
-              setSelectedProjectId(null);
-              setShowSettings(false);
-              setShowFilesBatchPanel(false);
-              setShowProjectsBatchPanel(false);
-              setShowScanPanel(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-              />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Scan Library
-          </button>
-
-          <div className="relative">
+          <div className="flex items-center gap-4">
             <button
-              onClick={() => setShowTagsStatuses((v) => !v)}
-              aria-label="Statuses and tags"
-              aria-expanded={showTagsStatuses}
-              aria-haspopup="dialog"
+              onClick={() => {
+                setSelectedId(null);
+                setSelectedProjectId(null);
+                setShowSettings(false);
+                setShowFilesBatchPanel(false);
+                setShowProjectsBatchPanel(false);
+                setShowScanPanel(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Scan Library
+            </button>
+
+            <div className="relative">
+              <button
+                onClick={() => setShowTagsStatuses((v) => !v)}
+                aria-label="Statuses and tags"
+                aria-expanded={showTagsStatuses}
+                aria-haspopup="dialog"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"
+                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+                </svg>
+              </button>
+              {showTagsStatuses && (
+                <TagsStatusesPanel
+                  allTags={allTags}
+                  onClose={() => setShowTagsStatuses(false)}
+                  onTagsChanged={handleTagCatalogChanged}
+                  onStatusDeleted={handleStatusDeleted}
+                />
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() => setShowMetrics((v) => !v)}
+                aria-label="Metrics"
+                aria-expanded={showMetrics}
+                aria-haspopup="dialog"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5h3v6H3v-6zM10.5 7.5h3v12h-3v-12zM18 10.5h3v9h-3v-9z" />
+                </svg>
+              </button>
+              {showMetrics && (
+                <MetricsPanel stats={stats} lastScanChanges={lastScanChanges} onClose={() => setShowMetrics(false)} />
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setSelectedId(null);
+                setSelectedProjectId(null);
+                setShowScanPanel(false);
+                setShowFilesBatchPanel(false);
+                setShowProjectsBatchPanel(false);
+                setShowSettings(true);
+              }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"
+                  d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.559-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"
                 />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </button>
-            {showTagsStatuses && (
-              <TagsStatusesPanel allTags={allTags} onClose={() => setShowTagsStatuses(false)} />
-            )}
           </div>
+        </header>
 
-          <div className="relative">
+        <div className="bg-chrome-light flex flex-col flex-1 min-h-39">
+          <div className={tabRowClassName(sectionBorder)}>
+          {/*<div className={`flex items-center gap-1 ${theme === 'profolder' ? "px-6" : ""} py-1.5 border-b ${sectionBorder}`}>*/}
             <button
-              onClick={() => setShowMetrics((v) => !v)}
-              aria-label="Metrics"
-              aria-expanded={showMetrics}
-              aria-haspopup="dialog"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
+              onClick={() => setShowCreateTabModal(true)}
+              aria-label="Create custom tab"
+              title="Create custom tab"
+              className="flex items-center justify-center w-6 h-6 mr-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover profolder:bg-surface"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5h3v6H3v-6zM10.5 7.5h3v12h-3v-12zM18 10.5h3v9h-3v-9z" />
-              </svg>
+              +
             </button>
-            {showMetrics && (
-              <MetricsPanel stats={stats} lastScanChanges={lastScanChanges} onClose={() => setShowMetrics(false)} />
-            )}
-          </div>
 
-          <button
-            onClick={() => {
-              setSelectedId(null);
-              setSelectedProjectId(null);
-              setShowScanPanel(false);
-              setShowFilesBatchPanel(false);
-              setShowProjectsBatchPanel(false);
-              setShowSettings(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.559-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"
-              />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
-        </div>
-      </header>
-
-      <div className="bg-chrome-light flex flex-col flex-1 min-h-39">
-        <div className={tabRowClassName(sectionBorder)}>
-        {/*<div className={`flex items-center gap-1 ${theme === 'profolder' ? "px-6" : ""} py-1.5 border-b ${sectionBorder}`}>*/}
-          <button
-            onClick={() => setShowCreateTabModal(true)}
-            aria-label="Create custom tab"
-            title="Create custom tab"
-            className="flex items-center justify-center w-6 h-6 mr-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover profolder:bg-surface"
-          >
-            +
-          </button>
-
-          {(
-            [
-              ["projects", "Project Folders"],
-              ["files", "Audio Files"],
-            ] as [Tab, string][]
-          ).map(([tab, label]) => (
-            <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
-              aria-current={activeTab === tab}
-              className={tabButtonClassName(activeTab === tab, theme)}
-            >
-              {label}
-            </button>
-          ))}
-
-          {customTabs.map((tab) => (
-            <div key={tab.id} className={`flex items-center ${tabButtonClassName(activeTab === tab.id, theme)}`}>
+            {(
+              [
+                ["projects", "Project Folders"],
+                ["files", "Audio Files"],
+              ] as [Tab, string][]
+            ).map(([tab, label]) => (
               <button
-                onClick={() => handleTabChange(tab.id)}
-                aria-current={activeTab === tab.id}
+                key={tab}
+                onClick={() => handleTabChange(tab)}
+                aria-current={activeTab === tab}
+                className={tabButtonClassName(activeTab === tab, theme)}
               >
-                {tab.name}
+                {label}
               </button>
-              <button
-                onClick={() => setDeletingTab(tab)}
-                aria-label={`Delete tab ${tab.name}`}
-                title={`Delete tab ${tab.name}`}
-                className="flex items-center justify-center w-4 h-4 ml-1 rounded-[var(--rt-radius)] text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
+            ))}
 
-        {banner && (
-          <div className="mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono bg-info-surface text-info">
-            {banner}
-          </div>
-        )}
-
-        {activeTab === "projects" ? (
-          <>
-            <ProjectsFilterBar
-              filters={projectFilters}
-              onChange={handleProjectsFilterChange}
-              allTags={allTags}
-              resultLabel={projectsLoading ? "—" : `${projects.length} of ${projectsTotal} projects`}
-              selectedCount={selectedProjectIds.size}
-              onOpenBatchPanel={() => {
-                setSelectedProjectId(null);
-                setShowProjectsBatchPanel(true);
-              }}
-            />
-            <ProjectsTable
-              projects={projects}
-              total={projectsTotal}
-              totalPages={projectsTotalPages}
-              page={projectsPage}
-              pageSize={projectsPageSize}
-              loading={projectsLoading}
-              selectedId={selectedProjectId}
-              selectedIds={selectedProjectIds}
-              filters={projectFilters}
-              onPageChange={handleProjectsPageChange}
-              onRowClick={handleProjectRowClick}
-              onToggleSelect={toggleProjectSelect}
-              onToggleSelectAll={toggleAllProjectSelect}
-              onSortChange={handleProjectSortChange}
-              playerActive={playingFile !== null}
-            />
-          </>
-        ) : activeTab === "files" ? (
-          <>
-            <FilterBar
-              filters={filters}
-              onChange={handleFilesFilterChange}
-              allTags={allTags}
-              resultLabel={loading ? "—" : `${files.length} of ${total} files`}
-              selectedCount={selectedFileIds.size}
-              onOpenBatchPanel={() => {
-                setSelectedId(null);
-                setShowFilesBatchPanel(true);
-              }}
-            />
-
-            {error && (
-              <div className="mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono bg-danger-surface text-danger">
-                {error}
+            {customTabs.map((tab) => (
+              <div key={tab.id} className={`flex items-center ${tabButtonClassName(activeTab === tab.id, theme)}`}>
+                <button
+                  onClick={() => handleTabChange(tab.id)}
+                  aria-current={activeTab === tab.id}
+                >
+                  {tab.name}
+                </button>
+                <button
+                  onClick={() => setDeletingTab(tab)}
+                  aria-label={`Delete tab ${tab.name}`}
+                  title={`Delete tab ${tab.name}`}
+                  className="flex items-center justify-center w-4 h-4 ml-1 rounded-[var(--rt-radius)] text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover"
+                >
+                  ×
+                </button>
               </div>
-            )}
+            ))}
+          </div>
 
-            <main className={`flex-1 overflow-auto ${playingFile ? "pb-20" : ""}`} aria-live="polite" aria-label="Audio file library">
-              <FileTable
-                files={files}
+          {banner && (
+            <div className="mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono bg-info-surface text-info">
+              {banner}
+            </div>
+          )}
+
+          {activeTab === "projects" ? (
+            <>
+              <ProjectsFilterBar
+                filters={projectFilters}
+                onChange={handleProjectsFilterChange}
+                allTags={allTags}
+                resultLabel={projectsLoading ? "—" : `${projects.length} of ${projectsTotal} projects`}
+                selectedCount={selectedProjectIds.size}
+                onOpenBatchPanel={() => {
+                  setSelectedProjectId(null);
+                  setShowProjectsBatchPanel(true);
+                }}
+              />
+              <ProjectsTable
+                projects={projects}
+                total={projectsTotal}
+                totalPages={projectsTotalPages}
+                page={projectsPage}
+                pageSize={projectsPageSize}
+                loading={projectsLoading}
+                selectedId={selectedProjectId}
+                selectedIds={selectedProjectIds}
+                filters={projectFilters}
+                onPageChange={handleProjectsPageChange}
+                onRowClick={handleProjectRowClick}
+                onToggleSelect={toggleProjectSelect}
+                onToggleSelectAll={toggleAllProjectSelect}
+                onSortChange={handleProjectSortChange}
+                playerActive={playingFile !== null}
+              />
+            </>
+          ) : activeTab === "files" ? (
+            <>
+              <FilterBar
                 filters={filters}
-                loading={loading}
-                flashId={flashId}
-                selectedId={selectedId}
-                selectedIds={selectedFileIds}
+                onChange={handleFilesFilterChange}
+                allTags={allTags}
+                resultLabel={loading ? "—" : `${files.length} of ${total} files`}
+                selectedCount={selectedFileIds.size}
+                onOpenBatchPanel={() => {
+                  setSelectedId(null);
+                  setShowFilesBatchPanel(true);
+                }}
+              />
+
+              {error && (
+                <div className="mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono bg-danger-surface text-danger">
+                  {error}
+                </div>
+              )}
+
+              <main className={`flex-1 overflow-auto ${playingFile ? "pb-20" : ""}`} aria-live="polite" aria-label="Audio file library">
+                <FileTable
+                  files={files}
+                  filters={filters}
+                  loading={loading}
+                  flashId={flashId}
+                  selectedId={selectedId}
+                  selectedIds={selectedFileIds}
+                  playingFileId={playingFile?.id ?? null}
+                  isPlaying={isPlaying}
+                  onSortChange={handleSortChange}
+                  onRowClick={handleRowClick}
+                  onClearFilters={() => handleFilesFilterChange({ search: undefined, statuses: undefined, scores: undefined, tags: undefined, sortBy: undefined, sortDir: undefined })}
+                  onToggleSelect={toggleFileSelect}
+                  onToggleSelectAll={toggleAllFileSelect}
+                  onPlayClick={handlePlayClick}
+                />
+              </main>
+
+              <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={handleFilesPageChange} />
+            </>
+          ) : (
+            activeCustomTab &&
+            (activeCustomTab.type === "files" ? (
+              <CustomFilesTabPanel
+                key={`custom-${activeCustomTab.id}`}
+                tab={activeCustomTab}
+                allTags={allTags}
+                refreshStats={refreshStats}
+                refreshTags={refreshTags}
+                refetchProjects={refetchProjects}
+                scanCompletionSignal={lastScanChanges}
                 playingFileId={playingFile?.id ?? null}
                 isPlaying={isPlaying}
-                onSortChange={handleSortChange}
-                onRowClick={handleRowClick}
-                onClearFilters={() => handleFilesFilterChange({ search: undefined, statuses: undefined, scores: undefined, tags: undefined, sortBy: undefined, sortDir: undefined })}
-                onToggleSelect={toggleFileSelect}
-                onToggleSelectAll={toggleAllFileSelect}
                 onPlayClick={handlePlayClick}
+                setBanner={setBanner}
+                musicRoot={musicRoot}
               />
-            </main>
+            ) : (
+              <CustomProjectsTabPanel
+                key={`custom-${activeCustomTab.id}`}
+                tab={activeCustomTab}
+                allTags={allTags}
+                refreshStats={refreshStats}
+                refreshTags={refreshTags}
+                refetchFiles={refetch}
+                scanCompletionSignal={lastScanChanges}
+                playerActive={playingFile !== null}
+                setBanner={setBanner}
+                musicRoot={musicRoot}
+              />
+            ))
+          )}
+        </div>
 
-            <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={handleFilesPageChange} />
-          </>
-        ) : (
-          activeCustomTab &&
-          (activeCustomTab.type === "files" ? (
-            <CustomFilesTabPanel
-              key={`custom-${activeCustomTab.id}`}
-              tab={activeCustomTab}
-              allTags={allTags}
-              refreshStats={refreshStats}
-              refreshTags={refreshTags}
-              refetchProjects={refetchProjects}
-              scanCompletionSignal={lastScanChanges}
-              playingFileId={playingFile?.id ?? null}
-              isPlaying={isPlaying}
-              onPlayClick={handlePlayClick}
-              setBanner={setBanner}
-              musicRoot={musicRoot}
-            />
-          ) : (
-            <CustomProjectsTabPanel
-              key={`custom-${activeCustomTab.id}`}
-              tab={activeCustomTab}
-              allTags={allTags}
-              refreshStats={refreshStats}
-              refreshTags={refreshTags}
-              refetchFiles={refetch}
-              scanCompletionSignal={lastScanChanges}
-              playerActive={playingFile !== null}
-              setBanner={setBanner}
-              musicRoot={musicRoot}
-            />
-          ))
-        )}
+        <AudioPlayerBar
+          file={playingFile}
+          isPlaying={isPlaying}
+          onPlayingChange={setIsPlaying}
+          onClose={handleClosePlayer}
+        />
+
+        <FileDetailPanel
+          file={selectedFile}
+          allTags={allTags}
+          onClose={() => setSelectedId(null)}
+          onSaveStatus={handleFileStatusSave}
+          onSaveTags={handleFileTagsSave}
+          onSaveScore={handleFileScoreSave}
+          onReveal={handleReveal}
+          onFileOperation={handleFileOperation}
+        />
+
+        <ProjectDetailPanel
+          project={selectedProject}
+          allTags={allTags}
+          onClose={() => setSelectedProjectId(null)}
+          onReveal={handleReveal}
+          onSaveStatus={handleProjectStatusSave}
+          onSaveTags={handleProjectTagsSave}
+          onSaveScore={handleProjectScoreSave}
+          onProjectOperation={handleProjectOperation}
+        />
+
+        <CopyMoveDeleteDialog
+          open={fileOpDialog !== null}
+          operation={fileOpDialog?.operation ?? "copy"}
+          itemType="files"
+          target={fileOpDialog?.target ?? { kind: "single", id: "", name: "" }}
+          musicRoot={musicRoot}
+          onClose={() => setFileOpDialog(null)}
+          onSuccess={handleFileOpSuccess}
+          onError={setBanner}
+        />
+
+        <CopyMoveDeleteDialog
+          open={projectOpDialog !== null}
+          operation={projectOpDialog?.operation ?? "copy"}
+          itemType="projects"
+          target={projectOpDialog?.target ?? { kind: "single", id: "", name: "" }}
+          excludedPath={projectOpDialog?.excludedPath}
+          musicRoot={musicRoot}
+          onClose={() => setProjectOpDialog(null)}
+          onSuccess={handleProjectOpSuccess}
+          onError={setBanner}
+        />
+
+        <ScanFolderPanel
+          open={showScanPanel}
+          musicRoot={musicRoot}
+          onClose={() => setShowScanPanel(false)}
+          onScanComplete={handleScanComplete}
+        />
+
+        <SettingsPanel
+          theme={theme}
+          setTheme={setTheme}
+          open={showSettings}
+          onClose={() => setShowSettings(false)}
+        />
+
+        <BatchEditPanel
+          open={showFilesBatchPanel}
+          count={selectedFileIds.size}
+          itemLabel="audio file"
+          allTags={allTags}
+          itemType="files"
+          selectedIds={[...selectedFileIds]}
+          onClose={() => setShowFilesBatchPanel(false)}
+          onApplyScore={handleBatchFileScore}
+          onApplyTag={handleBatchFileTag}
+          onBatchOperation={handleFilesBatchOperation}
+        />
+
+        <BatchEditPanel
+          open={showProjectsBatchPanel}
+          count={selectedProjectIds.size}
+          itemLabel="project folder"
+          allTags={allTags}
+          itemType="projects"
+          selectedIds={[...selectedProjectIds]}
+          projectPaths={projects.map((p) => ({ id: p.id, path: p.path }))}
+          onClose={() => setShowProjectsBatchPanel(false)}
+          onApplyScore={handleBatchProjectScore}
+          onApplyTag={handleBatchProjectTag}
+          onBatchOperation={handleProjectsBatchOperation}
+        />
+
+        <CreateCustomTabModal
+          open={showCreateTabModal}
+          allTags={allTags}
+          onClose={() => setShowCreateTabModal(false)}
+          onCreated={handleCustomTabCreated}
+        />
+
+        <DeleteTabConfirmDialog
+          open={deletingTab !== null}
+          tabName={deletingTab?.name ?? ""}
+          onConfirm={handleDeleteTabConfirm}
+          onCancel={() => setDeletingTab(null)}
+        />
+
+        <footer className="border-t bg-chrome-lighter px-6 py-2 flex items-center justify-between border-chrome-border-faint sticky bottom-0 z-20">
+          <span className="text-xs font-mono text-chrome-ink-faint">ProFolder · Local, read-only scanner</span>
+          <span className="text-xs font-mono text-chrome-ink-faint">Score and tag your tracks · Track what's ready to release</span>
+        </footer>
       </div>
-
-      <AudioPlayerBar
-        file={playingFile}
-        isPlaying={isPlaying}
-        onPlayingChange={setIsPlaying}
-        onClose={handleClosePlayer}
-      />
-
-      <FileDetailPanel
-        file={selectedFile}
-        allTags={allTags}
-        onClose={() => setSelectedId(null)}
-        onSaveStatus={handleFileStatusSave}
-        onSaveTags={handleFileTagsSave}
-        onSaveScore={handleFileScoreSave}
-        onReveal={handleReveal}
-        onFileOperation={handleFileOperation}
-      />
-
-      <ProjectDetailPanel
-        project={selectedProject}
-        allTags={allTags}
-        onClose={() => setSelectedProjectId(null)}
-        onReveal={handleReveal}
-        onSaveStatus={handleProjectStatusSave}
-        onSaveTags={handleProjectTagsSave}
-        onSaveScore={handleProjectScoreSave}
-        onProjectOperation={handleProjectOperation}
-      />
-
-      <CopyMoveDeleteDialog
-        open={fileOpDialog !== null}
-        operation={fileOpDialog?.operation ?? "copy"}
-        itemType="files"
-        target={fileOpDialog?.target ?? { kind: "single", id: "", name: "" }}
-        musicRoot={musicRoot}
-        onClose={() => setFileOpDialog(null)}
-        onSuccess={handleFileOpSuccess}
-        onError={setBanner}
-      />
-
-      <CopyMoveDeleteDialog
-        open={projectOpDialog !== null}
-        operation={projectOpDialog?.operation ?? "copy"}
-        itemType="projects"
-        target={projectOpDialog?.target ?? { kind: "single", id: "", name: "" }}
-        excludedPath={projectOpDialog?.excludedPath}
-        musicRoot={musicRoot}
-        onClose={() => setProjectOpDialog(null)}
-        onSuccess={handleProjectOpSuccess}
-        onError={setBanner}
-      />
-
-      <ScanFolderPanel
-        open={showScanPanel}
-        musicRoot={musicRoot}
-        onClose={() => setShowScanPanel(false)}
-        onScanComplete={handleScanComplete}
-      />
-
-      <SettingsPanel
-        theme={theme}
-        setTheme={setTheme}
-        open={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
-
-      <BatchEditPanel
-        open={showFilesBatchPanel}
-        count={selectedFileIds.size}
-        itemLabel="audio file"
-        allTags={allTags}
-        itemType="files"
-        selectedIds={[...selectedFileIds]}
-        onClose={() => setShowFilesBatchPanel(false)}
-        onApplyScore={handleBatchFileScore}
-        onApplyTag={handleBatchFileTag}
-        onBatchOperation={handleFilesBatchOperation}
-      />
-
-      <BatchEditPanel
-        open={showProjectsBatchPanel}
-        count={selectedProjectIds.size}
-        itemLabel="project folder"
-        allTags={allTags}
-        itemType="projects"
-        selectedIds={[...selectedProjectIds]}
-        projectPaths={projects.map((p) => ({ id: p.id, path: p.path }))}
-        onClose={() => setShowProjectsBatchPanel(false)}
-        onApplyScore={handleBatchProjectScore}
-        onApplyTag={handleBatchProjectTag}
-        onBatchOperation={handleProjectsBatchOperation}
-      />
-
-      <CreateCustomTabModal
-        open={showCreateTabModal}
-        allTags={allTags}
-        onClose={() => setShowCreateTabModal(false)}
-        onCreated={handleCustomTabCreated}
-      />
-
-      <DeleteTabConfirmDialog
-        open={deletingTab !== null}
-        tabName={deletingTab?.name ?? ""}
-        onConfirm={handleDeleteTabConfirm}
-        onCancel={() => setDeletingTab(null)}
-      />
-
-      <footer className="border-t bg-chrome-lighter px-6 py-2 flex items-center justify-between border-chrome-border-faint sticky bottom-0 z-20">
-        <span className="text-xs font-mono text-chrome-ink-faint">ProFolder · Local, read-only scanner</span>
-        <span className="text-xs font-mono text-chrome-ink-faint">Score and tag your tracks · Track what's ready to release</span>
-      </footer>
-    </div>
+    </StatusCatalogProvider>
   );
 }

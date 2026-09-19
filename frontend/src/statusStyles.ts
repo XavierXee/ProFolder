@@ -1,4 +1,6 @@
 import type { TrackStatus } from "./types.js";
+import { UNKNOWN_STATUS_KEY } from "./types.js";
+import type { StatusDef } from "./api/client.js";
 
 export const ALL_STATUSES: TrackStatus[] = ["unknown", "draft", "needs_mixing", "done", "released"];
 
@@ -38,3 +40,18 @@ export const STATUS_PILL: Record<TrackStatus, string> = {
 /** Pill styling for an unselected status option — shared across all statuses (not per-status), token-driven. */
 export const STATUS_PILL_UNSELECTED =
   "border-status-pill-unselected-border text-status-pill-unselected-ink bg-transparent hover:border-status-pill-unselected-border-hover hover:text-status-pill-unselected-ink-hover";
+
+/**
+ * Builds the `{value, label}` option list shared by every status picker/filter (FilterToolbar,
+ * CreateCustomTabModal, FileDetailPanel/ProjectDetailPanel's status pickers, MetricsPanel's
+ * per-status breakdown): the fixed "unknown" sentinel first, followed by every dynamic catalog
+ * status in its existing (already `sortOrder`-sorted) order. `UNKNOWN_STATUS_KEY`'s label always
+ * comes from the hardcoded `STATUS_LABELS.unknown` (it is not a catalog row), matching the
+ * convention `StatusBadge.tsx` already established.
+ */
+export function buildStatusOptions(catalogStatuses: StatusDef[]): { value: string; label: string }[] {
+  return [
+    { value: UNKNOWN_STATUS_KEY, label: STATUS_LABELS.unknown },
+    ...catalogStatuses.map((s) => ({ value: s.key, label: s.name })),
+  ];
+}

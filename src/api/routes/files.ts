@@ -15,7 +15,8 @@ import {
 } from "../../database/repositories/audioFileRepository.js";
 import { findAllActive as findAllActiveProjects } from "../../database/repositories/projectRepository.js";
 import { syncProjectFromFiles } from "../../database/repositories/linkSync.js";
-import { ALL_TRACK_STATUSES, type AudioFile, type TrackStatus } from "../../models/AudioFile.js";
+import { isKnownStatusKey } from "../../database/repositories/statusRepository.js";
+import { type AudioFile, type TrackStatus } from "../../models/AudioFile.js";
 import { isValidScore, parseScoreListQueryParam } from "../../models/Score.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { toStringArray } from "../queryParams.js";
@@ -27,8 +28,6 @@ import {
   NameConflictError as FileOpsNameConflictError,
 } from "../../services/FileOpsService.js";
 import { type TrashService, PathOutsideRootError as TrashPathOutsideRootError } from "../../services/TrashService.js";
-
-const VALID_STATUSES = ALL_TRACK_STATUSES;
 
 /** Attaches each project's absolute folder path, so the frontend can offer "reveal project folder" without string-splitting file paths. */
 function withProjectPath(db: Database.Database, file: AudioFile): AudioFile & { projectPath?: string } {
@@ -77,9 +76,7 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
       const pageNum = parsePositiveInt(page, 1);
       const pageSizeNum = parsePositiveInt(pageSize, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
 
-      const statuses = toStringArray(status).filter((s): s is TrackStatus =>
-        ALL_TRACK_STATUSES.includes(s as TrackStatus)
-      );
+      const statuses = toStringArray(status).filter((s) => isKnownStatusKey(db, s));
       const tags = toStringArray(tag);
 
       const { items, total } = findAllActivePaged(db, {
@@ -338,8 +335,8 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
     asyncHandler(async (req, res) => {
       const id = req.params.id!;
       const { status } = req.body as { status: TrackStatus };
-      if (!VALID_STATUSES.includes(status)) {
-        res.status(400).json({ error: `status must be one of ${VALID_STATUSES.join(", ")}` });
+      if (typeof status !== "string" || !isKnownStatusKey(db, status)) {
+        res.status(400).json({ error: `status must be a known status key (got "${status}")` });
         return;
       }
       updateStatus(db, id, status);

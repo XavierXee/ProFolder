@@ -1,8 +1,9 @@
 import type Database from "better-sqlite3";
 import type { Project } from "../../models/Project.js";
-import { ALL_TRACK_STATUSES, type EntityStats, type TrackStatus } from "../../models/AudioFile.js";
+import { UNKNOWN_STATUS_KEY, type EntityStats, type TrackStatus } from "../../models/AudioFile.js";
 import type { DawType } from "../../scanner/dawDetector.js";
 import type { PagedResult } from "./audioFileRepository.js";
+import { findAll as findAllStatuses } from "./statusRepository.js";
 
 export type ProjectFilters = {
   search?: string;
@@ -219,31 +220,30 @@ export function findAllActive(db: Database.Database): Project[] {
  * Deliberately unfiltered by `daw_type` — every active project folder counts, matching what
  * the Projects tab's own list endpoint already shows (see `loadActiveDawProjectIds`'s doc
  * comment for why file-association logic uses a *different*, DAW-only set — that
- * distinction doesn't apply here). Also deliberately a single aggregate query with no
- * GROUP BY, so it always returns exactly one row (even over an empty table) with every
- * status present — a GROUP BY-based approach would silently omit any status with zero
- * matching rows. */
+ * distinction doesn't apply here). Uses a plain parameterized `GROUP BY` (status values are
+ * now user-created catalog strings, not a compile-time-constant set, so string-interpolating
+ * each status into a column alias would be SQL-injection-shaped) and then zero-fills the
+ * result in JS for every currently-known status key ("unknown" plus every row in the
+ * `statuses` catalog table), so the returned shape still has an entry for every known status
+ * even if its count is 0 — preserving this function's previous zero-fill guarantee despite
+ * the underlying query now being a real GROUP BY. */
 export function getProjectStats(db: Database.Database): EntityStats {
-  const statusClauses = ALL_TRACK_STATUSES.map(
-    (status) => `SUM(CASE WHEN status = '${status}' THEN 1 ELSE 0 END) AS ${status}`
-  ).join(",\n        ");
+  const totalRow = db
+    .prepare(`SELECT COUNT(*) AS total FROM projects WHERE is_removed = 0`)
+    .get() as { total: number };
 
-  const row = db
-    .prepare(
-      `SELECT
-        COUNT(*) AS total,
-        ${statusClauses}
-      FROM projects
-      WHERE is_removed = 0`
-    )
-    .get() as { total: number } & Record<TrackStatus, number | null>;
+  const rows = db
+    .prepare(`SELECT status, COUNT(*) AS count FROM projects WHERE is_removed = 0 GROUP BY status`)
+    .all() as { status: TrackStatus; count: number }[];
+  const countsByStatus = new Map(rows.map((r) => [r.status, r.count]));
 
-  const byStatus = {} as Record<TrackStatus, number>;
-  for (const status of ALL_TRACK_STATUSES) {
-    byStatus[status] = row[status] ?? 0;
+  const byStatus: Record<string, number> = {};
+  byStatus[UNKNOWN_STATUS_KEY] = countsByStatus.get(UNKNOWN_STATUS_KEY) ?? 0;
+  for (const status of findAllStatuses(db)) {
+    byStatus[status.key] = countsByStatus.get(status.key) ?? 0;
   }
 
-  return { total: row.total, byStatus };
+  return { total: totalRow.total, byStatus };
 }
 
 export function findById(db: Database.Database, id: string): Project | undefined {
