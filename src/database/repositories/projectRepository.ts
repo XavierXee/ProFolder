@@ -260,6 +260,38 @@ export function getProjectStats(db: Database.Database): EntityStats {
   return { total: totalRow.total, byStatus };
 }
 
+/** Counts active projects per requested tag name, for the Metrics panel's per-tag breakdown.
+ * Same shape/convention as `audioFileRepository.ts`'s `getFileTagCounts`: one parameterized
+ * query joining `tags` -> `project_tags` -> `projects` (never string-interpolating a tag name
+ * into SQL text), then zero-filled in JS for every requested name so a tag with no matches (or
+ * that doesn't exist in the `tags` table at all) still gets an explicit 0. */
+export function getProjectTagCounts(db: Database.Database, tagNames: string[]): Record<string, number> {
+  if (tagNames.length === 0) return {};
+
+  const placeholders = tagNames.map(() => "?").join(",");
+  const rows = db
+    .prepare(
+      `SELECT t.name AS name, COUNT(DISTINCT pt.project_id) AS count
+       FROM tags t
+       JOIN project_tags pt ON pt.tag_id = t.id
+       JOIN projects p ON p.id = pt.project_id
+       WHERE p.is_removed = 0 AND t.name IN (${placeholders})
+       GROUP BY t.name`
+    )
+    .all(...tagNames) as { name: string; count: number }[];
+  // `tags.name` is UNIQUE COLLATE NOCASE, so the SQL `IN (...)` match above is case-insensitive
+  // and returns rows keyed by the tag's actual stored casing. Key the map by lowercased name so
+  // the zero-fill lookup below (which uses the caller's requested casing) matches regardless of
+  // casing differences between the request and the stored tag.
+  const countsByName = new Map(rows.map((r) => [r.name.toLowerCase(), r.count]));
+
+  const result: Record<string, number> = {};
+  for (const name of tagNames) {
+    result[name] = countsByName.get(name.toLowerCase()) ?? 0;
+  }
+  return result;
+}
+
 export function findById(db: Database.Database, id: string): Project | undefined {
   const row = db.prepare(`SELECT * FROM projects WHERE id = ?`).get(id) as
     | ProjectRow

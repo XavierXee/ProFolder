@@ -9,6 +9,7 @@ import path from "node:path";
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import { getScratchDir } from "../support/testEnv.js";
+import { resolveTagFullName } from "./statusesTagsCatalog.steps.js";
 
 const { Given, When, Then } = createBdd();
 
@@ -38,8 +39,15 @@ Given("a new audio file exists in the production folder", async () => {
   fs.copyFileSync(source, metricsFixturePath());
 });
 
+// `exact: true` matters here specifically because of this task's own fixture: any Audio Files
+// row whose filename happens to contain "Metrics" (e.g. "Metrics E2E Tag Count.wav", used by
+// metrics-panel-editable.feature) renders a per-row "Play <filename>" button whose accessible name
+// contains "Metrics" as a substring — colliding with this header button under Playwright's default
+// substring-and-case-insensitive `getByRole({name})` matching once that row is actually rendered
+// (e.g. after a search-filter step narrows the table down to just that one file). Confirmed via a
+// live `strict mode violation` failure while writing metrics-panel-editable.feature's scenario.
 function metricsButton(page: Page) {
-  return page.getByRole("button", { name: "Metrics" });
+  return page.getByRole("button", { name: "Metrics", exact: true });
 }
 
 function metricsPanel(page: Page) {
@@ -56,4 +64,116 @@ When("I open the metrics panel", async ({ page }) => {
 // panel's other tiles (Total Files/Draft/Unscored) never render this shape of text themselves.
 Then("the metrics panel should show {string} for the last scan", async ({ page }, expectedText: string) => {
   await expect(metricsPanel(page).getByText(expectedText, { exact: true })).toBeVisible();
+});
+
+// --- Editable metrics (metrics-panel-editable.feature) ------------------------------------------
+//
+// `title` is always literally "Projects" or "Audio Files" (MetricsSection's own `title` prop in
+// MetricsPanel.tsx) — every locator below is built from `metricsSection(page, title)`, itself
+// scoped under `metricsPanel(page)`, never a bare `page.getByRole(...)`. This matters specifically
+// for "Audio Files": that exact string is also the pre-existing tab-switcher button's accessible
+// name, and Playwright's `getByRole({name})` substring-matches by default — an unscoped query
+// would collide with it (a real, Reviewer-confirmed Task 4 finding — see the doc comment on
+// e2e/features/scanning-settings/metrics-panel-editable.feature for the full citation).
+
+type MetricsSectionTitle = "Projects" | "Audio Files";
+
+// Each section's own root is the only element inside the dialog carrying the literal Tailwind
+// class token "border-b" whose text content is exactly that section's title (the panel header row
+// also has "border-b", but its own text is "Library Metrics", never "Projects"/"Audio Files").
+function metricsSection(page: Page, title: MetricsSectionTitle) {
+  return metricsPanel(page).locator("div.border-b", { hasText: title });
+}
+
+function metricsAddButton(page: Page, title: MetricsSectionTitle) {
+  return metricsSection(page, title).getByRole("button", { name: `Add metric to ${title}` });
+}
+
+function metricsAddTypeSelect(page: Page, title: MetricsSectionTitle) {
+  return metricsSection(page, title).getByLabel(`New ${title} metric type`);
+}
+
+function metricsAddValueSelect(page: Page, title: MetricsSectionTitle) {
+  return metricsSection(page, title).getByLabel(`New ${title} metric value`);
+}
+
+function metricsConfirmAddButton(page: Page, title: MetricsSectionTitle) {
+  return metricsSection(page, title).getByRole("button", { name: `Confirm adding ${title} metric` });
+}
+
+function metricsRemoveButton(page: Page, title: MetricsSectionTitle, label: string) {
+  return metricsSection(page, title).getByRole("button", { name: `Remove ${label} from ${title} metrics` });
+}
+
+// A tile's own container carries the literal Tailwind class token "flex-col" — but so does the
+// (only-rendered-while-open) add-metric form's own wrapper div, elsewhere in the same section. The
+// `has` filter disambiguates: only a real, already-added tile contains a "Remove ... from ...
+// metrics" button for this exact label.
+//
+// Deliberately NOT `has: metricsRemoveButton(page, title, label)` here: Playwright's `has` option
+// re-applies the ENTIRE passed-in locator chain as a relative/descendant search under each
+// candidate — since `metricsRemoveButton` is itself built from `metricsSection(page, title)` (an
+// ANCESTOR condition, not a descendant one), that filter can never match anything (confirmed via a
+// live "element(s) not found" failure while writing this scenario). Container is already
+// guaranteed by the outer `metricsSection(page, title)` scoping this is chained from, so a plain,
+// uniquely-worded button locator is both correct and safe here.
+function metricsTile(page: Page, title: MetricsSectionTitle, label: string) {
+  return metricsSection(page, title).locator("div.flex-col", {
+    has: page.getByRole("button", { name: `Remove ${label} from ${title} metrics` }),
+  });
+}
+
+function isMetricsSettingsPut(page: Page) {
+  return page.waitForResponse(
+    (res) => res.request().method() === "PUT" && new URL(res.url()).pathname === "/api/config/metrics-settings"
+  );
+}
+
+When(
+  "I add my tag {string} as a Tag metric to the Audio Files section",
+  async ({ page }, baseTagName: string) => {
+    const fullName = resolveTagFullName(page, baseTagName);
+    const title: MetricsSectionTitle = "Audio Files";
+
+    await metricsAddButton(page, title).click();
+    await metricsAddTypeSelect(page, title).selectOption({ label: "Tag" });
+    await metricsAddValueSelect(page, title).selectOption({ label: fullName });
+
+    await Promise.all([isMetricsSettingsPut(page), metricsConfirmAddButton(page, title).click()]);
+  }
+);
+
+When("I remove my tag {string} metric from the Audio Files section", async ({ page }, baseTagName: string) => {
+  const fullName = resolveTagFullName(page, baseTagName);
+  const title: MetricsSectionTitle = "Audio Files";
+
+  await Promise.all([isMetricsSettingsPut(page), metricsRemoveButton(page, title, fullName).click()]);
+});
+
+Then(
+  "the Audio Files metrics should show my tag {string} with count {int}",
+  async ({ page }, baseTagName: string, count: number) => {
+    const fullName = resolveTagFullName(page, baseTagName);
+    const tile = metricsTile(page, "Audio Files", fullName);
+    await expect(tile).toBeVisible();
+    // The tile's own count span (Tailwind class token "text-xl", unique within one tile) — read
+    // directly rather than via a regex, matching this suite's exact-count philosophy (see
+    // metrics-panel.feature's own doc comment on this).
+    await expect(tile.locator("span.text-xl")).toHaveText(String(count));
+  }
+);
+
+Then("the Projects metrics should not show my tag {string}", async ({ page }, baseTagName: string) => {
+  const fullName = resolveTagFullName(page, baseTagName);
+  await expect(metricsTile(page, "Projects", fullName)).toHaveCount(0);
+});
+
+// Confirms the Projects section's own two default tiles (Total + the built-in Unknown-status
+// tile — see defaultMetrics() in MetricsPanel.tsx) are still present and untouched, proving the
+// Audio Files section's add/remove above patched only its own `filesMetrics` half of the settings
+// object, not `projectsMetrics` too.
+Then("the Projects metrics should still show its default tiles", async ({ page }) => {
+  const section = metricsSection(page, "Projects");
+  await expect(section.getByText("Total", { exact: true })).toBeVisible();
+  await expect(section.getByText("Unknown", { exact: true })).toBeVisible();
 });

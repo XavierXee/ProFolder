@@ -286,6 +286,40 @@ export function getFileStats(db: Database.Database): EntityStats {
   return { total: totalRow.total, byStatus };
 }
 
+/** Counts active files per requested tag name, for the Metrics panel's per-tag breakdown.
+ * Uses one parameterized query joining `tags` -> `audio_file_tags` -> `audio_files` (never
+ * string-interpolating a tag name into SQL text, matching this file's other `IN (...)`
+ * placeholder queries, e.g. `tagsForFiles`) and then zero-fills the result in JS for every
+ * requested name, so a tag with no matching rows (or that doesn't even exist in the `tags`
+ * table) still gets an explicit 0 instead of being omitted or `undefined` — mirroring
+ * `getFileStats`'s zero-fill idiom above. */
+export function getFileTagCounts(db: Database.Database, tagNames: string[]): Record<string, number> {
+  if (tagNames.length === 0) return {};
+
+  const placeholders = tagNames.map(() => "?").join(",");
+  const rows = db
+    .prepare(
+      `SELECT t.name AS name, COUNT(DISTINCT aft.audio_file_id) AS count
+       FROM tags t
+       JOIN audio_file_tags aft ON aft.tag_id = t.id
+       JOIN audio_files af ON af.id = aft.audio_file_id
+       WHERE af.is_removed = 0 AND t.name IN (${placeholders})
+       GROUP BY t.name`
+    )
+    .all(...tagNames) as { name: string; count: number }[];
+  // `tags.name` is UNIQUE COLLATE NOCASE, so the SQL `IN (...)` match above is case-insensitive
+  // and returns rows keyed by the tag's actual stored casing. Key the map by lowercased name so
+  // the zero-fill lookup below (which uses the caller's requested casing) matches regardless of
+  // casing differences between the request and the stored tag.
+  const countsByName = new Map(rows.map((r) => [r.name.toLowerCase(), r.count]));
+
+  const result: Record<string, number> = {};
+  for (const name of tagNames) {
+    result[name] = countsByName.get(name.toLowerCase()) ?? 0;
+  }
+  return result;
+}
+
 /** Active file counts per project in a single aggregate query, avoiding a full-table load just to count. */
 export function countActiveGroupedByProject(db: Database.Database): Map<string, number> {
   const rows = db

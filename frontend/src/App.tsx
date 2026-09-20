@@ -522,7 +522,12 @@ export default function App() {
                 </svg>
               </button>
               {showMetrics && (
-                <MetricsPanel stats={stats} lastScanChanges={lastScanChanges} onClose={() => setShowMetrics(false)} />
+                <MetricsPanel
+                  stats={stats}
+                  lastScanChanges={lastScanChanges}
+                  allTags={allTags}
+                  onClose={() => setShowMetrics(false)}
+                />
               )}
             </div>
 

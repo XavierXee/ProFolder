@@ -3,8 +3,16 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "../src/database/db.js";
 import { createServer } from "../src/api/server.js";
-import { insertAudioFile, updateStatus as updateFileStatus } from "../src/database/repositories/audioFileRepository.js";
-import { upsertProject, updateStatus as updateProjectStatus } from "../src/database/repositories/projectRepository.js";
+import {
+  insertAudioFile,
+  setTags as setFileTags,
+  updateStatus as updateFileStatus,
+} from "../src/database/repositories/audioFileRepository.js";
+import {
+  upsertProject,
+  setTags as setProjectTags,
+  updateStatus as updateProjectStatus,
+} from "../src/database/repositories/projectRepository.js";
 
 // Covers the stats router (src/api/routes/stats.ts). This is the concrete, tested reference
 // for the composed { files, projects } response shape a later frontend task is checked
@@ -97,6 +105,83 @@ describe("GET /api/stats", () => {
         total: 1,
         byStatus: { unknown: 0, draft: 0, needs_mixing: 1, done: 0, released: 0 },
       },
+    });
+  });
+});
+
+describe("GET /api/stats/tag-counts", () => {
+  let db: Database.Database;
+  let app: ReturnType<typeof createServer>;
+
+  beforeEach(() => {
+    db = new Database(":memory:");
+    runMigrations(db);
+    app = createServer(db);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it("returns { files: {}, projects: {} } when no fileTag/projectTag params are given", async () => {
+    const res = await request(app).get("/api/stats/tag-counts");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ files: {}, projects: {} });
+  });
+
+  it("returns correct counts for a real request with both fileTag and projectTag params, including repeated-param parsing", async () => {
+    const now = new Date().toISOString();
+
+    insertAudioFile(db, {
+      id: "track1.wav",
+      path: "/Music/track1.wav",
+      relativePath: "track1.wav",
+      filename: "track1.wav",
+      extension: ".wav",
+      size: 100,
+      modifiedAt: now,
+      containingFolder: "/Music",
+      firstSeenAt: now,
+      lastSeenAt: now,
+      isRemoved: false,
+    });
+    insertAudioFile(db, {
+      id: "track2.wav",
+      path: "/Music/track2.wav",
+      relativePath: "track2.wav",
+      filename: "track2.wav",
+      extension: ".wav",
+      size: 100,
+      modifiedAt: now,
+      containingFolder: "/Music",
+      firstSeenAt: now,
+      lastSeenAt: now,
+      isRemoved: false,
+    });
+    setFileTags(db, "track1.wav", ["rock"]);
+    setFileTags(db, "track2.wav", ["rock"]);
+
+    upsertProject(db, {
+      id: "ProjectA",
+      name: "ProjectA",
+      path: "/Music/ProjectA",
+      firstSeenAt: now,
+      lastSeenAt: now,
+      hasVideo: false,
+      hasImage: false,
+      contentModifiedAt: null,
+    });
+    setProjectTags(db, "ProjectA", ["demo"]);
+
+    const res = await request(app).get(
+      "/api/stats/tag-counts?fileTag=rock&fileTag=jazz&projectTag=demo"
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      files: { rock: 2, jazz: 0 },
+      projects: { demo: 1 },
     });
   });
 });

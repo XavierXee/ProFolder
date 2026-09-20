@@ -13,6 +13,7 @@ import {
   markRemoved,
   loadActiveProjectIds,
   getProjectStats,
+  getProjectTagCounts,
 } from "../src/database/repositories/projectRepository.js";
 import { insertAudioFile, type AudioFileUpsertInput } from "../src/database/repositories/audioFileRepository.js";
 import type { Project } from "../src/models/Project.js";
@@ -450,5 +451,87 @@ describe("projectRepository.getProjectStats", () => {
 
     expect(stats.total).toBe(23); // 22 base fixtures + AbletonProject
     expect(stats.byStatus.done).toBe(1);
+  });
+});
+
+describe("getProjectTagCounts", () => {
+  it("counts active projects per requested tag", () => {
+    setTags(db, "Project 00", ["rock"]);
+    setTags(db, "Project 01", ["rock"]);
+    setTags(db, "Project 02", ["rock"]);
+    setTags(db, "Project 03", ["jazz"]);
+
+    const counts = getProjectTagCounts(db, ["rock", "jazz"]);
+
+    expect(counts).toEqual({ rock: 3, jazz: 1 });
+  });
+
+  it("excludes a soft-removed project with a matching tag from that tag's count", () => {
+    setTags(db, "Project 00", ["rock"]);
+    setTags(db, "Project 01", ["rock"]);
+    markRemoved(db, ["Project 00"], new Date().toISOString());
+
+    const counts = getProjectTagCounts(db, ["rock"]);
+
+    expect(counts.rock).toBe(1);
+  });
+
+  it("zero-fills a requested tag that exists in the tags table but has no project associations", () => {
+    // Give the "orphan" tag a real row in `tags` (by tagging then untagging a project), so it
+    // exists in the catalog but currently references nothing.
+    setTags(db, "Project 00", ["orphan"]);
+    setTags(db, "Project 00", []); // clears project_tags, tags row for "orphan" remains
+
+    const counts = getProjectTagCounts(db, ["orphan"]);
+
+    expect(counts.orphan).toBe(0);
+  });
+
+  it("zero-fills a requested tag name that doesn't exist in the tags table at all, without throwing or returning undefined", () => {
+    const counts = getProjectTagCounts(db, ["never-created"]);
+
+    expect(counts["never-created"]).toBe(0);
+  });
+
+  it("returns {} with no crash for an empty input array", () => {
+    expect(getProjectTagCounts(db, [])).toEqual({});
+  });
+
+  it("does not choke on a SQL-metacharacter-laden requested tag name (parameterized query regression check)", () => {
+    // Mirrors getProjectStats's own SQL-injection regression-test convention above: the
+    // requested tag name is only ever bound as a query parameter, never string-interpolated
+    // into the SQL text, so an adversarial value used as a lookup key is harmless.
+    setTags(db, "Project 00", ["rock"]);
+    const evilTag = `rock'; DROP TABLE projects; --`;
+
+    expect(() => getProjectTagCounts(db, [evilTag, "rock"])).not.toThrow();
+    const counts = getProjectTagCounts(db, [evilTag, "rock"]);
+
+    expect(counts[evilTag]).toBe(0);
+    expect(counts.rock).toBe(1);
+    const row = db.prepare(`SELECT COUNT(*) AS c FROM projects`).get() as { c: number };
+    expect(row.c).toBe(22);
+  });
+
+  it("returns the real count when the requested tag name differs in case from the stored tag (COLLATE NOCASE regression)", () => {
+    // tags.name is UNIQUE COLLATE NOCASE, so a tag stored as "rock" must still be found when
+    // requested as "Rock" — the SQL IN (...) match is case-insensitive, and the JS zero-fill
+    // lookup must be too, or a case-only tag rename would silently zero out the Metrics tile.
+    setTags(db, "Project 00", ["rock"]);
+    setTags(db, "Project 01", ["rock"]);
+
+    const counts = getProjectTagCounts(db, ["Rock"]);
+
+    expect(counts.Rock).toBe(2);
+  });
+
+  it("keys the returned result by the caller's requested casing, not the tag's stored casing", () => {
+    setTags(db, "Project 00", ["rock"]);
+
+    const counts = getProjectTagCounts(db, ["ROCK"]);
+
+    expect(Object.keys(counts)).toEqual(["ROCK"]);
+    expect(counts.ROCK).toBe(1);
+    expect(counts.rock).toBeUndefined();
   });
 });

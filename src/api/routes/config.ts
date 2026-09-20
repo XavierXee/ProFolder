@@ -7,6 +7,11 @@ import {
   setConfirmationSettings,
 } from "../../config/confirmationSettings.js";
 import { getPaginationSettings, setPaginationSettings } from "../../config/paginationSettings.js";
+import {
+  getMetricsSettings,
+  setMetricsSettings,
+  type MetricSpec,
+} from "../../config/metricsSettings.js";
 import type { FolderPickerService } from "../../services/FolderPickerService.js";
 import { asyncHandler } from "../asyncHandler.js";
 
@@ -154,6 +159,33 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
         res.json(setPaginationSettings(db, { itemsPerPage }));
       } catch (err) {
         res.status(400).json({ error: err instanceof Error ? err.message : "Invalid itemsPerPage" });
+      }
+    })
+  );
+
+  router.get(
+    "/metrics-settings",
+    asyncHandler(async (_req, res) => {
+      res.json(getMetricsSettings(db));
+    })
+  );
+
+  router.put(
+    "/metrics-settings",
+    asyncHandler(async (req, res) => {
+      const { projectsMetrics, filesMetrics } = req.body as {
+        projectsMetrics?: unknown;
+        filesMetrics?: unknown;
+      };
+      try {
+        res.json(
+          setMetricsSettings(db, {
+            projectsMetrics: projectsMetrics as MetricSpec[] | undefined,
+            filesMetrics: filesMetrics as MetricSpec[] | undefined,
+          })
+        );
+      } catch (err) {
+        res.status(400).json({ error: err instanceof Error ? err.message : "Invalid metrics settings" });
       }
     })
   );

@@ -395,6 +395,40 @@ export function getStats(): Promise<LibraryStats> {
   return request<LibraryStats>(`/stats`);
 }
 
+export type MetricSpec =
+  | { type: "total" }
+  | { type: "status"; key: string }
+  | { type: "tag"; name: string };
+
+export type MetricsSettings = {
+  projectsMetrics: MetricSpec[];
+  filesMetrics: MetricSpec[];
+};
+
+export function getMetricsSettings(): Promise<MetricsSettings> {
+  return request<MetricsSettings>(`/config/metrics-settings`);
+}
+
+export function setMetricsSettings(patch: Partial<MetricsSettings>): Promise<MetricsSettings> {
+  return request<MetricsSettings>(`/config/metrics-settings`, {
+    method: "PUT",
+    body: JSON.stringify(patch),
+  });
+}
+
+export type TagCounts = {
+  files: Record<string, number>;
+  projects: Record<string, number>;
+};
+
+export function getTagCounts(fileTags: string[], projectTags: string[]): Promise<TagCounts> {
+  const params = new URLSearchParams();
+  for (const t of fileTags) params.append("fileTag", t);
+  for (const t of projectTags) params.append("projectTag", t);
+  const qs = params.toString();
+  return request<TagCounts>(`/stats/tag-counts${qs ? `?${qs}` : ""}`);
+}
+
 export type FolderNode = {
   name: string;
   path: string;

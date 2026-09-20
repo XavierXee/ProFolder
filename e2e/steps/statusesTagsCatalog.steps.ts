@@ -101,6 +101,14 @@ function resolveTag(page: Page, baseName: string): CreatedTag {
   return record;
 }
 
+// Exposed so other step-definition files (e.g. metrics.steps.ts) can resolve the actual,
+// randomUUID()-suffixed name a "I create a new tag named ..." step produced, without needing to
+// duplicate this file's registry/randomUUID machinery — the resolved name is needed verbatim to
+// select the matching <option> in MetricsPanel.tsx's "New ... metric value" dropdown.
+export function resolveTagFullName(page: Page, baseName: string): string {
+  return resolveTag(page, baseName).fullName;
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

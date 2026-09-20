@@ -12,6 +12,7 @@ import {
   addTagsToFiles,
   findById,
   getFileStats,
+  getFileTagCounts,
   markRemoved,
   moveFile,
   cloneFile,
@@ -297,6 +298,88 @@ describe("getFileStats", () => {
 
     expect(fileStats.byStatus.draft).toBe(3);
     expect(projectStats.byStatus.draft).toBe(7);
+  });
+});
+
+describe("getFileTagCounts", () => {
+  it("counts active files per requested tag", () => {
+    setTags(db, "file-00.wav", ["rock"]);
+    setTags(db, "file-01.wav", ["rock"]);
+    setTags(db, "file-02.wav", ["rock"]);
+    setTags(db, "file-03.wav", ["jazz"]);
+
+    const counts = getFileTagCounts(db, ["rock", "jazz"]);
+
+    expect(counts).toEqual({ rock: 3, jazz: 1 });
+  });
+
+  it("excludes a soft-removed file with a matching tag from that tag's count", () => {
+    setTags(db, "file-00.wav", ["rock"]);
+    setTags(db, "file-01.wav", ["rock"]);
+    markRemoved(db, ["file-00.wav"], new Date().toISOString());
+
+    const counts = getFileTagCounts(db, ["rock"]);
+
+    expect(counts.rock).toBe(1);
+  });
+
+  it("zero-fills a requested tag that exists in the tags table but has no file associations", () => {
+    // Give the "orphan" tag a real row in `tags` (by tagging then untagging a file), so it
+    // exists in the catalog but currently references nothing.
+    setTags(db, "file-00.wav", ["orphan"]);
+    setTags(db, "file-00.wav", []); // clears audio_file_tags, tags row for "orphan" remains
+
+    const counts = getFileTagCounts(db, ["orphan"]);
+
+    expect(counts.orphan).toBe(0);
+  });
+
+  it("zero-fills a requested tag name that doesn't exist in the tags table at all, without throwing or returning undefined", () => {
+    const counts = getFileTagCounts(db, ["never-created"]);
+
+    expect(counts["never-created"]).toBe(0);
+  });
+
+  it("returns {} with no crash for an empty input array", () => {
+    expect(getFileTagCounts(db, [])).toEqual({});
+  });
+
+  it("does not choke on a SQL-metacharacter-laden requested tag name (parameterized query regression check)", () => {
+    // Mirrors getFileStats's own SQL-injection regression-test convention above: the
+    // requested tag name is only ever bound as a query parameter, never string-interpolated
+    // into the SQL text, so an adversarial value used as a lookup key is harmless.
+    setTags(db, "file-00.wav", ["rock"]);
+    const evilTag = `rock'; DROP TABLE audio_files; --`;
+
+    expect(() => getFileTagCounts(db, [evilTag, "rock"])).not.toThrow();
+    const counts = getFileTagCounts(db, [evilTag, "rock"]);
+
+    expect(counts[evilTag]).toBe(0);
+    expect(counts.rock).toBe(1);
+    const row = db.prepare(`SELECT COUNT(*) AS c FROM audio_files`).get() as { c: number };
+    expect(row.c).toBe(25);
+  });
+
+  it("returns the real count when the requested tag name differs in case from the stored tag (COLLATE NOCASE regression)", () => {
+    // tags.name is UNIQUE COLLATE NOCASE, so a tag stored as "rock" must still be found when
+    // requested as "Rock" — the SQL IN (...) match is case-insensitive, and the JS zero-fill
+    // lookup must be too, or a case-only tag rename would silently zero out the Metrics tile.
+    setTags(db, "file-00.wav", ["rock"]);
+    setTags(db, "file-01.wav", ["rock"]);
+
+    const counts = getFileTagCounts(db, ["Rock"]);
+
+    expect(counts.Rock).toBe(2);
+  });
+
+  it("keys the returned result by the caller's requested casing, not the tag's stored casing", () => {
+    setTags(db, "file-00.wav", ["rock"]);
+
+    const counts = getFileTagCounts(db, ["ROCK"]);
+
+    expect(Object.keys(counts)).toEqual(["ROCK"]);
+    expect(counts.ROCK).toBe(1);
+    expect(counts.rock).toBeUndefined();
   });
 });
 
