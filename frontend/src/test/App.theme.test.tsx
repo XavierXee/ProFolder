@@ -173,37 +173,41 @@ describe("App - header branding", () => {
 
 // Task 8 of the theming rework: the isProFolder JS ternary for tab button classes (the last two
 // live isDark/isProFolder consumers anywhere in the codebase) was replaced by a single static
-// className (see App.tsx's tabButtonClassName helper) that unconditionally carries both the
-// underline-tab structural/color classes (border-b-2, -mb-px, border-blue-500/text-blue-400,
-// etc.) AND the profolder:-prefixed override classes (profolder:border, profolder:bg-accent,
-// etc.) — the exact same string renders for every theme; only the compiled CSS's
-// higher-specificity `[data-theme="profolder"] &` selector (see index.css's `@custom-variant
-// profolder`) decides which set of rules actually wins visually for a given theme. These
-// assertions therefore expect the SAME exact className string under all three themes, which is
-// itself the proof no JS branching survives on this element (a stale isProFolder ternary would
-// produce two different strings across themes, as the pre-Task-8 version of this describe block
-// asserted). jsdom cannot evaluate the CSS attribute-selector cascade itself (see file-level NOTE),
-// so these tests prove the class list, not which ruleset visually wins.
+// className helper (see App.tsx's tabButtonClassName) that carries both the underline-tab
+// structural/color classes (border-b-2, -mb-px, border-blue-500/text-blue-400, etc.) AND the
+// profolder:-prefixed override classes (profolder:border, profolder:bg-accent, etc.) — the
+// compiled CSS's higher-specificity `[data-theme="profolder"] &` selector (see index.css's
+// `@custom-variant profolder`) decides which set of rules actually wins visually for a given
+// theme, not JS. A later, deliberate compact-tabs-under-profolder tweak reintroduced one real,
+// narrow JS branch on theme (`tabButtonClassName`'s own `py` spacing value: `py-1` under
+// profolder, `py-2.5` otherwise) — so dark/light share one classNames pair and profolder has its
+// own, distinguished only by that spacing token; every other class (color/border/profolder:*
+// overrides) is identical across all three themes. jsdom cannot evaluate the CSS
+// attribute-selector cascade itself (see file-level NOTE), so these tests prove the class list,
+// not which ruleset visually wins.
 describe("App - tab switcher styling per theme", () => {
   const ACTIVE_CLASSNAME =
-    "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)] border-blue-500 text-blue-400 profolder:bg-accent profolder:text-accent-ink profolder:border-accent";
+    "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)] border-blue-500 text-blue-400 profolder:bg-accent profolder:text-accent-ink profolder:border-border";
   const INACTIVE_CLASSNAME =
     "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)] border-transparent text-slate-500 hover:text-ink profolder:bg-surface profolder:text-ink-muted profolder:border-border";
+  // profolder's own pair: identical to the above except `py-1` (compact tabs), matching
+  // tabButtonClassName's `theme === "profolder" ? "py-1" : "py-2.5"` branch.
+  const PROFOLDER_ACTIVE_CLASSNAME = ACTIVE_CLASSNAME.replace("py-2.5", "py-1");
+  const PROFOLDER_INACTIVE_CLASSNAME = INACTIVE_CLASSNAME.replace("py-2.5", "py-1");
 
-  // TODO: fix this test
-  // it("renders the exact same active/inactive tab classNames under the profolder theme", async () => {
-  //   render(<App />);
-  //   await waitForMount();
-  //   expect(document.documentElement.dataset.theme).toBe("profolder");
-  //
-  //   const activeTab = screen.getByRole("button", { name: "Project Folders" });
-  //   const inactiveTab = screen.getByRole("button", { name: "Audio Files" });
-  //
-  //   expect(activeTab.className).toBe(ACTIVE_CLASSNAME);
-  //   expect(inactiveTab.className).toBe(INACTIVE_CLASSNAME);
-  // });
+  it("renders profolder's own (py-1) active/inactive tab classNames under the profolder theme", async () => {
+    render(<App />);
+    await waitForMount();
+    expect(document.documentElement.dataset.theme).toBe("profolder");
 
-  it("renders the exact same active/inactive tab classNames under the dark theme (no JS branch on theme)", async () => {
+    const activeTab = screen.getByRole("button", { name: "Project Folders" });
+    const inactiveTab = screen.getByRole("button", { name: "Audio Files" });
+
+    expect(activeTab.className).toBe(PROFOLDER_ACTIVE_CLASSNAME);
+    expect(inactiveTab.className).toBe(PROFOLDER_INACTIVE_CLASSNAME);
+  });
+
+  it("renders the same (py-2.5) active/inactive tab classNames under the dark theme", async () => {
     localStorage.setItem(LEGACY_THEME_KEY, "true");
     render(<App />);
     await waitForMount();
@@ -216,7 +220,7 @@ describe("App - tab switcher styling per theme", () => {
     expect(inactiveTab.className).toBe(INACTIVE_CLASSNAME);
   });
 
-  it("renders the exact same active/inactive tab classNames under the light theme (no JS branch on theme)", async () => {
+  it("renders the same (py-2.5) active/inactive tab classNames under the light theme", async () => {
     localStorage.setItem(LEGACY_THEME_KEY, "false");
     render(<App />);
     await waitForMount();
@@ -229,24 +233,23 @@ describe("App - tab switcher styling per theme", () => {
     expect(inactiveTab.className).toBe(INACTIVE_CLASSNAME);
   });
 
-  // TODO: fix this test
-  // it("swaps the active/inactive classNames when switching tabs, regardless of theme", async () => {
-  //   const user = userEvent.setup();
-  //   render(<App />);
-  //   await waitForMount();
-  //   expect(document.documentElement.dataset.theme).toBe("profolder");
-  //
-  //   const projectsTab = screen.getByRole("button", { name: "Project Folders" });
-  //   const filesTab = screen.getByRole("button", { name: "Audio Files" });
-  //
-  //   expect(projectsTab.className).toBe(ACTIVE_CLASSNAME);
-  //   expect(filesTab.className).toBe(INACTIVE_CLASSNAME);
-  //
-  //   await user.click(filesTab);
-  //
-  //   await waitFor(() => expect(filesTab.className).toBe(ACTIVE_CLASSNAME));
-  //   expect(projectsTab.className).toBe(INACTIVE_CLASSNAME);
-  // });
+  it("swaps the active/inactive classNames when switching tabs, regardless of theme", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await waitForMount();
+    expect(document.documentElement.dataset.theme).toBe("profolder");
+
+    const projectsTab = screen.getByRole("button", { name: "Project Folders" });
+    const filesTab = screen.getByRole("button", { name: "Audio Files" });
+
+    expect(projectsTab.className).toBe(PROFOLDER_ACTIVE_CLASSNAME);
+    expect(filesTab.className).toBe(PROFOLDER_INACTIVE_CLASSNAME);
+
+    await user.click(filesTab);
+
+    await waitFor(() => expect(filesTab.className).toBe(PROFOLDER_ACTIVE_CLASSNAME));
+    expect(projectsTab.className).toBe(PROFOLDER_INACTIVE_CLASSNAME);
+  });
 });
 
 describe("App - converted chrome elements carry token classes, not the old hardcoded ternary classes", () => {

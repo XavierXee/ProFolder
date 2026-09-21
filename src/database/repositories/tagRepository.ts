@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { pruneTagFromAllTabs, renameTagInAllTabs } from "./customTabRepository.js";
 
 /** Thrown when a create/rename would collide with an existing tag name (case-insensitive,
  * matching the `tags.name UNIQUE COLLATE NOCASE` constraint) — the route layer catches this
@@ -41,14 +42,18 @@ export function createTag(db: Database.Database, name: string): { id: number; na
  * from `audio_file_tags`/`project_tags` for nothing here — a rename is an UPDATE, not a
  * delete/recreate, so file/project associations are preserved automatically. */
 export function renameTag(db: Database.Database, oldName: string, newName: string): void {
-  try {
-    db.prepare(`UPDATE tags SET name = ? WHERE name = ? COLLATE NOCASE`).run(newName, oldName);
-  } catch (err) {
-    if (isUniqueConstraintError(err)) {
-      throw new DuplicateTagError(`A tag named "${newName}" already exists`);
+  const rename = db.transaction((old: string, next: string) => {
+    try {
+      db.prepare(`UPDATE tags SET name = ? WHERE name = ? COLLATE NOCASE`).run(next, old);
+    } catch (err) {
+      if (isUniqueConstraintError(err)) {
+        throw new DuplicateTagError(`A tag named "${next}" already exists`);
+      }
+      throw err;
     }
-    throw err;
-  }
+    renameTagInAllTabs(db, old, next);
+  });
+  rename(oldName, newName);
 }
 
 export function tagExists(db: Database.Database, name: string): boolean {
@@ -60,5 +65,9 @@ export function tagExists(db: Database.Database, name: string): boolean {
  * from `audio_file_tags`/`project_tags` (see migration 001) to clean up every file/project's
  * reference to it — no manual junction-table cleanup needed. */
 export function deleteTagByName(db: Database.Database, name: string): void {
-  db.prepare(`DELETE FROM tags WHERE name = ? COLLATE NOCASE`).run(name);
+  const deleteAndPrune = db.transaction((n: string) => {
+    db.prepare(`DELETE FROM tags WHERE name = ? COLLATE NOCASE`).run(n);
+    pruneTagFromAllTabs(db, n);
+  });
+  deleteAndPrune(name);
 }

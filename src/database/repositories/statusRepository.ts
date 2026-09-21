@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import type { StatusDef } from "../../models/Status.js";
 import { UNKNOWN_STATUS_KEY } from "../../models/AudioFile.js";
+import { pruneStatusFromAllTabs } from "./customTabRepository.js";
 
 const COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
@@ -114,6 +115,7 @@ export function deleteByKey(db: Database.Database, key: string): void {
     db.prepare(`UPDATE audio_files SET status = ? WHERE status = ?`).run(UNKNOWN_STATUS_KEY, k);
     db.prepare(`UPDATE projects SET status = ? WHERE status = ?`).run(UNKNOWN_STATUS_KEY, k);
     db.prepare(`DELETE FROM statuses WHERE key = ?`).run(k);
+    pruneStatusFromAllTabs(db, k);
   });
   reassignAndDelete(key);
 }

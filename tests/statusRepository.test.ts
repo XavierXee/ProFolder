@@ -10,6 +10,7 @@ import {
 } from "../src/database/repositories/statusRepository.js";
 import { insertAudioFile, type AudioFileUpsertInput } from "../src/database/repositories/audioFileRepository.js";
 import { upsertProject } from "../src/database/repositories/projectRepository.js";
+import { create as createCustomTab, findAll as findAllCustomTabs } from "../src/database/repositories/customTabRepository.js";
 import type { Project } from "../src/models/Project.js";
 
 let db: Database.Database;
@@ -222,5 +223,36 @@ describe("statusRepository.deleteByKey", () => {
 
   it("rejects a key that doesn't exist", () => {
     expect(() => deleteByKey(db, "not_a_real_status")).toThrow();
+  });
+
+  it("removes the deleted status from a custom tab's stored statuses array", () => {
+    const tab = createCustomTab(db, {
+      name: "My Tab",
+      type: "files",
+      statuses: ["draft", "needs_mixing"],
+      scores: [],
+      tags: [],
+    });
+
+    deleteByKey(db, "draft");
+
+    const [found] = findAllCustomTabs(db);
+    expect(found!.id).toBe(tab.id);
+    expect(found!.statuses).toEqual(["needs_mixing"]);
+  });
+
+  it("leaves a custom tab with no matching status reference completely untouched", () => {
+    const tab = createCustomTab(db, {
+      name: "Untouched Tab",
+      type: "projects",
+      statuses: ["needs_mixing"],
+      scores: [3],
+      tags: ["kick"],
+    });
+
+    deleteByKey(db, "draft");
+
+    const [found] = findAllCustomTabs(db);
+    expect(found).toEqual(tab);
   });
 });
