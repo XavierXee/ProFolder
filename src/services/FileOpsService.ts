@@ -50,6 +50,13 @@ export class NodeFileOpsService implements FileOpsService {
   private assertWithinRoot(absolutePath: string, description: string): void {
     const root = this.getAllowedRoot();
     if (!isWithinRoot(absolutePath, root)) {
+      // `isWithinRoot` fails closed (via `fs.realpathSync`) on ENOENT the same way it fails
+      // closed on a genuine outside-root path — distinguish the two here so a destination
+      // directory that simply doesn't exist yet gets an accurate message instead of the
+      // misleading "outside the configured music root" (docs/TODO.md item 128).
+      if (!fs.existsSync(absolutePath)) {
+        throw new PathOutsideRootError(`Refusing to operate on a ${description} that does not exist: ${absolutePath}`);
+      }
       throw new PathOutsideRootError(`Refusing to operate on a ${description} outside the configured music root`);
     }
   }

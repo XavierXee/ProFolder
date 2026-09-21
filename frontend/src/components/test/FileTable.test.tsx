@@ -200,7 +200,7 @@ describe("FileTable - loading/empty/populated states", () => {
     const user = userEvent.setup();
     renderTable({ loading: false, files: [], onClearFilters });
 
-    await user.click(screen.getByRole("button", { name: "Clear all filters" }));
+    await user.click(screen.getByRole("button", { name: "Clear all filters (no results)" }));
 
     expect(onClearFilters).toHaveBeenCalledTimes(1);
   });

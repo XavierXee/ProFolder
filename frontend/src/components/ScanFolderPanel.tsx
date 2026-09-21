@@ -73,9 +73,14 @@ type Props = {
   musicRoot: string | undefined;
   onClose: () => void;
   onScanComplete: (stats: ScanStats) => void;
+  /** Called the instant a new scan attempt starts (before the request is even sent), so the
+   * caller can clear a stale banner from a previous scan — otherwise, if this new attempt
+   * fails, the previous attempt's success banner would keep silently claiming a scan completed
+   * (docs/TODO.md item, Task 7.1 finding). */
+  onScanStart: () => void;
 };
 
-export default function ScanFolderPanel({ open, musicRoot, onClose, onScanComplete }: Props) {
+export default function ScanFolderPanel({ open, musicRoot, onClose, onScanComplete, onScanStart }: Props) {
   const [tree, setTree] = useState<FolderNode | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -145,6 +150,7 @@ export default function ScanFolderPanel({ open, musicRoot, onClose, onScanComple
   }
 
   async function handleStartScan() {
+    onScanStart();
     setScanning(true);
     setError(undefined);
     try {

@@ -70,6 +70,7 @@ Feature: Statuses & tags catalog — CRUD, filter/picker wiring, and cascade-on-
     When I close the statuses and tags panel
     And I open the file detail panel for "Statuses Tags E2E Status Edit.wav"
     Then the file detail panel should show my status "Statuses Tags E2E Edit Status"
+    And the file detail panel's status badge for "Statuses Tags E2E Edit Status" should have color "#00ffcc"
 
   Scenario: Cancelling adding or deleting a status leaves the catalog unchanged
     When I open the statuses and tags panel

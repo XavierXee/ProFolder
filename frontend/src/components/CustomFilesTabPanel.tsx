@@ -200,7 +200,12 @@ export default function CustomFilesTabPanel({
     // App.tsx's handleFileOpSuccess exactly. selectedId is already null for a batch operation
     // (the batch panel and detail panel are never open at the same time), so this is a
     // harmless no-op in that case.
-    if (operation !== "copy") setSelectedId(null);
+    if (operation !== "copy") {
+      setSelectedId(null);
+      // A move/delete invalidates every id in the batch selection too — see App.tsx's
+      // identical comment on its own handleFileOpSuccess (docs/TODO.md item 132).
+      setSelectedFileIds(new Set());
+    }
     setBanner(fileOpSuccessMessage(operation, outcome));
     refetch();
     refreshStats();

@@ -47,9 +47,12 @@ describe("StatusBadge", () => {
 
     const badge = await waitFor(() => screen.getByLabelText("Status: Draft"));
     expect(badge).toHaveTextContent("Draft");
-    // jsdom's CSSOM normalizes a bare hex literal set via the `backgroundColor` property to its
-    // rgb() equivalent (#a1b2c3 -> rgb(161, 178, 195)) even though it leaves the same literal
-    // untouched inside `color`/`boxShadow` (verified empirically) — jsdom doesn't compute
+    // jsdom's CSSOM normalizes a `color-mix()` expression to its rgb() equivalent only when the
+    // expression has no unresolved `var()` reference inside it — not based on which CSS property
+    // it's assigned to (verified empirically: `borderColor` normalizes the same way `background
+    // Color` does here). `statusBadgeStyle()`'s `backgroundColor`/`boxShadow` mix a plain hex
+    // literal with no `var()` (#a1b2c3 -> rgb(161, 178, 195)), while `color` mixes in
+    // `var(--color-ink)` and so stays a literal, unresolved string. jsdom doesn't compute
     // color-mix() itself either way, so none of these assertions confirm the resolved/rendered
     // color, only that the right hex made it into the right style string.
     expect(badge.style.backgroundColor).toContain("rgb(161, 178, 195)");

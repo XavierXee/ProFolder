@@ -118,7 +118,17 @@ function escapeRegExp(value: string): string {
 async function toggleFilterOption(page: Page, triggerLabel: string, optionText: string): Promise<void> {
   // The trigger's accessible name is `${triggerLabel}` when nothing is selected, or
   // `${triggerLabel} (N)` once N options are selected (see FilterToolbar.tsx) — match the prefix.
-  await page.getByRole("button", { name: new RegExp(`^${escapeRegExp(triggerLabel)}`) }).click();
+  // Scoped to FilterToolbar's own role="toolbar" landmark (docs/TODO.md item 140-147): an
+  // unscoped name match on "Status" collides with the header's "Statuses and tags" button
+  // (also starts with "Status"), and aria-haspopup="listbox" alone is no longer sufficient
+  // either — CreateCustomTabModal.tsx stays permanently mounted since its own slide-animation
+  // fix (item 25) and renders its own same-named Status/Score/Tags MultiSelectDropdown triggers
+  // even while closed/off-screen. FilterToolbar is the only role="toolbar" landmark in the page,
+  // so scoping to it excludes both collisions at once.
+  const trigger = page
+    .getByRole("toolbar", { name: "Filters" })
+    .getByRole("button", { name: new RegExp(`^${escapeRegExp(triggerLabel)}`) });
+  await trigger.click();
 
   const listbox = page.getByRole("listbox", { name: `Filter by ${triggerLabel.toLowerCase()}` });
   await listbox.locator("label", { hasText: new RegExp(`^${escapeRegExp(optionText)}$`) }).click();
@@ -240,6 +250,12 @@ const ALL_PROJECTS_E2E_FIXTURES = [
   // untouched "keep.wav" placeholder) the source project is moved into.
   "File Ops E2E Project Move Source",
   "File Ops E2E Project Move Destination",
+  // "loose-exports" and "Smoke Test Project" — Task 1's inert smoke-scaffolding fixtures (see
+  // ALL_FILES_E2E_FIXTURES's own note on "loose-exports/silence-stub.wav"). Both get their own
+  // project row like any other visited folder (same rationale as "Scanning E2E Exclusion Toggle"
+  // above); previously untracked in this table (docs/TODO.md item 111).
+  "loose-exports",
+  "Smoke Test Project",
 ];
 
 // Asserts the visible row set is *exactly* the given names — every listed name has a row, and
@@ -279,14 +295,13 @@ Then("I should see these projects in this order: {string}", async ({ page }, nam
   }).toPass();
 });
 
-// ProjectsTable.tsx picks between two empty-result messages based on the *filtered* `total`
-// (not an unfiltered/global count): total === 0 renders "No folders found yet. Try running a
-// scan.", anything else (i.e. total > 0 but the current page rendered no rows) renders
-// "No folders match your filters." A search matching zero projects makes the filtered total 0
-// too, so it's the former message that actually renders here — see the .feature file's comment
-// on this scenario for why the latter isn't reachable this way.
+// ProjectsTable.tsx picks between two empty-result messages based on whether a content filter
+// (search/status/score/tag) is currently active, not off the filtered `total` alone (docs/
+// TODO.md item 95 — `total` is already the filtered count, so `total === 0` can't distinguish
+// "empty library" from "filtered to zero"). A search matching zero projects IS an active filter,
+// so "No folders match your filters." is what renders here.
 Then("I should see the projects empty-results message", async ({ page }) => {
-  await expect(page.getByText("No folders found yet. Try running a scan.")).toBeVisible();
+  await expect(page.getByText("No folders match your filters.")).toBeVisible();
 });
 
 // ProjectsFilterBar.tsx's `resultLabel`, set in App.tsx to `${projects.length} of ${projectsTotal}

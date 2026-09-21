@@ -192,7 +192,17 @@ function escapeRegExp(value: string): string {
 }
 
 async function toggleFilterOption(page: Page, triggerLabel: string, optionText: string): Promise<void> {
-  await page.getByRole("button", { name: new RegExp(`^${escapeRegExp(triggerLabel)}`) }).click();
+  // Scoped to FilterToolbar's own role="toolbar" landmark (docs/TODO.md item 140-147): an
+  // unscoped name match on "Status" collides with the header's "Statuses and tags" button
+  // (also starts with "Status"), and aria-haspopup="listbox" alone is no longer sufficient
+  // either — CreateCustomTabModal.tsx stays permanently mounted since its own slide-animation
+  // fix (item 25) and renders its own same-named Status/Score/Tags MultiSelectDropdown triggers
+  // even while closed/off-screen. FilterToolbar is the only role="toolbar" landmark in the page,
+  // so scoping to it excludes both collisions at once.
+  const trigger = page
+    .getByRole("toolbar", { name: "Filters" })
+    .getByRole("button", { name: new RegExp(`^${escapeRegExp(triggerLabel)}`) });
+  await trigger.click();
 
   const listbox = page.getByRole("listbox", { name: `Filter by ${triggerLabel.toLowerCase()}` });
   await listbox.locator("label", { hasText: new RegExp(`^${escapeRegExp(optionText)}$`) }).click();
@@ -213,16 +223,13 @@ When("I filter files by tag {string}", async ({ page }, tag: string) => {
 });
 
 // FilterToolbar.tsx's own "Clear all filters" control (`clearAll`) has an explicit
-// `aria-label="Clear all filters"` overriding its visible text ("Clear") — but EmptyState.tsx
+// `aria-label="Clear all filters"` overriding its visible text ("Clear"). EmptyState.tsx
 // (rendered inside the table's `<tbody>` whenever the current filtered result set is empty) has
-// its OWN "Clear all filters" button with no `aria-label` at all, whose accessible name is just
-// its plain visible text, which happens to be the exact same string. Whenever a scenario's filter
-// combination narrows the table down to zero rows before calling this step (as Task 6.3's
-// selection-clears-on-filter-change scenario does — none of its 3 fixtures have any status
-// seeded, so filtering by any status empties the table), a plain `getByRole("button", { name:
-// "Clear all filters" })` is ambiguous (two matches) and throws a strict-mode violation. Matching
-// on the `aria-label` attribute directly (rather than the computed accessible name both buttons
-// share) is what disambiguates: only FilterToolbar.tsx's own button actually has that attribute.
+// its own visually-identical "Clear all filters" button, disambiguated via its own
+// `aria-label="Clear all filters (no results)"` (docs/TODO.md's EmptyState-collision item) — so
+// the two no longer share an accessible name. Still matching on the `aria-label` attribute
+// directly here (rather than the computed accessible name) to keep this step scoped to
+// FilterToolbar.tsx's button specifically, regardless of which empty-state variant is showing.
 When("I clear all file filters", async ({ page }) => {
   await page.locator('button[aria-label="Clear all filters"]').click();
 });
@@ -270,6 +277,12 @@ const ALL_FILES_E2E_FIXTURES = [
   "Files E2E DetailPanel Take.wav",
   "reverse-take-1.wav",
   "reverse-take-2.wav",
+  // "Projects E2E Cascade Session/cascade-take-{1,2}.wav" — Task 4's project→file cascade
+  // fixture (see projects-tab/detail-panel-status-tags-score.feature's cascade scenario, which
+  // searches for these by name on the Audio Files tab too). Previously missing from this table
+  // (docs/TODO.md item 109) despite rendering as real rows here.
+  "cascade-take-1.wav",
+  "cascade-take-2.wav",
   // "Batch E2E Projects ..." folders' cascade-target files — Task 6.2's 3 batch-edit fixtures
   // (see e2e/features/projects-tab/batch-edit.feature's cascade scenario).
   "alpha-cascade.wav",

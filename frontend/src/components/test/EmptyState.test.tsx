@@ -15,7 +15,7 @@ describe("EmptyState", () => {
 
     expect(screen.getByText("No audio files match your filters")).toBeInTheDocument();
     expect(screen.getByText("Try adjusting your search or filter criteria")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Clear all filters" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear all filters (no results)" })).toBeInTheDocument();
   });
 
   it("calls onClear when the clear-filters button is clicked", async () => {
@@ -29,7 +29,7 @@ describe("EmptyState", () => {
       </table>
     );
 
-    await user.click(screen.getByRole("button", { name: "Clear all filters" }));
+    await user.click(screen.getByRole("button", { name: "Clear all filters (no results)" }));
 
     expect(onClear).toHaveBeenCalledTimes(1);
   });

@@ -166,6 +166,8 @@
 
 13.4. "Reveal in Finder" is refused (server-side) for any path outside the currently configured music root, even if requested directly.
 
+13.5. The Settings panel's Confirmation Settings section exposes 6 independent, persisted toggles gating a typed-text confirmation step before a destructive/bulk action runs: "Confirm tab deletion" (type the tab's exact name), "Confirm copy"/"Confirm move"/"Confirm delete" (type the literal word COPY/MOVE/DELETE, for the Copy/Move/Delete operations described in §16), and "Confirm status deletion"/"Confirm tag deletion" (type the status's/tag's exact name before it can be removed from the global Statuses & Tags catalog, a separate editable-catalog panel not otherwise covered in this document). Each toggle is off by default; when on, the relevant action's confirm dialog requires the exact text to be typed (case-sensitive) before the confirm button enables. Removing a tag from a single file's or project's own tag list (§8.2) is a separate, lighter-weight action and is never gated by any of these toggles.
+
 ## 14. Theming
 
 14.1. The UI supports three themes — ProFolder (default, the app's own brand palette/typography), Light, and Dark — selected via a header dropdown (`ProFolder`/`Light`/`Dark`, in that order), persisted in `localStorage`, and applied without a flash by being set (via a `data-theme` attribute on the document root) before first paint. A one-time migration reads any pre-existing legacy dark/light preference on first load under the new mechanism.
@@ -190,11 +192,11 @@
 
 15.6. Playback is global, not per-tab: there is a single audio player bar shared across the whole app, so starting playback from within a custom Audio Files tab, then switching to another tab (default or custom), leaves the same file playing uninterrupted.
 
-15.7. Each custom tab is shown in the tab bar with its name and its own "×" delete button; clicking "×" opens a confirmation dialog, and deleting is permanent (no undo, no soft-delete). Deleting the tab that is currently active falls back to the default "Project Folders" tab.
+15.7. Each custom tab is shown in the tab bar with its name and its own "×" delete button; clicking "×" opens a confirmation dialog, and deleting is permanent (no undo, no soft-delete). Deleting the tab that is currently active falls back to the default "Project Folders" tab. The confirmation dialog can optionally require typing the tab's exact name before it confirms — see §13.5 for the Settings toggle that gates this; off by default.
 
 ## 16. Copy, Move & Delete
 
-16.1. Copy, Move, and Delete are available for a single audio file (from the File detail panel), a single project folder (from the Project detail panel), and for a multi-row batch selection (from the Batch Edit panel) on either view — in both the default "Project Folders"/"Audio Files" tabs and any custom tab of either type.
+16.1. Copy, Move, and Delete are available for a single audio file (from the File detail panel), a single project folder (from the Project detail panel), and for a multi-row batch selection (from the Batch Edit panel) on either view — in both the default "Project Folders"/"Audio Files" tabs and any custom tab of either type. Each operation can optionally require a typed-text confirmation (typing the literal word COPY/MOVE/DELETE) before running — see §13.5 for the Settings toggles that gate this per operation; off by default.
 
 16.2. Delete moves the item to the macOS Trash via Finder (`MacTrashService`, AppleScript `tell application "Finder" to delete`) — it is reversible, not a permanent filesystem deletion. This is an explicit product decision, not an oversight.
 

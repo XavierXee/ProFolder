@@ -115,8 +115,8 @@ describe("ProjectsTable - empty states", () => {
     expect(screen.getByText("No folders found yet. Try running a scan.").closest("td")).toHaveAttribute("colSpan", "9");
   });
 
-  it("shows the 'no folders match your filters' message when total is nonzero but the current page is empty", () => {
-    renderTable({ projects: [], total: 5 });
+  it("shows the 'no folders match your filters' message when a content filter is active (docs/TODO.md item 95: `total` alone can't distinguish this from a truly empty library, since it's already the filtered count)", () => {
+    renderTable({ projects: [], total: 0, filters: { search: "nonexistent-project" } });
 
     expect(screen.getByText("No folders match your filters.")).toBeInTheDocument();
   });
@@ -273,6 +273,14 @@ describe("ProjectsTable - sortable headers", () => {
     expect(header).toHaveAttribute("aria-sort", "none");
     expect(within(header).getByRole("button")).toHaveTextContent("Modified");
     expect(within(header).getByRole("button")).not.toHaveTextContent(/[↑↓]/);
+  });
+
+  it("keeps the Project Folder (Name) header left-aligned, not centered (docs/TODO.md item 123)", () => {
+    renderTable({ filters: { sortBy: "name", sortDir: "asc" } });
+
+    const header = getHeader(/Project Folder/);
+    expect(header).toHaveClass("text-left");
+    expect(header).not.toHaveClass("text-center");
   });
 
   it("centers the Score header to match its centered column data", () => {

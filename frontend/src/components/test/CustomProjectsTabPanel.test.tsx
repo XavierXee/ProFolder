@@ -195,8 +195,13 @@ describe("CustomProjectsTabPanel - locked pickers are hidden, search/sort stay l
     // ProjectsTable's Score column header is now also a sortable button named "Score" (see
     // ProjectsTable.tsx's SortTh), so an unscoped name query would match both it and the
     // FilterToolbar's Score picker. The picker is a MultiSelectDropdown trigger, uniquely
-    // identified by aria-haspopup="listbox" (the sort header has no such attribute).
-    const scoreButtons = screen.queryAllByRole("button", { name: "Score" });
+    // identified by aria-haspopup="listbox" (the sort header has no such attribute). Matching
+    // on the exact name "Score" alone is NOT sufficient to find it though (docs/TODO.md item
+    // 126): LOCKED_PARAMS pre-selects 2 scores, so the picker's real accessible name (if it
+    // leaked through despite being locked) would be "Score (2)", never plain "Score" — an
+    // exact-match query here would vacuously find nothing whether or not the underlying bug
+    // this test exists to catch were reintroduced. Match the "Score"-prefix instead.
+    const scoreButtons = screen.queryAllByRole("button", { name: /^Score/ });
     expect(scoreButtons.find((b) => b.getAttribute("aria-haspopup") === "listbox")).toBeUndefined();
     expect(screen.queryByRole("button", { name: "Tags" })).not.toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search project folders" })).toBeInTheDocument();

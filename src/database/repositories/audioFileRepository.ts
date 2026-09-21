@@ -431,7 +431,16 @@ function deriveLocationFields(musicRoot: string, absolutePath: string) {
   const resolvedRoot = path.resolve(musicRoot);
   const resolvedPath = path.resolve(absolutePath);
   const relativePath = path.relative(resolvedRoot, resolvedPath);
-  if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+  // `relativePath === ""` means `absolutePath` IS musicRoot itself (no filename segment at
+  // all) — not `".."`/`".." + sep`-prefixed/absolute, so it would otherwise slip past this
+  // guard and produce a corrupted row (empty id/relativePath, containingFolder computed as
+  // musicRoot's own parent — genuinely outside the root). docs/TODO.md item 114.
+  if (
+    relativePath === ".." ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath) ||
+    relativePath === ""
+  ) {
     throw new Error(
       `deriveLocationFields: "${absolutePath}" resolves outside musicRoot "${musicRoot}"`
     );

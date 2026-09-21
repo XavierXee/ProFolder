@@ -319,6 +319,13 @@ describe("SettingsPanel - Confirmation Settings section", () => {
   });
 });
 
+// docs/TODO.md item 134 / the project notes' documented 50ms auto-focus hazard: SettingsPanel.tsx's
+// mount effect does `setTimeout(() => closeRef.current?.focus(), 50)`. Under real-timer
+// userEvent's default inter-keystroke delays, a `.clear()`/`.type()` sequence run shortly after
+// mount can straddle that window and have focus stolen mid-type, dropping input. Every `user`
+// instance below uses `delay: null` to close the race (matching this codebase's established fix
+// for this exact hazard — see FileDetailPanel.test.tsx's/ProjectDetailPanel.test.tsx's "tags
+// optimistic update" tests).
 describe("SettingsPanel - Pagination section", () => {
   it("renders the Items per page input pre-filled with the fetched value", async () => {
     mockGetPaginationSettings.mockReset().mockResolvedValue(makePaginationSettings({ itemsPerPage: 75 }));
@@ -329,7 +336,7 @@ describe("SettingsPanel - Pagination section", () => {
   });
 
   it("calls setPaginationSettings with the typed value when Apply is clicked", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPanel();
 
     const input = await screen.findByLabelText("Items per page");
@@ -344,7 +351,7 @@ describe("SettingsPanel - Pagination section", () => {
 
   it("pushes the new value to every mounted tab via setItemsPerPageGlobally on a successful Apply", async () => {
     mockSetPaginationSettings.mockResolvedValue(makePaginationSettings({ itemsPerPage: 200 }));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPanel();
 
     const input = await screen.findByLabelText("Items per page");
@@ -356,7 +363,7 @@ describe("SettingsPanel - Pagination section", () => {
   });
 
   it("shows the Saved indicator after a successful Apply", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPanel();
 
     const input = await screen.findByLabelText("Items per page");
@@ -368,7 +375,7 @@ describe("SettingsPanel - Pagination section", () => {
   });
 
   it("disables Apply when the input is out of range (below the minimum of 10)", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPanel();
 
     const input = await screen.findByLabelText("Items per page");
@@ -379,7 +386,7 @@ describe("SettingsPanel - Pagination section", () => {
   });
 
   it("disables Apply when the input is out of range (above the maximum of 500)", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPanel();
 
     const input = await screen.findByLabelText("Items per page");
@@ -390,7 +397,7 @@ describe("SettingsPanel - Pagination section", () => {
   });
 
   it("disables Apply when the input is empty", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPanel();
 
     const input = await screen.findByLabelText("Items per page");
@@ -410,7 +417,7 @@ describe("SettingsPanel - Pagination section", () => {
 
   it("does not call setItemsPerPageGlobally and shows an error when the save rejects", async () => {
     mockSetPaginationSettings.mockRejectedValue(new Error("itemsPerPage must be an integer between 10 and 500"));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPanel();
 
     const input = await screen.findByLabelText("Items per page");

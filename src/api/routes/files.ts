@@ -339,6 +339,10 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
         res.status(400).json({ error: `status must be a known status key (got "${status}")` });
         return;
       }
+      if (!findById(db, id)) {
+        res.status(404).json({ error: "File not found" });
+        return;
+      }
       updateStatus(db, id, status);
       res.json(withProjectPath(db, findById(db, id)!));
     })
@@ -351,6 +355,10 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
       const { tags } = req.body as { tags: string[] };
       if (!Array.isArray(tags) || !tags.every((t) => typeof t === "string")) {
         res.status(400).json({ error: "tags must be an array of strings" });
+        return;
+      }
+      if (!findById(db, id)) {
+        res.status(404).json({ error: "File not found" });
         return;
       }
       setTags(db, id, tags);
@@ -367,6 +375,10 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
       const { score } = req.body as { score: number | null };
       if (!isValidScore(score)) {
         res.status(400).json({ error: "score must be an integer from 1 to 5, or null" });
+        return;
+      }
+      if (!findById(db, id)) {
+        res.status(404).json({ error: "File not found" });
         return;
       }
       setScore(db, id, score);

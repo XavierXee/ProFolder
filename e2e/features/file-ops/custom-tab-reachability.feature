@@ -3,12 +3,12 @@ Feature: Copy/Move/Delete — reachable from within a custom tab, not just the d
   # Confirms Copy/Move/Delete is wired up inside a custom (non-default) tab too, per this
   # feature's "everywhere, not just custom tabs" scope decision — CustomFilesTabPanel.tsx mounts
   # its own FileDetailPanel + CopyMoveDeleteDialog instance, entirely separate from App.tsx's
-  # default-tab ones (see CustomFilesTabPanel.tsx). Uses Delete rather than Copy/Move: see
-  # fileOps.steps.ts's top doc comment for the confirmed destination-picker bug that currently
-  # makes every real UI-driven copy/move fail end-to-end regardless of which tab it's driven
-  # from — Delete needs no destination and so is unaffected, and is enough on its own to prove
-  # this dialog is reachable and functional from a custom tab's own panel instance, not just the
-  # default Files tab's.
+  # default-tab ones (see CustomFilesTabPanel.tsx). Uses Delete rather than Copy/Move: Delete
+  # needs no destination, so it's a minimal, self-contained proof that this dialog is reachable
+  # and functional from a custom tab's own panel instance, not just the default Files tab's (the
+  # real UI-driven copy/move destination-picker bug fileOps.steps.ts's top doc comment describes
+  # was fixed separately — see that file for the fix and copy.feature/move.feature/
+  # project-move.feature for the coverage proving it).
   #
   # "File Ops E2E Custom Tab Delete.wav" is exclusive to this scenario (see
   # ALL_FILES_E2E_FIXTURES in files.steps.ts for its registration). `@custom-tabs` tags this

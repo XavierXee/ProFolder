@@ -273,6 +273,22 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
                   {statusSaving && <span className="normal-case tracking-normal">Saving…</span>}
                 </p>
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Select status">
+                  {/* Transient fallback for the window before useStatusCatalog()'s mount-time
+                      fetch resolves: buildStatusOptions(catalogStatuses) is just [unknown] until
+                      then, so the project's real (non-unknown) status would otherwise have no
+                      pill showing it selected (docs/TODO.md item 138). Self-corrects once the
+                      catalog loads and this status's real pill takes over. Not clickable — it's
+                      not a real catalog entry, just a placeholder for "whatever this already
+                      is". */}
+                  {status !== UNKNOWN_STATUS_KEY && !catalogStatuses.some((s) => s.key === status) && (
+                    <button
+                      disabled
+                      aria-pressed="true"
+                      className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-all disabled:cursor-not-allowed ring-1 ${STATUS_PILL.unknown}`}
+                    >
+                      {status}
+                    </button>
+                  )}
                   {buildStatusOptions(catalogStatuses).map((opt) => {
                     const selected = status === opt.value;
                     const isUnknown = opt.value === UNKNOWN_STATUS_KEY;

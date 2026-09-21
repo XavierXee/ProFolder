@@ -127,7 +127,7 @@ describe("App - ThemeSelector wiring", () => {
 
     const trigger = screen.getByRole("button", { name: "Theme" });
     expect(trigger).toBeInTheDocument();
-    expect(trigger).toHaveTextContent("ProFolder");
+    expect(trigger).toHaveTextContent("Default");
     expect(document.documentElement.dataset.theme).toBe("profolder");
 
     await user.click(trigger);
@@ -146,9 +146,7 @@ describe("App - header branding", () => {
     render(<App />);
     await waitForMount();
 
-    // Scoped to the heading role specifically: the ThemeSelector trigger button also displays
-    // "ProFolder" as the current theme option's label, so a plain getByText("ProFolder") would
-    // be ambiguous between the two elements.
+    // Scoped to the heading role specifically to avoid any ambiguity with other header text.
     expect(screen.getByRole("heading", { name: "ProFolder" })).toBeInTheDocument();
     // Scoped to the header specifically: SplashScreen (mounted as a sibling overlay, per this
     // cycle's Task 5) also renders its own logo (data-testid="logo") for its ~1s lifetime, so a

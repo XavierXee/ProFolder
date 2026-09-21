@@ -211,6 +211,7 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 15/87 (17%). The remaining 2 row
 | 13.2 | Per-folder include/exclude panel + trigger scan from it | COVERED-E2E | `exclusion-toggles.feature:46-115` |
 | 13.3 | Settings panel toggles with "Saving…"/"Saved"/"Failed" feedback | COVERED-BOTH | toggle mechanics + "Saved" COVERED-E2E; "Saving…"/"Failed" states COVERED-UNIT (`SettingsPanel.test.tsx:144-178`) — corrects a stale prior verdict, this was already covered before Task 9 follow-up #8 confirmed it |
 | 13.4 | Reveal-in-Finder refused server-side for outside-root paths | COVERED-UNIT | `tests/revealRoute.test.ts:50-69`, `tests/finderService.test.ts:22-40`; no e2e from the actual UI button |
+| 13.5 | 6 independent typed-text confirmation toggles (tab/status/tag deletion by name, copy/move/delete by literal word), off by default | COVERED-UNIT | backend settings module `tests/confirmationSettings.test.ts`; toggle rendering/persistence `SettingsPanel.test.tsx`; typed-confirmation mechanics `ConfirmTextInput.test.tsx`, `useTypedConfirmation.test.ts`, `useConfirmationRequired.test.ts`; per-action dialogs `DeleteTabConfirmDialog.test.tsx`, `DeleteStatusConfirmDialog.test.tsx`, `DeleteCatalogTagConfirmDialog.test.tsx`, `CopyMoveDeleteDialog.test.tsx`; no dedicated e2e scenario for the typed-text gate itself (each dialog's e2e coverage elsewhere exercises the untyped/default-off path only) |
 
 ## §14 Theming
 

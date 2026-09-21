@@ -13,10 +13,17 @@ type Props = {
    * (allTags is plain App.tsx state, not Context-based like the status catalog). */
   onTagsChanged: () => void;
   /** Called after a successful status delete, so App.tsx can refetch already-loaded file/project
-   * rows (and stats) whose `status` column may have been reassigned to "unknown" server-side.
-   * Not called for status create/edit — those never touch any row's data, only the catalog entry's
-   * name/color, which is already covered by this component's own `refetchStatuses()` above. */
-  onStatusDeleted: () => void;
+   * rows (and stats) whose `status` column may have been reassigned to "unknown" server-side, and
+   * prune the deleted key out of any active filter that references it. Not called for status
+   * create/edit — those never touch any row's data, only the catalog entry's name/color, which is
+   * already covered by this component's own `refetchStatuses()` above. */
+  onStatusDeleted: (key: string) => void;
+  /** Called after a successful tag delete (in addition to `onTagsChanged`), so App.tsx can prune
+   * the deleted tag out of any active filter that references it. */
+  onTagDeleted: (name: string) => void;
+  /** Called after a successful tag rename (in addition to `onTagsChanged`), so App.tsx can update
+   * any active filter referencing the old tag name to the new one instead. */
+  onTagRenamed: (oldName: string, newName: string) => void;
 };
 
 /** Neutral starting point for a brand-new status's color, before the user picks their own. */
@@ -66,7 +73,7 @@ function XIcon() {
   );
 }
 
-export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onStatusDeleted }: Props) {
+export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onStatusDeleted, onTagDeleted, onTagRenamed }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const { statuses, refetch: refetchStatuses } = useStatusCatalog();
 
@@ -183,7 +190,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
     try {
       await api.deleteStatus(target.key);
       await refetchStatuses();
-      onStatusDeleted();
+      onStatusDeleted(target.key);
     } catch {
       // Best-effort, mirroring App.tsx's own catch(() => {}) convention for fire-and-forget
       // refresh calls — the dialog has already closed, so there's no inline surface left for
@@ -240,6 +247,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
     try {
       await api.renameTag(oldName, name);
       onTagsChanged();
+      onTagRenamed(oldName, name);
       setRenamingTag(null);
     } catch (err) {
       setRenameTagError(errorMessage(err, "Failed to rename tag"));
@@ -254,6 +262,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
     try {
       await api.deleteTag(target);
       onTagsChanged();
+      onTagDeleted(target);
     } catch {
       // Best-effort, mirrors confirmDeleteStatus above.
     } finally {

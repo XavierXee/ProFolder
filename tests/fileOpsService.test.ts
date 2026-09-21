@@ -282,6 +282,17 @@ describe("NodeFileOpsService", () => {
       }
     });
 
+    it("rejects with an accurate 'does not exist' message, not the outside-root message, when the destination directory simply hasn't been created yet (docs/TODO.md item 128)", async () => {
+      const sourceDir = path.join(root, "source");
+      fs.mkdirSync(sourceDir, { recursive: true });
+      const sourcePath = path.join(sourceDir, "kick.wav");
+      fs.writeFileSync(sourcePath, "kick-bytes");
+      const missingDestDir = path.join(root, "does-not-exist-yet");
+
+      await expect(service.movePath(sourcePath, missingDestDir)).rejects.toThrow(/destination directory that does not exist/);
+      expect(fs.existsSync(sourcePath)).toBe(true);
+    });
+
     it("rejects (fails closed) for a symlink inside root pointing outside it as the source", async () => {
       const other = fs.mkdtempSync(path.join(os.tmpdir(), "file-ops-service-test-symlink-"));
       const secretPath = path.join(other, "secret.txt");

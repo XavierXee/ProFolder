@@ -88,6 +88,11 @@ export function ProjectsTable({
   const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted border-b border-divider";
   const staticTh = `${thBase} text-center`;
   const allSelected = projects.length > 0 && projects.every((p) => selectedIds.has(p.id));
+  // `total` is already the FILTERED count, so `total === 0` can't distinguish "empty library"
+  // from "filtered to zero" (it's always 0 whenever this empty state renders at all) — check the
+  // content-filtering fields directly instead (sortBy/page intentionally excluded: they never
+  // reduce the result count to zero, docs/TODO.md's ProjectsTable empty-state message item).
+  const hasActiveFilter = Boolean(filters.search) || (filters.statuses?.length ?? 0) > 0 || (filters.scores?.length ?? 0) > 0 || (filters.tags?.length ?? 0) > 0;
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -125,7 +130,7 @@ export function ProjectsTable({
             ) : projects.length === 0 ? (
               <tr>
                 <td colSpan={9} className={`px-6 py-10 text-center text-sm ${meta}`}>
-                  {total === 0 ? "No folders found yet. Try running a scan." : "No folders match your filters."}
+                  {hasActiveFilter ? "No folders match your filters." : "No folders found yet. Try running a scan."}
                 </td>
               </tr>
             ) : (

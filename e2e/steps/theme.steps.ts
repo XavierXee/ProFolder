@@ -1,5 +1,5 @@
 /**
- * Step definitions for the 3-way ProFolder/Light/Dark theme dropdown (ThemeSelector.tsx,
+ * Step definitions for the 3-way Default/Light/Dark theme dropdown (ThemeSelector.tsx,
  * wired into App.tsx). Fully client-side: selecting an option calls `setTheme`, which a
  * `useLayoutEffect` in App.tsx mirrors onto `document.documentElement.dataset.theme` (i.e.
  * `<html data-theme="...">`, one of "profolder"/"light"/"dark" — NOT a `.light`/`.dark` CSS
@@ -15,7 +15,7 @@
  * see ThemeSelector.tsx's doc comment on why it needed an explicit aria-label to avoid colliding
  * with other same-named accessible controls elsewhere in the view). The listbox shares that same
  * `aria-label="Theme"`. Each option's accessible name is its visible label text exactly
- * ("ProFolder"/"Light"/"Dark").
+ * ("Default"/"Light"/"Dark").
  */
 
 import { expect } from "@playwright/test";

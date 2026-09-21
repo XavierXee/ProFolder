@@ -18,9 +18,9 @@ describe("ThemeSelector", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
-  it("shows the ProFolder label on the trigger when value is profolder", () => {
+  it("shows the Default label on the trigger when value is profolder", () => {
     render(<ThemeSelector value="profolder" onChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Theme" })).toHaveTextContent("ProFolder");
+    expect(screen.getByRole("button", { name: "Theme" })).toHaveTextContent("Default");
   });
 
   it("shows the Light label on the trigger when value is light", () => {
@@ -36,7 +36,7 @@ describe("ThemeSelector", () => {
 
     const options = screen.getAllByRole("option");
     expect(options).toHaveLength(3);
-    expect(options[0]).toHaveTextContent("ProFolder");
+    expect(options[0]).toHaveTextContent("Default");
     expect(options[1]).toHaveTextContent("Light");
     expect(options[2]).toHaveTextContent("Dark");
   });
@@ -47,7 +47,7 @@ describe("ThemeSelector", () => {
 
     await user.click(screen.getByRole("button", { name: "Theme" }));
 
-    const profolderOpt = screen.getByRole("option", { name: "ProFolder" });
+    const profolderOpt = screen.getByRole("option", { name: "Default" });
     const lightOpt = screen.getByRole("option", { name: "Light" });
     const darkOpt = screen.getByRole("option", { name: /Dark/ });
 
@@ -61,13 +61,13 @@ describe("ThemeSelector", () => {
     expect(lightOpt.textContent).not.toContain("✓");
   });
 
-  it("clicking the ProFolder option calls onChange with 'profolder' and closes the dropdown", async () => {
+  it("clicking the Default option calls onChange with 'profolder' and closes the dropdown", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<ThemeSelector value="dark" onChange={onChange} />);
 
     await user.click(screen.getByRole("button", { name: "Theme" }));
-    await user.click(screen.getByRole("option", { name: "ProFolder" }));
+    await user.click(screen.getByRole("option", { name: "Default" }));
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith("profolder");
@@ -229,7 +229,7 @@ describe("ThemeSelector", () => {
     render(<ThemeSelector value="profolder" onChange={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: "Theme" }));
 
-    const profolderSelected = screen.getByRole("option", { name: "ProFolder" });
+    const profolderSelected = screen.getByRole("option", { name: "Default" });
     // The old broken pattern (plain text-accent on the whole option, i.e. on the label) is gone.
     expect(profolderSelected.className).not.toContain("text-accent");
 

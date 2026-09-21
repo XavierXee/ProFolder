@@ -195,7 +195,12 @@ export default function CustomProjectsTabPanel({
     // detail view is keyed to, so close it; a copy leaves the original project/id untouched.
     // selectedProjectId is already null for a batch operation (the batch panel and detail
     // panel are never open at the same time), so this is a harmless no-op in that case.
-    if (operation !== "copy") setSelectedProjectId(null);
+    if (operation !== "copy") {
+      setSelectedProjectId(null);
+      // A move/delete invalidates every id in the batch selection too — see App.tsx's
+      // identical comment on its own handleProjectOpSuccess (docs/TODO.md item 132).
+      setSelectedProjectIds(new Set());
+    }
     setBanner(projectOpSuccessMessage(operation, outcome));
     refetch();
     refetchFiles(); // a project's member files move/disappear along with it on move/delete

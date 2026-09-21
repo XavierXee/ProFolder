@@ -27,6 +27,7 @@ import * as api from "./api/client.js";
 import type { FileFilters, LibraryStats, ProjectFilters, ScanStats } from "./api/client.js";
 import type { AudioFile, CustomTab, Project, Theme, TrackStatus } from "./types.js";
 import { StatusCatalogProvider } from "./contexts/StatusCatalogContext.js";
+import { applyCatalogFilterEvent } from "./catalogFilterEvents.js";
 
 type Tab = "projects" | "files" | number;
 
@@ -162,10 +163,37 @@ export default function App() {
   // rows still show the old (now-deleted) key until refetched. Status create/edit only ever change
   // the catalog entry's name/color, which StatusBadge/pickers already read live from Context, so no
   // row-level refetch is needed there (and none is wired for it).
-  function handleStatusDeleted() {
+  //
+  // It also has to prune the deleted key out of the Files/Projects tabs' own active filters, if
+  // either currently has it selected — otherwise the filter chip is left pointing at a key that no
+  // longer exists in the catalog, silently showing 0 results with no way to clear just that one
+  // filter (see catalogFilterEvents.ts's doc comment).
+  function handleStatusDeleted(key: string) {
+    const filesPatch = applyCatalogFilterEvent(filters, { kind: "statusDeleted", key });
+    const projectsPatch = applyCatalogFilterEvent(projectFilters, { kind: "statusDeleted", key });
+    if (filesPatch) updateFilters(filesPatch);
+    if (projectsPatch) updateProjectFilters(projectsPatch);
     refetch();
     refetchProjects();
     refreshStats();
+  }
+
+  // Same filter-pruning concern as handleStatusDeleted above, but for tag delete/rename. No extra
+  // refetch/refreshStats calls needed here beyond the filter update itself — handleTagCatalogChanged
+  // (still wired to onTagsChanged, called alongside these for every tag mutation) already refetches
+  // row/stat data.
+  function handleTagDeleted(name: string) {
+    const filesPatch = applyCatalogFilterEvent(filters, { kind: "tagDeleted", name });
+    const projectsPatch = applyCatalogFilterEvent(projectFilters, { kind: "tagDeleted", name });
+    if (filesPatch) updateFilters(filesPatch);
+    if (projectsPatch) updateProjectFilters(projectsPatch);
+  }
+
+  function handleTagRenamed(oldName: string, newName: string) {
+    const filesPatch = applyCatalogFilterEvent(filters, { kind: "tagRenamed", oldName, newName });
+    const projectsPatch = applyCatalogFilterEvent(projectFilters, { kind: "tagRenamed", oldName, newName });
+    if (filesPatch) updateFilters(filesPatch);
+    if (projectsPatch) updateProjectFilters(projectsPatch);
   }
 
   useEffect(() => {
@@ -359,7 +387,15 @@ export default function App() {
     // leaves the original file/id untouched, so the panel can stay open as-is. selectedId is
     // already null for a batch operation (the batch panel and detail panel are never open at
     // the same time), so this is a harmless no-op in that case.
-    if (operation !== "copy") setSelectedId(null);
+    if (operation !== "copy") {
+      setSelectedId(null);
+      // A move/delete invalidates every id in the batch selection too (moved ids change,
+      // deleted ids no longer exist) — without this, the batch panel keeps showing a stale
+      // "N selected" count and a follow-up batch action silently resends already-processed
+      // ids (docs/TODO.md item 132). A copy leaves the originals untouched, so selection
+      // staying intact there is fine (and arguably useful — same items are still valid).
+      setSelectedFileIds(new Set());
+    }
     setBanner(copyMoveDeleteSuccessMessage(operation, "File", outcome));
     refetch();
     refreshStats();
@@ -368,7 +404,11 @@ export default function App() {
 
   function handleProjectOpSuccess(outcome: CopyMoveDeleteOutcome) {
     const operation = projectOpDialog?.operation ?? "copy";
-    if (operation !== "copy") setSelectedProjectId(null);
+    if (operation !== "copy") {
+      setSelectedProjectId(null);
+      // See handleFileOpSuccess's identical comment above (docs/TODO.md item 132).
+      setSelectedProjectIds(new Set());
+    }
     setBanner(copyMoveDeleteSuccessMessage(operation, "Folder", outcome));
     refetchProjects();
     refetch(); // a project's member files move/disappear along with it on move/delete
@@ -507,6 +547,8 @@ export default function App() {
                   onClose={() => setShowTagsStatuses(false)}
                   onTagsChanged={handleTagCatalogChanged}
                   onStatusDeleted={handleStatusDeleted}
+                  onTagDeleted={handleTagDeleted}
+                  onTagRenamed={handleTagRenamed}
                 />
               )}
             </div>
@@ -542,6 +584,7 @@ export default function App() {
                 setShowProjectsBatchPanel(false);
                 setShowSettings(true);
               }}
+              aria-label="Settings"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -772,6 +815,7 @@ export default function App() {
           musicRoot={musicRoot}
           onClose={() => setShowScanPanel(false)}
           onScanComplete={handleScanComplete}
+          onScanStart={() => setBanner(undefined)}
         />
 
         <SettingsPanel

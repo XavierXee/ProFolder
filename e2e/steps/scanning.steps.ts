@@ -1,7 +1,9 @@
 /**
  * Step definitions for the "Prod Folder" scan settings panel (ScanFolderPanel.tsx) — opened via
- * the header's "Prod Folder" button, which lives outside both tabs' content in App.tsx so it's
- * always reachable regardless of which tab (or other panel) is currently active.
+ * the header's button (visible text "Scan Library" since the `6f6536c` "update stats" rename;
+ * the panel's own dialog title/aria-label is still "Production folder scan settings", unchanged),
+ * which lives outside both tabs' content in App.tsx so it's always reachable regardless of which
+ * tab (or other panel) is currently active.
  *
  * Task 7.1 adds these steps for the exclusion-toggle scenarios (see
  * e2e/features/scanning-settings/exclusion-toggles.feature) — the first scenarios in this suite
@@ -19,7 +21,7 @@ function scanPanel(page: Page) {
 }
 
 When("I open the production folder scan settings panel", async ({ page }) => {
-  await page.getByRole("button", { name: "Prod Folder", exact: true }).click();
+  await page.getByRole("button", { name: "Scan Library", exact: true }).click();
   await expect(scanPanel(page)).toBeVisible();
 });
 

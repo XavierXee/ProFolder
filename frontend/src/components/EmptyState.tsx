@@ -18,6 +18,7 @@ export default function EmptyState({ onClear }: Props) {
           <p className="text-xs text-slate-600 mb-4">Try adjusting your search or filter criteria</p>
           <button
             onClick={onClear}
+            aria-label="Clear all filters (no results)"
             className="text-xs font-medium text-blue-400 hover:text-blue-300 border border-blue-500/30 hover:border-blue-400/50 px-3 py-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             Clear all filters

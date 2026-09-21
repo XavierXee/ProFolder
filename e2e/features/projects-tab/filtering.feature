@@ -59,12 +59,11 @@ Feature: Projects tab filtering
     And I should see project "Projects E2E Gamma Idea" in the table
     And I should see project "Projects E2E Delta Untouched" in the table
 
-  # ProjectsTable.tsx picks its empty-state message off the *filtered* `total` (see the doc
-  # comment on the step definition): a search matching zero projects also makes the filtered
-  # total 0, so — same as a genuinely empty, never-scanned DB — it renders "No folders found
-  # yet. Try running a scan." rather than "No folders match your filters.", which is only
-  # reachable if `total` is nonzero while the current page happens to render no rows (not
-  # producible through this search, which is what's asserted here).
+  # ProjectsTable.tsx picks its empty-state message off whether a content filter (search/status/
+  # score/tag) is active, not off the filtered `total` alone (docs/TODO.md item 95 — `total` is
+  # already the filtered count, so it can't distinguish "empty library" from "filtered to zero").
+  # A search matching zero projects IS an active filter, so this renders "No folders match your
+  # filters.", not "No folders found yet."
   Scenario: Searching for a term matching nothing shows an empty-results message
     When I search projects for "Projects E2E Nonexistent Zzz"
     Then I should see the projects empty-results message

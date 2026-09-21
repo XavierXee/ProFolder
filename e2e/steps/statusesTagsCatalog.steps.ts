@@ -305,7 +305,11 @@ When("I confirm deleting my status {string}", async ({ page }, baseName: string)
 // same way that step already does for other filter labels).
 
 function statusFilterTrigger(page: Page) {
-  return page.getByRole("button", { name: "Status", exact: true }).and(page.locator('[aria-haspopup="listbox"]'));
+  // Scoped to FilterToolbar's own role="toolbar" landmark (docs/TODO.md item 140-147):
+  // aria-haspopup="listbox" alone is no longer sufficient — CreateCustomTabModal.tsx stays
+  // permanently mounted (its own slide-animation fix, item 25) and renders its own identically
+  // named, aria-haspopup="listbox" Status picker even while closed/off-screen.
+  return page.getByRole("toolbar", { name: "Filters" }).getByRole("button", { name: "Status", exact: true });
 }
 
 async function openStatusFilterListbox(page: Page) {
@@ -352,6 +356,19 @@ When("I set the file status to my status {string}", async ({ page }, baseName: s
 Then("the file detail panel should show my status {string}", async ({ page }, baseName: string) => {
   const { fullName } = resolveStatus(page, baseName);
   await expect(fileDetailPanel(page).locator(`[aria-label="Status: ${fullName}"]`)).toBeVisible();
+});
+
+// docs/TODO.md item 148: the color half of a status rename/edit was never actually verified —
+// every existing assertion checks the badge's aria-label (name propagation) only. StatusBadge.tsx
+// sets its color via inline `color-mix(...)` style properties embedding the literal hex, so the
+// raw `style` HTML attribute (not the CSSOM-normalized `element.style.*` getters, which a real
+// browser may resolve into rgb()) is the one property guaranteed to still contain that literal
+// hex string exactly as passed — checking it directly proves the new color actually reached the
+// DOM without needing to compute the resulting color-mix() output.
+Then("the file detail panel's status badge for {string} should have color {string}", async ({ page }, baseName: string, hex: string) => {
+  const { fullName } = resolveStatus(page, baseName);
+  const style = await fileDetailPanel(page).locator(`[aria-label="Status: ${fullName}"]`).getAttribute("style");
+  expect(style).toContain(hex);
 });
 
 // --- Create tag -----------------------------------------------------------------------------------

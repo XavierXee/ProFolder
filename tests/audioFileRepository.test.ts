@@ -933,4 +933,29 @@ describe("moveFile/cloneFile reject an out-of-root destination instead of silent
     const total = (db.prepare(`SELECT COUNT(*) AS c FROM audio_files`).get() as { c: number }).c;
     expect(total).toBe(26); // 25 base fixtures + the one ProjectA/track1.wav inserted above
   });
+
+  // docs/TODO.md item 114: a destination exactly equal to musicRoot itself (no filename segment
+  // at all) resolves to `relativePath === ""`, which is none of the `..`-prefixed/absolute
+  // shapes the original check rejected — this boundary previously slipped through and produced
+  // a corrupted row (empty id/relativePath, containingFolder outside the root).
+  it("moveFile throws when newAbsolutePath is exactly musicRoot itself (empty relativePath boundary)", () => {
+    upsertProject(db, makeProject("ProjectA", "ableton"));
+    insertAudioFile(
+      db,
+      makeFile({
+        id: "ProjectA/track1.wav",
+        path: `${MUSIC_ROOT}/ProjectA/track1.wav`,
+        relativePath: "ProjectA/track1.wav",
+        filename: "track1.wav",
+        containingFolder: `${MUSIC_ROOT}/ProjectA`,
+        projectId: "ProjectA",
+      })
+    );
+
+    expect(() => moveFile(db, "ProjectA/track1.wav", MUSIC_ROOT, MUSIC_ROOT)).toThrow();
+
+    const source = findById(db, "ProjectA/track1.wav")!;
+    expect(source).toBeDefined();
+    expect(source.path).toBe(`${MUSIC_ROOT}/ProjectA/track1.wav`);
+  });
 });

@@ -54,6 +54,8 @@ function renderPanel(overrides: Partial<Parameters<typeof TagsStatusesPanel>[0]>
     onClose: vi.fn(),
     onTagsChanged: vi.fn(),
     onStatusDeleted: vi.fn(),
+    onTagDeleted: vi.fn(),
+    onTagRenamed: vi.fn(),
     ...overrides,
   };
   return {
@@ -261,6 +263,7 @@ describe("TagsStatusesPanel - delete status", () => {
     expect(mockGetStatuses).toHaveBeenCalledTimes(2);
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete status confirmation" })).not.toBeInTheDocument());
     expect(onStatusDeleted).toHaveBeenCalledTimes(1);
+    expect(onStatusDeleted).toHaveBeenCalledWith("draft");
   });
 
   it("gates the Delete button on typed confirmation when confirmStatusDeletion is required", async () => {
@@ -363,8 +366,9 @@ describe("TagsStatusesPanel - rename tag", () => {
   it("clicking the edit icon converts the tag row to an inline input, and Save calls renameTag + onTagsChanged", async () => {
     mockRenameTag.mockResolvedValue({ name: "vocal-fx" });
     const onTagsChanged = vi.fn();
+    const onTagRenamed = vi.fn();
     const user = userEvent.setup();
-    renderPanel({ onTagsChanged, allTags: ["vocals"] });
+    renderPanel({ onTagsChanged, onTagRenamed, allTags: ["vocals"] });
 
     await user.click(screen.getByRole("button", { name: "Edit tag vocals" }));
     expect(screen.getByLabelText("Rename tag vocals")).toHaveValue("vocals");
@@ -375,6 +379,7 @@ describe("TagsStatusesPanel - rename tag", () => {
 
     await waitFor(() => expect(mockRenameTag).toHaveBeenCalledWith("vocals", "vocal-fx"));
     expect(onTagsChanged).toHaveBeenCalledTimes(1);
+    expect(onTagRenamed).toHaveBeenCalledWith("vocals", "vocal-fx");
   });
 
   it("cancelling the rename discards changes and does not call renameTag", async () => {
@@ -407,8 +412,9 @@ describe("TagsStatusesPanel - delete tag", () => {
   it("opens DeleteCatalogTagConfirmDialog, and confirming calls deleteTag + onTagsChanged", async () => {
     mockDeleteTag.mockResolvedValue(undefined);
     const onTagsChanged = vi.fn();
+    const onTagDeleted = vi.fn();
     const user = userEvent.setup();
-    renderPanel({ onTagsChanged, allTags: ["vocals"] });
+    renderPanel({ onTagsChanged, onTagDeleted, allTags: ["vocals"] });
 
     await user.click(screen.getByRole("button", { name: "Delete tag vocals" }));
     expect(screen.getByRole("dialog", { name: "Delete tag confirmation" })).toBeInTheDocument();
@@ -419,6 +425,7 @@ describe("TagsStatusesPanel - delete tag", () => {
 
     await waitFor(() => expect(mockDeleteTag).toHaveBeenCalledWith("vocals"));
     expect(onTagsChanged).toHaveBeenCalledTimes(1);
+    expect(onTagDeleted).toHaveBeenCalledWith("vocals");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete tag confirmation" })).not.toBeInTheDocument());
   });
 

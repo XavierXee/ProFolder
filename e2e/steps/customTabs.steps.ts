@@ -163,7 +163,13 @@ async function createCustomTab(
     dialog.getByRole("button", { name: "Create" }).click(),
   ]);
   const created = (await response.json()) as { id: number };
-  await expect(dialog).not.toBeVisible();
+  // CreateCustomTabModal.tsx now stays permanently mounted and slides off-screen via a CSS
+  // transform on close (its own slide-animation fix, docs/TODO.md item 25), rather than
+  // unmounting — so "closed" is asserted via the off-screen transform class, not DOM absence/
+  // visibility (a `translate-x-full`-positioned element is still `visible` to Playwright, since
+  // CSS transforms don't affect the visibility/display computation). Mirrors the same fix
+  // already applied to CreateCustomTabModal.test.tsx/App.customTabs.test.tsx.
+  await expect(dialog).toHaveClass(/translate-x-full/);
 
   registryFor(page).set(options.baseName, { fullName, id: created.id, deletedViaUi: false });
 }
@@ -301,12 +307,14 @@ When("I ensure the file score is {int}", async ({ page, request }, value: number
 Then("I should not see a {string} filter control", async ({ page }, triggerLabel: string) => {
   // FileTable/ProjectsTable's sortable column headers can render a same-named button (e.g. the
   // "Score" sort header) alongside FilterToolbar's own Status/Score/Tags picker triggers, so an
-  // unscoped name match would collide. Scope to the picker specifically: it's the only "filter
-  // control" that opens a listbox (MultiSelectDropdown), identified by aria-haspopup="listbox"
-  // (sort-header buttons carry no such attribute).
-  const pickerButton = page
-    .getByRole("button", { name: triggerLabel, exact: true })
-    .and(page.locator('[aria-haspopup="listbox"]'));
+  // unscoped name match would collide — aria-haspopup="listbox" alone used to be enough to
+  // disambiguate (sort-header buttons carry no such attribute), but CreateCustomTabModal.tsx now
+  // stays permanently mounted (its own slide-animation fix, docs/TODO.md item 25) and renders its
+  // own identically-labeled, aria-haspopup="listbox" Status/Score/Tags pickers even while
+  // closed/off-screen. Scope to FilterToolbar's own role="toolbar" landmark instead, which
+  // CreateCustomTabModal's create-tab form never renders (see files.steps.ts's/projects.steps.ts's
+  // toggleFilterOption, which hit and fixed this identical collision).
+  const pickerButton = page.getByRole("toolbar", { name: "Filters" }).getByRole("button", { name: triggerLabel, exact: true });
   await expect(pickerButton).toHaveCount(0);
 });
 

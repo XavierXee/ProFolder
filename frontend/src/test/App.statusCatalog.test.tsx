@@ -243,3 +243,239 @@ describe("App - status catalog mutations refetch already-loaded row/stat data", 
   // status *create*/*edit* specifically don't call onStatusDeleted (the one signal that's
   // actually gated), which is the real behavior worth asserting.
 });
+
+async function switchToFilesTab(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Audio Files" }));
+  await waitFor(() => expect(screen.getByRole("toolbar", { name: "Filters" })).toBeInTheDocument());
+}
+
+// Scoped to the active tab's own filter toolbar: App.tsx also keeps CreateCustomTabModal.tsx
+// permanently mounted (CSS-transition-hidden, not conditionally rendered — see the project notes' item
+// 25/slide-animation note), which has its own same-labeled Status/Tags dropdown triggers in its
+// create-tab form, so an unscoped query is ambiguous.
+function filterToolbar() {
+  return screen.getByRole("toolbar", { name: "Filters" });
+}
+
+async function selectStatusFilter(user: ReturnType<typeof userEvent.setup>, statusLabel: string) {
+  await user.click(within(filterToolbar()).getByRole("button", { name: "Status" }));
+  const checkbox = await screen.findByRole("checkbox", { name: statusLabel });
+  await user.click(checkbox);
+  // MultiSelectDropdown closes itself on any outside mousedown (see its own listener), so the
+  // subsequent click to open the Tags/Statuses panel closes this dropdown as a side effect —
+  // no explicit close step needed here.
+}
+
+async function selectTagFilter(user: ReturnType<typeof userEvent.setup>, tag: string) {
+  await user.click(within(filterToolbar()).getByRole("button", { name: "Tags" }));
+  const checkbox = await screen.findByRole("checkbox", { name: tag });
+  await user.click(checkbox);
+}
+
+// These prove the actual bug fix (see catalogFilterEvents.ts's doc comment and the project notes' TODO
+// note): deleting/renaming a status or tag that's currently an active filter on a default
+// Files/Projects tab must prune/update that filter, not leave it pointing at a now-nonexistent
+// catalog entry.
+describe("App - catalog delete/rename prunes an active Files/Projects filter (bug fix)", () => {
+  it("deleting an active status filter on the Files tab removes it from the files filter", async () => {
+    mockDeleteStatus.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => expect(mockGetFiles).toHaveBeenCalledTimes(1));
+
+    await switchToFilesTab(user);
+    await selectStatusFilter(user, "Draft");
+    await waitFor(() => expect(mockGetFiles.mock.calls.at(-1)?.[0]?.statuses).toContain("draft"));
+
+    await openTagsStatusesPanel(user);
+    mockGetStatuses.mockResolvedValue([]);
+    await user.click(screen.getByRole("button", { name: "Delete status Draft" }));
+    const confirmDialog = screen.getByRole("dialog", { name: "Delete status confirmation" });
+    await waitFor(() => expect(within(confirmDialog).getByRole("button", { name: "Delete" })).not.toBeDisabled());
+    await user.click(within(confirmDialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(mockDeleteStatus).toHaveBeenCalledWith("draft"));
+    await waitFor(() => expect(mockGetFiles.mock.calls.at(-1)?.[0]?.statuses).not.toContain("draft"));
+  });
+
+  it("deleting a status filter active on the Files tab does not touch an unrelated, independently-active Projects tab filter (Reviewer finding: Files/Projects independence gap)", async () => {
+    mockDeleteStatus.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => expect(mockGetProjects).toHaveBeenCalledTimes(1));
+
+    // Projects tab is the default active tab: set its own, unrelated tag filter first.
+    await selectTagFilter(user, "vocals");
+    await waitFor(() => expect(mockGetProjects.mock.calls.at(-1)?.[0]?.tags).toContain("vocals"));
+
+    // Now set an independent status filter on the Files tab.
+    await switchToFilesTab(user);
+    await selectStatusFilter(user, "Draft");
+    await waitFor(() => expect(mockGetFiles.mock.calls.at(-1)?.[0]?.statuses).toContain("draft"));
+
+    await openTagsStatusesPanel(user);
+    mockGetStatuses.mockResolvedValue([]);
+    await user.click(screen.getByRole("button", { name: "Delete status Draft" }));
+    const confirmDialog = screen.getByRole("dialog", { name: "Delete status confirmation" });
+    await waitFor(() => expect(within(confirmDialog).getByRole("button", { name: "Delete" })).not.toBeDisabled());
+    await user.click(within(confirmDialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(mockDeleteStatus).toHaveBeenCalledWith("draft"));
+    await waitFor(() => expect(mockGetFiles.mock.calls.at(-1)?.[0]?.statuses).not.toContain("draft"));
+
+    // A Files-only status deletion must not touch the Projects tab's OWN filter state: its
+    // deliberate unconditional refetchProjects() call (existing, pre-Task-2 behavior, unrelated
+    // to filter pruning) still fires once more — that's expected — but the refetched filter args
+    // must still be exactly the tag filter set above, with no statuses field contaminated in.
+    await waitFor(() => {
+      const lastProjectsCall = mockGetProjects.mock.calls.at(-1)?.[0];
+      expect(lastProjectsCall?.tags).toContain("vocals");
+      expect(lastProjectsCall?.statuses).toBeUndefined();
+    });
+  });
+
+  it("deleting an active status filter on the Projects tab removes it from the projects filter", async () => {
+    mockDeleteStatus.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => expect(mockGetProjects).toHaveBeenCalledTimes(1));
+
+    await selectStatusFilter(user, "Draft");
+    await waitFor(() => expect(mockGetProjects.mock.calls.at(-1)?.[0]?.statuses).toContain("draft"));
+
+    await openTagsStatusesPanel(user);
+    mockGetStatuses.mockResolvedValue([]);
+    await user.click(screen.getByRole("button", { name: "Delete status Draft" }));
+    const confirmDialog = screen.getByRole("dialog", { name: "Delete status confirmation" });
+    await waitFor(() => expect(within(confirmDialog).getByRole("button", { name: "Delete" })).not.toBeDisabled());
+    await user.click(within(confirmDialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(mockDeleteStatus).toHaveBeenCalledWith("draft"));
+    await waitFor(() => expect(mockGetProjects.mock.calls.at(-1)?.[0]?.statuses).not.toContain("draft"));
+  });
+
+  it("deleting an active tag filter on the Files tab removes it from the files filter", async () => {
+    mockDeleteTag.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => expect(mockGetFiles).toHaveBeenCalledTimes(1));
+
+    await switchToFilesTab(user);
+    await selectTagFilter(user, "vocals");
+    await waitFor(() => expect(mockGetFiles.mock.calls.at(-1)?.[0]?.tags).toContain("vocals"));
+
+    await openTagsStatusesPanel(user);
+    mockGetAllTags.mockResolvedValue([]);
+    await user.click(screen.getByRole("button", { name: "Delete tag vocals" }));
+    const confirmDialog = screen.getByRole("dialog", { name: "Delete tag confirmation" });
+    await waitFor(() => expect(within(confirmDialog).getByRole("button", { name: "Delete" })).not.toBeDisabled());
+    await user.click(within(confirmDialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(mockDeleteTag).toHaveBeenCalledWith("vocals"));
+    await waitFor(() => expect(mockGetFiles.mock.calls.at(-1)?.[0]?.tags).not.toContain("vocals"));
+  });
+
+  it("deleting an active tag filter on the Projects tab removes it from the projects filter", async () => {
+    mockDeleteTag.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => expect(mockGetProjects).toHaveBeenCalledTimes(1));
+
+    await selectTagFilter(user, "vocals");
+    await waitFor(() => expect(mockGetProjects.mock.calls.at(-1)?.[0]?.tags).toContain("vocals"));
+
+    await openTagsStatusesPanel(user);
+    mockGetAllTags.mockResolvedValue([]);
+    await user.click(screen.getByRole("button", { name: "Delete tag vocals" }));
+    const confirmDialog = screen.getByRole("dialog", { name: "Delete tag confirmation" });
+    await waitFor(() => expect(within(confirmDialog).getByRole("button", { name: "Delete" })).not.toBeDisabled());
+    await user.click(within(confirmDialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(mockDeleteTag).toHaveBeenCalledWith("vocals"));
+    await waitFor(() => expect(mockGetProjects.mock.calls.at(-1)?.[0]?.tags).not.toContain("vocals"));
+  });
+
+  it("renaming an active tag filter on the Files tab updates the files filter to the new name", async () => {
+    mockRenameTag.mockResolvedValue({ name: "vocal-fx" });
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => expect(mockGetFiles).toHaveBeenCalledTimes(1));
+
+    await switchToFilesTab(user);
+    await selectTagFilter(user, "vocals");
+    await waitFor(() => expect(mockGetFiles.mock.calls.at(-1)?.[0]?.tags).toContain("vocals"));
+
+    await openTagsStatusesPanel(user);
+    await user.click(screen.getByRole("button", { name: "Edit tag vocals" }));
+    await user.clear(screen.getByLabelText("Rename tag vocals"));
+    await user.type(screen.getByLabelText("Rename tag vocals"), "vocal-fx");
+    mockGetAllTags.mockResolvedValue(["vocal-fx"]);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockRenameTag).toHaveBeenCalledWith("vocals", "vocal-fx"));
+    await waitFor(() => {
+      const lastTags = mockGetFiles.mock.calls.at(-1)?.[0]?.tags;
+      expect(lastTags).toContain("vocal-fx");
+      expect(lastTags).not.toContain("vocals");
+    });
+  });
+
+  it("renaming an active tag filter on the Projects tab updates the projects filter to the new name", async () => {
+    mockRenameTag.mockResolvedValue({ name: "vocal-fx" });
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => expect(mockGetProjects).toHaveBeenCalledTimes(1));
+
+    await selectTagFilter(user, "vocals");
+    await waitFor(() => expect(mockGetProjects.mock.calls.at(-1)?.[0]?.tags).toContain("vocals"));
+
+    await openTagsStatusesPanel(user);
+    await user.click(screen.getByRole("button", { name: "Edit tag vocals" }));
+    await user.clear(screen.getByLabelText("Rename tag vocals"));
+    await user.type(screen.getByLabelText("Rename tag vocals"), "vocal-fx");
+    mockGetAllTags.mockResolvedValue(["vocal-fx"]);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockRenameTag).toHaveBeenCalledWith("vocals", "vocal-fx"));
+    await waitFor(() => {
+      const lastTags = mockGetProjects.mock.calls.at(-1)?.[0]?.tags;
+      expect(lastTags).toContain("vocal-fx");
+      expect(lastTags).not.toContain("vocals");
+    });
+  });
+
+  // Negative control: deleting a catalog entry that ISN'T currently an active filter must not
+  // touch filter state at all (guards against an overly-broad implementation that unconditionally
+  // clears/resets filters on any catalog delete). Here the Files tab has an active *tag* filter
+  // ("vocals") while a *status* ("draft", unrelated) gets deleted — applyCatalogFilterEvent should
+  // return null for this mismatched event, so updateFilters must never be called and the only new
+  // getFiles call after the delete should be the pre-existing, unconditional refetch() already
+  // fired by handleStatusDeleted regardless of any filter match.
+  it("deleting a status that is not an active filter leaves the (unrelated) active tag filter untouched, with no extra refetch", async () => {
+    mockDeleteStatus.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() => expect(mockGetFiles).toHaveBeenCalledTimes(1));
+
+    await switchToFilesTab(user);
+    await selectTagFilter(user, "vocals");
+    await waitFor(() => expect(mockGetFiles.mock.calls.at(-1)?.[0]?.tags).toContain("vocals"));
+
+    const callsBefore = mockGetFiles.mock.calls.length;
+
+    await openTagsStatusesPanel(user);
+    mockGetStatuses.mockResolvedValue([]);
+    await user.click(screen.getByRole("button", { name: "Delete status Draft" }));
+    const confirmDialog = screen.getByRole("dialog", { name: "Delete status confirmation" });
+    await waitFor(() => expect(within(confirmDialog).getByRole("button", { name: "Delete" })).not.toBeDisabled());
+    await user.click(within(confirmDialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(mockDeleteStatus).toHaveBeenCalledWith("draft"));
+    // Only handleStatusDeleted's own unconditional refetch() should have fired — no second call
+    // from an (incorrectly triggered) updateFilters-driven refetch.
+    await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(callsBefore + 1));
+    const lastCall = mockGetFiles.mock.calls.at(-1)?.[0];
+    expect(lastCall?.tags).toContain("vocals");
+    expect(lastCall?.statuses ?? []).not.toContain("draft");
+  });
+});

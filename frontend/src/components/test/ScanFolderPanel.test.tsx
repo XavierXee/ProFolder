@@ -48,6 +48,7 @@ function renderPanel(overrides: Partial<Parameters<typeof ScanFolderPanel>[0]> =
     musicRoot: "/music",
     onClose: () => {},
     onScanComplete: vi.fn(),
+    onScanStart: vi.fn(),
     ...overrides,
   };
   return { ...render(<ScanFolderPanel {...props} />), props };
@@ -340,6 +341,23 @@ describe("ScanFolderPanel - handleStartScan", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(callOrder).toEqual(["setExclusions", "triggerScan"]);
     expect(onScanComplete).toHaveBeenCalledWith(expect.objectContaining({ rootPath: "/music" }));
+  });
+
+  it("calls onScanStart before triggering the scan, so a caller can clear a stale banner from a previous attempt (docs/TODO.md Task 7.1 finding)", async () => {
+    const callOrder: string[] = [];
+    const onScanStart = vi.fn(() => callOrder.push("onScanStart"));
+    mockTriggerScan.mockImplementation(async () => {
+      callOrder.push("triggerScan");
+      return makeScanStats();
+    });
+    const user = userEvent.setup();
+    renderPanel({ onScanStart });
+
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "Grandparent" })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Scan" }));
+
+    await waitFor(() => expect(onScanStart).toHaveBeenCalledTimes(1));
+    expect(callOrder).toEqual(["onScanStart", "triggerScan"]);
   });
 
   it("shows 'Scanning…' while the scan is in flight", async () => {
