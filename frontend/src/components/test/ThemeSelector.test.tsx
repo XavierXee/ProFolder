@@ -190,15 +190,16 @@ describe("ThemeSelector", () => {
     expect(lightSelected.className).not.toContain("text-blue-400");
   });
 
-  // Task 1.5 Fix A: the trigger sits on the still-dark --rt-chrome header background under all 3
-  // themes (canvas/surface flipped to light under profolder, chrome did not), so the plain
-  // ink/ink-muted tokens (dark-on-light text colors under profolder) would be nearly invisible
-  // there. profolder gets its own legible-on-black classes; dark/light are unaffected.
-  it("uses profolder-specific legible-on-chrome trigger classes (text-border, not text-ink-muted) under value='profolder'", () => {
+  // Task 1.5 Fix A: profolder's chrome background is now light (matching the Light theme, per a
+  // later user decision — see index.css's profolder block), but the trigger still gets its own
+  // distinct classes rather than falling back to the plain ink/ink-muted tokens: a border-based
+  // hover (hover:border-border) instead of dark/light's text-color hover. profolder gets its own
+  // legible classes; dark/light are unaffected.
+  it("uses profolder-specific trigger classes (text-border, not text-ink-muted) under value='profolder'", () => {
     render(<ThemeSelector value="profolder" onChange={vi.fn()} />);
     const trigger = screen.getByRole("button", { name: "Theme" });
     expect(trigger.className).toContain("text-border");
-    expect(trigger.className).toContain("hover:text-slate-100");
+    expect(trigger.className).toContain("hover:border-border");
     expect(trigger.className).not.toContain("text-ink-muted");
     expect(trigger.className).not.toContain("hover:text-ink");
   });

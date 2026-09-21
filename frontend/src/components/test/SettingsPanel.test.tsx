@@ -57,6 +57,8 @@ function makePaginationSettings(overrides: Partial<PaginationSettings> = {}): Pa
 
 function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0]> = {}) {
   const props = {
+    theme: "profolder" as const,
+    setTheme: () => {},
     open: true,
     onClose: () => {},
     ...overrides,

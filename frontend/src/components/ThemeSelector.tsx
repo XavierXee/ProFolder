@@ -50,6 +50,10 @@ export function ThemeSelector({
 
   const current = OPTIONS.find((o) => o.value === value) ?? OPTIONS[0];
 
+  // Fully replaces (rather than augments) the base button's border/text-color classes: appending
+  // profolder's own classes on top of an unconditional "text-ink-muted hover:text-ink" would leave
+  // both a conflicting color class active on the element, with the winner depending on Tailwind's
+  // generated stylesheet order rather than anything explicit here.
   const triggerCls =
     value === "profolder"
       ? "border-border text-border hover:border-border"
@@ -69,7 +73,7 @@ export function ThemeSelector({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label="Theme"
-        className={`min-w-32 flex items-center justify-center gap-1 pl-6 pr-5 py-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-surface text-ink-muted border-border hover:text-ink hover:bg-surface-hover ${triggerCls}`}
+        className={`min-w-32 flex items-center justify-center gap-1 pl-6 pr-5 py-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-surface hover:bg-surface-hover ${triggerCls}`}
       >
         <span className="whitespace-nowrap">{current.label}</span>
         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

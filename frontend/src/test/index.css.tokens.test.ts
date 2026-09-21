@@ -42,17 +42,20 @@ describe("index.css theme tokens match their pre-existing, byte-faithful source 
   });
 });
 
-// Task 1.5: the profolder canvas moved from an all-dark scheme to a light Desk Grey/Panel
-// scheme (matching the actual brand charter), with a NEW --rt-chrome token carrying the Rack
-// Black value forward for header/footer/logo-tile contexts specifically (which stay dark in all
-// 3 themes). dark/light's --rt-chrome is asserted byte-identical to their own pre-existing
-// --rt-canvas values (confirmed against the actual current source at the time of this task, not
-// assumed) so bg-chrome renders with zero visual change for those two themes.
+// Task 1.5 first moved the profolder canvas from an all-dark scheme to a light Desk Grey/Panel
+// scheme, with a NEW --rt-chrome token carrying the Rack Black value forward for
+// header/footer/logo-tile contexts specifically. A LATER, separate user decision then moved
+// profolder's canvas/surface/chrome again, this time to match the Light theme's own resolved
+// values exactly (byte-identical, not just similarly light) — see index.css's profolder block,
+// where the Desk Grey/Panel/Rack-Black-chrome values are left in place only as commented-out
+// history, not live declarations. dark/light's --rt-chrome is asserted byte-identical to their
+// own pre-existing --rt-canvas values (confirmed against the actual current source at the time of
+// this task, not assumed) so bg-chrome renders with zero visual change for those two themes.
 describe("index.css profolder theme: Task 1.5 light-canvas correction + --rt-chrome token", () => {
   it("profolder: canvas/surface/ink/ink-muted/danger match the corrected light-scheme values", () => {
     const profolder = section('[data-theme="profolder"] {', "/* Geometry tokens");
-    expect(profolder).toContain("--rt-canvas: #CFCFCF;"); // Desk Grey
-    expect(profolder).toContain("--rt-surface: #E9E9E9;"); // Panel
+    expect(profolder).toContain("--rt-canvas: #f4f6f9;"); // matches Light theme's canvas, per later user decision
+    expect(profolder).toContain("--rt-surface: #ffffff;"); // matches Light theme's surface
     expect(profolder).toContain("--rt-ink: #1C1C1A;"); // Rack Black
     expect(profolder).toContain("--rt-ink-muted: #585858;"); // darkened from the old #6E6E6E
     expect(profolder).toContain("--rt-danger: #991b1b;"); // darkened from the old #ef4444
@@ -66,7 +69,12 @@ describe("index.css profolder theme: Task 1.5 light-canvas correction + --rt-chr
     expect(light).toContain("--rt-chrome: #f4f6f9;"); // byte-identical to light's own --rt-canvas
 
     const profolder = section('[data-theme="profolder"] {', "/* Geometry tokens");
-    expect(profolder).toContain("--rt-chrome: #1C1C1A;"); // Rack Black
+    // Live declaration only — the file also has commented-out prior values (#1C1C1A Rack Black,
+    // #b0b0b0, #47c5a8) directly above this line from earlier design iterations; matching the
+    // exact, uncommented "  --rt-chrome: #f4f6f9;" line (with its leading indent) avoids a false
+    // match against those dead lines, which a bare `.toContain("--rt-chrome: #1C1C1A;")` used to
+    // do even though that value is no longer live.
+    expect(profolder).toContain("\n  --rt-chrome: #f4f6f9;"); // matches Light theme's chrome, per later user decision
   });
 
   it("wires --rt-chrome through the @theme block so bg-chrome/text-chrome become real Tailwind utilities", () => {

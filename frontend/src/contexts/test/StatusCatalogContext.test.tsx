@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StatusCatalogProvider, useStatusCatalog } from "../StatusCatalogContext.js";
 import type { StatusDef } from "../../api/client.js";
@@ -71,9 +71,7 @@ describe("StatusCatalogContext", () => {
 
     mockGetStatuses.mockResolvedValueOnce([makeStatus({ key: "draft" }), makeStatus({ key: "released", name: "Released" })]);
 
-    await act(async () => {
-      await user.click(screen.getByRole("button", { name: "refetch" }));
-    });
+    await user.click(screen.getByRole("button", { name: "refetch" }));
 
     await waitFor(() => expect(screen.getByTestId("statuses")).toHaveTextContent("draft,released"));
     expect(mockGetStatuses).toHaveBeenCalledTimes(2);

@@ -156,19 +156,6 @@ describe("App - header branding", () => {
     expect(within(header!).getByTestId("logo")).toBeInTheDocument();
     expect(screen.queryByText("Music Library Manager")).not.toBeInTheDocument();
   });
-
-  it("renders the ProFolder name in the footer, not the old app name", async () => {
-    render(<App />);
-    await waitForMount();
-
-    // Scoped to the footer element specifically: both the <h1> heading and the ThemeSelector
-    // trigger button also render literal "ProFolder" text, so a page-wide getByText("ProFolder")
-    // would be ambiguous between multiple elements (the same collision Task 4 hit).
-    const footer = document.querySelector("footer");
-    expect(footer).not.toBeNull();
-    expect(within(footer!).queryByText(/Music Library Manager/)).not.toBeInTheDocument();
-    expect(within(footer!).getByText(/ProFolder/)).toBeInTheDocument();
-  });
 });
 
 // Task 8 of the theming rework: the isProFolder JS ternary for tab button classes (the last two
@@ -282,49 +269,22 @@ describe("App - converted chrome elements carry token classes, not the old hardc
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
     expect(header!.className).toContain("bg-chrome/90");
   });
-
-  it("gives the footer an explicit bg-chrome class regardless of theme value (it used to inherit bg-canvas from the page wrapper, which is now light under profolder and would otherwise turn the footer light too)", async () => {
-    render(<App />);
-    await waitForMount();
-
-    const footer = document.querySelector("footer");
-    expect(footer).not.toBeNull();
-    expect(footer!.className).toContain("bg-chrome");
-    expect(document.documentElement.dataset.theme).toBe("profolder");
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Theme" }));
-    await user.click(screen.getByRole("option", { name: /Dark/ })); // profolder -> dark
-    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
-    expect(footer!.className).toContain("bg-chrome");
-
-    await user.click(screen.getByRole("button", { name: "Theme" }));
-    await user.click(screen.getByRole("option", { name: "Light" })); // dark -> light
-    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
-    expect(footer!.className).toContain("bg-chrome");
-  });
 });
 
 // Task 4 of the theming rework: App.tsx's own remaining direct isDark/isProFolder JSX usages
-// (header title/subtitle, metrics-button unscored badge, info/error banners, footer, "+"
-// create-tab button) were converted to token classes. These assertions prove the token class is
-// present, not the resulting rendered color (see file-level NOTE on the jsdom limitation).
+// (header title/subtitle, metrics-button unscored badge, info/error banners, "+" create-tab
+// button) were converted to token classes. The old branding footer this task once also converted
+// was later removed entirely (see "small UI fixes" commit) in favor of a plain <footer> wrapping
+// just Pagination, so there is no footer-branding assertion left in this block. These assertions
+// prove the token class is present, not the resulting rendered color (see file-level NOTE on the
+// jsdom limitation).
 describe("App - Task 4 token-converted elements", () => {
   it("gives the header title/subtitle the chrome-ink/chrome-ink-faint token classes", async () => {
     render(<App />);
     await waitForMount();
 
     expect(screen.getByRole("heading", { name: "ProFolder" })).toHaveClass("text-chrome-ink");
-    expect(screen.getByText("Local Scan Console")).toHaveClass("text-chrome-ink-faint");
-  });
-
-  it("gives the footer the chrome-ink-faint/border-chrome-border-faint token classes", async () => {
-    render(<App />);
-    await waitForMount();
-
-    const footer = document.querySelector("footer")!;
-    expect(footer.className).toContain("border-chrome-border-faint");
-    within(footer).getAllByText(/ProFolder|Score and tag/).forEach((el) => expect(el).toHaveClass("text-chrome-ink-faint"));
+    expect(screen.getByRole("button", { name: "Change production folder" })).toHaveClass("text-chrome-ink-faint");
   });
 
   it("gives the create-custom-tab '+' button the border-border/text-ink-muted token classes plus the profolder:bg-surface variant", async () => {
