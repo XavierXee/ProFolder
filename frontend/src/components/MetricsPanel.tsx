@@ -208,7 +208,7 @@ function MetricsSection({ title, sectionKey, entity, specs, statusOptions, allTa
       {specs.length === 0 ? (
         <p className={`text-sm px-4 pb-2 ${meta}`}>No metrics selected.</p>
       ) : (
-        <div className="grid grid-cols-2 gap-px p-px">
+        <div className="grid grid-cols-2 gap-px p-px max-h-36 overflow-y-auto">
           {specs.map((spec) => {
             const label = specLabel(spec, statusOptions);
             const value = specValue(spec, entity, tagCountsForSection);
