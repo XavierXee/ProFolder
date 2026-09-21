@@ -20,6 +20,8 @@ vi.mock("../api/client.js", () => ({
   getStatuses: vi.fn(),
   getCustomTabs: vi.fn(),
   getPaginationSettings: vi.fn(),
+  getMetricsSettings: vi.fn(),
+  getTagCounts: vi.fn(),
 }));
 
 import * as api from "../api/client.js";
@@ -33,6 +35,7 @@ const mockGetAllTags = vi.mocked(api.getAllTags);
 const mockGetStatuses = vi.mocked(api.getStatuses);
 const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
 const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
+const mockGetMetricsSettings = vi.mocked(api.getMetricsSettings);
 
 function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
   return {
@@ -114,6 +117,10 @@ beforeEach(() => {
   mockGetAllTags.mockReset().mockResolvedValue([]);
   mockGetStatuses.mockReset().mockResolvedValue([]);
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
+  mockGetMetricsSettings.mockReset().mockResolvedValue({
+    projectsMetrics: [{ type: "total" }, { type: "status", key: "unknown" }],
+    filesMetrics: [{ type: "total" }, { type: "status", key: "unknown" }],
+  });
   mockGetPaginationSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 });
 });
 
@@ -148,6 +155,35 @@ describe("App - pagination clears row selection (Files tab)", () => {
     await waitFor(() => expect(batchEditButton()).toBeDisabled());
     expect(cb1).not.toBeChecked();
     expect(cb2).not.toBeChecked();
+  });
+});
+
+// docs/TODO.md item 23: a negative control proving an unrelated re-render (opening the
+// Metrics panel touches only `showMetrics` state, never `page`/`filters`) leaves Files-tab
+// selection untouched — the deliberate contrast case this suite lost when the former sort
+// "negative control" test had to flip into a positive assertion once item 22 fixed sort to
+// also clear selection.
+describe("App - an unrelated re-render does not clear row selection (Files tab)", () => {
+  it("leaves the Batch Edit button state and checked row checkboxes intact when the Metrics panel is opened", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+
+    const cb1 = screen.getByRole("checkbox", { name: "Select Kick One.wav" });
+    const cb2 = screen.getByRole("checkbox", { name: "Select Snare Two.wav" });
+    await user.click(cb1);
+    await user.click(cb2);
+
+    expect(cb1).toBeChecked();
+    expect(cb2).toBeChecked();
+    expect(batchEditButton()).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Metrics" }));
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "Library metrics" })).toBeInTheDocument());
+
+    expect(cb1).toBeChecked();
+    expect(cb2).toBeChecked();
+    expect(batchEditButton()).toBeEnabled();
   });
 });
 

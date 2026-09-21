@@ -18,9 +18,10 @@ import { createServer } from "../src/api/server.js";
 // suppress a FOREIGN KEY constraint violation when audio_file_id references a row that
 // doesn't exist — the whole transaction rolled back, losing tags for every valid file in
 // the same batch (and any brand-new tag names) just because one id in the batch was bogus.
-// The fix filters `ids` down to ids that actually exist (existence-only, not
-// is_removed-aware) via filterExistingFileIds before calling into either repository
-// function, and reports the filtered count as `updated`.
+// The fix filters `ids` down to ids that actually exist and are active (updated per
+// docs/TODO.md item 20's product decision to also exclude soft-removed files, not just
+// unknown ids) via filterExistingFileIds before calling into either repository function,
+// and reports the filtered count as `updated`.
 
 function makeFile(overrides: Partial<AudioFileUpsertInput> & { id: string }): AudioFileUpsertInput {
   const now = new Date().toISOString();
@@ -101,7 +102,7 @@ describe("PATCH /api/files/batch/tags and /api/files/batch/score — unknown-id 
       expect(findById(db, "real-file-1")!.tags).toEqual(["brand-new-tag"]);
     });
 
-    it("still tags a soft-removed file included in the batch (existence-only filter, not active-only)", async () => {
+    it("excludes a soft-removed file from the batch (active-only filter, docs/TODO.md item 20)", async () => {
       insertAudioFile(db, makeFile({ id: "removed-file" }));
       markRemoved(db, ["removed-file"], new Date().toISOString());
 
@@ -110,10 +111,10 @@ describe("PATCH /api/files/batch/tags and /api/files/batch/score — unknown-id 
         .send({ ids: ["removed-file", "GHOSTFILE"], tags: ["drums"] });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ updated: 1 });
+      expect(res.body).toEqual({ updated: 0 });
       const file = findById(db, "removed-file")!;
       expect(file.isRemoved).toBe(true);
-      expect(file.tags).toEqual(["drums"]);
+      expect(file.tags).toEqual([]);
     });
 
     it("reports `updated` equal to the count of ids that actually exist", async () => {

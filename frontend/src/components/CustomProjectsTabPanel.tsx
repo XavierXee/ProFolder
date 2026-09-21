@@ -15,13 +15,14 @@ type SortKey = NonNullable<ProjectFilters["sortBy"]>;
 type Props = {
   tab: CustomTab;
   allTags: string[];
-  /** App-level refresh for the header stats (draft/unscored counts). Mirroring App.tsx's own
-   * handleProjectStatusSave/handleProjectTagsSave/handleProjectScoreSave and batch
-   * equivalents (none of which call `refreshStats`, since those mutations don't change how
-   * many files exist), this panel's own status/tags/score handlers below don't call it
-   * either. Copy/Move/Delete are different: they add, relocate, or remove file rows outright,
-   * which can change the draft/unscored counts — so this panel's `handleProjectOpSuccess`
-   * below DOES call it, mirroring App.tsx's own `handleProjectOpSuccess`. */
+  /** App-level refresh for the header stats (draft/unscored counts). Status/tags handlers
+   * below don't call it (those mutations don't change how many files are scored), but the
+   * score handlers do (docs/TODO.md item 26): a project-score edit cascades onto its member
+   * files' scores, which can turn a previously-unscored file into a scored one — mirroring
+   * App.tsx's own handleProjectScoreSave/handleBatchProjectScore. Copy/Move/Delete are
+   * different again: they add, relocate, or remove file rows outright, which can also change
+   * the draft/unscored counts — so this panel's `handleProjectOpSuccess` below calls it too,
+   * mirroring App.tsx's own `handleProjectOpSuccess`. */
   refreshStats: () => void;
   /** App-level refresh for the global tag list (used by tag pickers/autocomplete everywhere). */
   refreshTags: () => void;
@@ -148,12 +149,14 @@ export default function CustomProjectsTabPanel({
     await api.updateProjectScore(id, score);
     refetch();
     refetchFiles(); // score is linked: this was just cascaded onto the project's files
+    refreshStats(); // the cascade can turn previously-unscored files into scored ones
   }
 
   async function handleBatchProjectScore(score: number | null) {
     await api.batchUpdateProjectScore([...selectedProjectIds], score);
     refetch();
     refetchFiles(); // score is linked: this was just cascaded onto each project's files
+    refreshStats(); // the cascade can turn previously-unscored files into scored ones
   }
 
   async function handleBatchProjectTag(tag: string) {

@@ -100,6 +100,16 @@ function sampleKey(sample: SampleFileSignature): string {
   return `${sample.filename.toLowerCase()}::${sample.size}`;
 }
 
+/** Number of distinct (filename, size) sample signatures — the same dedup key each
+ * match's own `sampleCount`/`matchingSampleCount` is computed against in
+ * `findDuplicateMatches` below, so a caller reporting a project's own sample count
+ * (e.g. the `/duplicates` route's top-level `sampleCount`) stays internally consistent
+ * with the match percentages it displays alongside it, rather than reporting a raw,
+ * un-deduplicated file count (docs/TODO.md item 19). */
+export function countUniqueSamples(samples: SampleFileSignature[]): number {
+  return new Set(samples.map(sampleKey)).size;
+}
+
 /** True if one path is an ancestor of (or equal to) the other. The `projects` table
  * includes plain container folders alongside real DAW projects, and a container's own
  * Samples search recurses into everything nested beneath it — so a parent folder would

@@ -24,7 +24,7 @@ import { cascadeProjectScoreToFiles, cascadeProjectTagsToFiles } from "../../dat
 import { buildFolderTree } from "../../scanner/folderTree.js";
 import { walkDirectory } from "../../scanner/walk.js";
 import { classifyFolders } from "../../scanner/dawDetector.js";
-import { collectSampleFiles, findDuplicateMatches } from "../../scanner/duplicateDetector.js";
+import { collectSampleFiles, countUniqueSamples, findDuplicateMatches } from "../../scanner/duplicateDetector.js";
 import { getScanSettings } from "../../config/scanSettings.js";
 import { type TrackStatus } from "../../models/AudioFile.js";
 import { isKnownStatusKey } from "../../database/repositories/statusRepository.js";
@@ -575,7 +575,7 @@ export function createProjectsRouter(db: Database.Database): Router {
       ]);
 
       const matches = findDuplicateMatches(targetSamples, project, candidates);
-      res.json({ projectId: id, sampleCount: targetSamples.length, matches });
+      res.json({ projectId: id, sampleCount: countUniqueSamples(targetSamples), matches });
     })
   );
 

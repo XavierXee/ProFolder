@@ -39,7 +39,14 @@ export function createServer(db: ReturnType<typeof openDb>) {
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error(err);
-    res.status(500).json({ error: err instanceof Error ? err.message : "Internal server error" });
+    // body-parser sets a real `statusCode` (e.g. 400) on the SyntaxError it throws for
+    // malformed JSON bodies — echo it back when present instead of always answering 500
+    // (docs/TODO.md item 24). Anything without a valid HTTP status still falls back to 500.
+    const statusCode =
+      err && typeof err === "object" && "statusCode" in err && typeof err.statusCode === "number" && err.statusCode >= 400 && err.statusCode < 600
+        ? err.statusCode
+        : 500;
+    res.status(statusCode).json({ error: err instanceof Error ? err.message : "Internal server error" });
   });
 
   return app;

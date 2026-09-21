@@ -62,11 +62,12 @@ beforeEach(() => {
 });
 
 describe("CreateCustomTabModal - open=false", () => {
-  it("renders nothing", () => {
+  it("stays mounted but translated off-screen (slide-in pattern), matching ScanFolderPanel/SettingsPanel", () => {
     renderModal({ open: false });
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "Create custom tab" });
+    expect(dialog.className).toContain("translate-x-full");
+    expect(dialog.className).not.toContain("translate-x-0");
   });
 });
 

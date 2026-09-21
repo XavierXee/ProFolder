@@ -351,6 +351,9 @@ describe("CustomProjectsTabPanel - editing score inside the panel", () => {
     await waitFor(() => expect(mockUpdateProjectScore).toHaveBeenCalledWith("p1", 4));
     await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(callsBefore + 1));
     expect(props.refetchFiles).toHaveBeenCalledTimes(1);
+    // docs/TODO.md item 26: the cascade can turn a previously-unscored file into a scored
+    // one, so the header stats (unscoredCount) must be refreshed too.
+    expect(props.refreshStats).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -375,6 +378,9 @@ describe("CustomProjectsTabPanel - batch edit", () => {
     await waitFor(() => expect(mockBatchUpdateProjectScore).toHaveBeenCalledWith(["p1", "p2"], 3));
     await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(callsBefore + 1));
     expect(props.refetchFiles).toHaveBeenCalledTimes(1);
+    // docs/TODO.md item 26: the cascade can turn a previously-unscored file into a scored
+    // one, so the header stats (unscoredCount) must be refreshed too.
+    expect(props.refreshStats).toHaveBeenCalledTimes(1);
   });
 
   it("applies a batch tag and triggers the same cascade (local refetch + refetchFiles + refreshTags)", async () => {

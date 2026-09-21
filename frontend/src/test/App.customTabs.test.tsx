@@ -188,8 +188,10 @@ describe("App - custom tabs wiring", () => {
       tags: [],
     });
 
-    // Modal closes and the new tab becomes active, rendering CustomFilesTabPanel.
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Create custom tab" })).not.toBeInTheDocument());
+    // Modal closes and the new tab becomes active, rendering CustomFilesTabPanel. The modal now
+    // stays mounted (slide-in/out via transform, matching ScanFolderPanel/SettingsPanel) rather
+    // than unmounting, so "closed" is asserted via its off-screen transform class, not absence.
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "Create custom tab" }).className).toContain("translate-x-full"));
     await waitFor(() => expect(screen.getByRole("main", { name: "My Custom files" })).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "My Custom" })).toHaveAttribute("aria-current", "true");
 

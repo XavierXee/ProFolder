@@ -123,15 +123,11 @@ describe("GET /api/projects/:id/duplicates", () => {
     expect(res.status).toBe(200);
     expect(res.body.projectId).toBe("Track A");
 
-    // NOTE (confirmed product decision, not a bug to fix in this task): the top-level
-    // `sampleCount` field is the RAW count of every sample file found under the target's
-    // Samples folder(s) — it is NOT deduplicated by (filename, size) the way the
-    // per-match `sampleCount`/`matchingSampleCount` fields are (see
-    // src/scanner/duplicateDetector.ts's `findDuplicateMatches`, which dedupes via a
-    // `Set` of (lowercased filename, size) keys before computing matchRatio). A project
-    // with duplicate filename+size pairs across different Samples subfolders will show an
-    // inflated `sampleCount` relative to what the match percentages imply. Tracked as a
-    // follow-up in docs/TODO.md's "Task 9 follow-ups" list rather than fixed here.
+    // The top-level `sampleCount` is deduplicated by (lowercased filename, size) — the same
+    // key `findDuplicateMatches` uses for its own per-match counts (docs/TODO.md item 19) —
+    // via `countUniqueSamples`. No duplicate filename+size pairs in this fixture, so the
+    // deduped and raw counts happen to coincide; see the dedicated test below for a fixture
+    // that actually distinguishes them.
     expect(res.body.sampleCount).toBe(5);
 
     expect(res.body.matches).toEqual([
@@ -144,6 +140,21 @@ describe("GET /api/projects/:id/duplicates", () => {
         matchRatio: 1,
       },
     ]);
+  });
+
+  it("deduplicates the top-level sampleCount by (filename, size) across multiple Samples subfolders (docs/TODO.md item 19)", async () => {
+    const targetPath = path.join(root, "Track Dup");
+    seedProject({ id: "Track Dup", projectPath: targetPath, dawType: "ableton" });
+    // Same (filename, size) pair written into two distinct "Samples" folders the scanner
+    // recognizes independently — a raw file count would see 2 files; the deduped count
+    // (matching how `findDuplicateMatches` itself counts) sees 1 unique signature.
+    writeSamples(targetPath, [{ filename: "kick.wav", size: 100 }]);
+    writeSamples(path.join(targetPath, "Nested"), [{ filename: "kick.wav", size: 100 }]);
+
+    const res = await request(app).get(`/api/projects/${encodeURIComponent("Track Dup")}/duplicates`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.sampleCount).toBe(1);
   });
 
   it("orders matches descending by matchRatio when multiple candidates qualify", async () => {

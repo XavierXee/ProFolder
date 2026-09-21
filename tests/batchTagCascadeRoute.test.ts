@@ -24,10 +24,11 @@ import { createServer } from "../src/api/server.js";
 // SqliteError: FOREIGN KEY constraint failed and rolls back the ENTIRE transaction, losing
 // tags for every valid project in the same batch (and even new tag names from the global
 // `tags` dictionary insert, which shares the same transaction). The fix filters the id list
-// down to existing rows (filterExistingProjectIds, existence-only — NOT is_removed-filtered)
-// before calling addTagsToProjects/cascadeProjectTagsToFiles. The same helper is also applied
-// to the sibling PATCH /api/projects/batch/score route so both routes report an honest
-// `updated` count and neither diverges from the other in the future.
+// down to existing, active rows (filterExistingProjectIds — updated per docs/TODO.md item 20's
+// product decision to also exclude soft-removed projects, not just unknown ids) before calling
+// addTagsToProjects/cascadeProjectTagsToFiles. The same helper is also applied to the sibling
+// PATCH /api/projects/batch/score route so both routes report an honest `updated` count and
+// neither diverges from the other in the future.
 
 function makeFile(overrides: Partial<AudioFileUpsertInput> & { id: string }): AudioFileUpsertInput {
   const now = new Date().toISOString();
@@ -202,7 +203,7 @@ describe("PATCH /api/projects/batch/tags — cascade + unknown-id handling", () 
     expect(after).toBeDefined();
   });
 
-  it("still tags a soft-removed PROJECT included in the batch (existence-only, not active-only filter semantics)", async () => {
+  it("excludes a soft-removed PROJECT from the batch (active-only filter, docs/TODO.md item 20)", async () => {
     upsertProject(db, makeProject({ id: "Project Removed" }));
     insertAudioFile(db, makeFile({ id: "r1.wav", projectId: "Project Removed" }));
     markProjectRemoved(db, ["Project Removed"], new Date().toISOString());
@@ -212,10 +213,9 @@ describe("PATCH /api/projects/batch/tags — cascade + unknown-id handling", () 
       .send({ ids: ["Project Removed"], tags: ["mix-ready"] });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ updated: 1 });
-    expect(findProjectById(db, "Project Removed")?.tags).toEqual(["mix-ready"]);
-    // The project's own file is still active, so the cascade still reaches it.
-    expect(findFileById(db, "r1.wav")?.tags).toEqual(["mix-ready"]);
+    expect(res.body).toEqual({ updated: 0 });
+    expect(findProjectById(db, "Project Removed")?.tags).toEqual([]);
+    expect(findFileById(db, "r1.wav")?.tags).toEqual([]);
   });
 
   it("reports updated equal to the count of ids that actually exist (2 for a 2-real-1-ghost mixed batch)", async () => {

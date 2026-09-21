@@ -72,8 +72,6 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
     }
   }
 
-  if (!open) return null;
-
   const panel = "bg-surface border-border text-ink";
   const meta = "text-slate-500";
   const divider = "border-border";
@@ -85,7 +83,7 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
   return (
     <>
       <div
-        className="fixed inset-0 z-30 bg-scrim"
+        className={`fixed inset-0 z-30 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0 pointer-events-none"} bg-scrim`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -93,7 +91,7 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
         role="dialog"
         aria-modal="true"
         aria-label="Create custom tab"
-        className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col shadow-2xl ${panel}`}
+        className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col transition-transform duration-250 ease-out ${panel} ${open ? "translate-x-0 shadow-2xl" : "translate-x-full"}`}
       >
         <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
           <div className="min-w-0">

@@ -126,9 +126,14 @@ describe("scan routes", () => {
         expect(res.status).toBe(400);
         expect(res.body).toEqual({ error: "rootPath must be within the configured music root" });
 
-        // Nothing from the out-of-root scan should have been persisted.
+        // Nothing from the out-of-root scan should have been persisted. The GET /api/scan/last
+        // 404 already proves no scan_run row exists; docs/TODO.md item 30 adds this direct
+        // audio_files count as stronger defense-in-depth against a future refactor that
+        // decoupled the two writes (the file itself, "secret.wav", would never be indexed).
         const lastRes = await request(app).get("/api/scan/last");
         expect(lastRes.status).toBe(404);
+        const { count } = db.prepare(`SELECT COUNT(*) AS count FROM audio_files`).get() as { count: number };
+        expect(count).toBe(0);
       } finally {
         fs.rmSync(outside, { recursive: true, force: true });
       }

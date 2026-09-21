@@ -236,6 +236,7 @@ export default function App() {
     await api.updateProjectScore(id, score);
     refetchProjects();
     refetch(); // score is linked: this was just cascaded onto the project's files
+    refreshStats(); // the cascade can turn previously-unscored files into scored ones
   }
 
   function toggleFileSelect(id: string) {
@@ -304,6 +305,7 @@ export default function App() {
     await api.batchUpdateProjectScore([...selectedProjectIds], score);
     refetchProjects();
     refetch(); // score is linked: this was just cascaded onto each project's files
+    refreshStats(); // the cascade can turn previously-unscored files into scored ones
   }
 
   async function handleBatchProjectTag(tag: string) {
