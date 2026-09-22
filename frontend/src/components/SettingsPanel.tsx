@@ -222,15 +222,15 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
           </button>
         </div>
 
-        <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
-          <div className="w-full flex items-center justify-between mb-1">
+        <div className={`flex items-start justify-between gap-4 px-6 py-2 border-b ${divider}`}>
+          <div className="w-full flex items-center justify-between">
             <div className={`text-xs font-mono uppercase tracking-wider ${meta}`}>THEME</div>
             <div><ThemeSelector value={theme} onChange={setTheme}/></div>
           </div>
         </div>
 
         <div className={`flex items-start justify-between gap-4 px-6 py-2 border-b ${divider}`}>
-          <div className="flex items-center justify-between mt-4 pt-1">
+          <div className="flex items-center justify-between mt-2">
             <label htmlFor="items-per-page-input" className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Items per page</label>
             <div className="h-4">
               {paginationSaveState === "saving" && <span className={`text-xs font-mono ${meta}`}>Saving…</span>}
@@ -244,7 +244,7 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
           ) : paginationError && !paginationSettings ? (
             <p className="text-sm mt-3 text-red-400">{paginationError}</p>
           ) : paginationSettings ? (
-            <div className="py-3">
+            <div>
               <div className="flex items-center gap-2">
                 <input
                   id="items-per-page-input"
@@ -270,7 +270,44 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
           ) : null}
         </div>
 
-        <div className={`flex-0.5 overflow-y-auto px-6 py-5 border-b ${divider}`}>
+        <div className={`flex items-start justify-between gap-4 px-6 py-2 border-b ${divider}`}>
+          <div className="flex items-center justify-between mt-2">
+            <label htmlFor="duplicate-threshold-input" className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Duplicate match threshold (%)</label>
+            <div className="h-4">
+              {duplicateThresholdSaveState === "saving" && <span className={`text-xs font-mono ${meta}`}>Saving…</span>}
+              {duplicateThresholdSaveState === "saved" && <span className="text-xs font-mono text-emerald-400">Saved</span>}
+              {duplicateThresholdSaveState === "error" && <span className="text-xs font-mono text-red-400">Failed to save</span>}
+            </div>
+          </div>
+          {settings ? (
+            <div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="duplicate-threshold-input"
+                  type="number"
+                  min={MIN_DUPLICATE_MATCH_THRESHOLD_PERCENT}
+                  max={MAX_DUPLICATE_MATCH_THRESHOLD_PERCENT}
+                  value={duplicateThresholdInputValue}
+                  disabled={duplicateThresholdSaveState === "saving"}
+                  onChange={(e) => setDuplicateThresholdInputValue(e.target.value)}
+                  className="px-2 py-1 text-sm rounded-[var(--rt-radius)] border border-border bg-surface text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleDuplicateThresholdApply}
+                  disabled={isDuplicateThresholdApplyDisabled}
+                  aria-label="Apply duplicate match threshold"
+                  className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
+                >
+                  Apply
+                </button>
+              </div>
+              {duplicateThresholdError ? <p className="text-sm mt-2 text-red-400">{duplicateThresholdError}</p> : null}
+            </div>
+          ) : null}
+          {/*<p className={`text-xs mt-1 mb-2 ${meta}`}>Applies immediately — used the next time you open a project's Duplicates panel.</p>*/}
+        </div>
+        <div className={`flex-0.5 overflow-y-auto px-6 py-2 border-b ${divider}`}>
           <div className="flex items-center justify-between mb-1 mt-2">
             <p className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Scan Settings</p>
             <div className="h-4">
@@ -303,44 +340,8 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
             </div>
           ) : null}
           <p className={`text-xs mt-4 mb-2 ${meta}`}>Folder exclusion changes apply the next time you run a scan.</p>
-
-          <div className="flex items-center justify-between mt-4">
-            <label htmlFor="duplicate-threshold-input" className="text-sm font-medium text-ink">Duplicate match threshold (%)</label>
-            <div className="h-4">
-              {duplicateThresholdSaveState === "saving" && <span className={`text-xs font-mono ${meta}`}>Saving…</span>}
-              {duplicateThresholdSaveState === "saved" && <span className="text-xs font-mono text-emerald-400">Saved</span>}
-              {duplicateThresholdSaveState === "error" && <span className="text-xs font-mono text-red-400">Failed to save</span>}
-            </div>
-          </div>
-          {settings ? (
-            <div className="py-3">
-              <div className="flex items-center gap-2">
-                <input
-                  id="duplicate-threshold-input"
-                  type="number"
-                  min={MIN_DUPLICATE_MATCH_THRESHOLD_PERCENT}
-                  max={MAX_DUPLICATE_MATCH_THRESHOLD_PERCENT}
-                  value={duplicateThresholdInputValue}
-                  disabled={duplicateThresholdSaveState === "saving"}
-                  onChange={(e) => setDuplicateThresholdInputValue(e.target.value)}
-                  className="px-2 py-1 text-sm rounded-[var(--rt-radius)] border border-border bg-surface text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={handleDuplicateThresholdApply}
-                  disabled={isDuplicateThresholdApplyDisabled}
-                  aria-label="Apply duplicate match threshold"
-                  className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
-                >
-                  Apply
-                </button>
-              </div>
-              {duplicateThresholdError ? <p className="text-sm mt-2 text-red-400">{duplicateThresholdError}</p> : null}
-            </div>
-          ) : null}
-          <p className={`text-xs mt-1 mb-2 ${meta}`}>Applies immediately — used the next time you open a project's Duplicates panel.</p>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-6 py-2">
           <div className="flex items-center justify-between mb-1 mt-2">
             <p className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Confirmation Settings</p>
             <div className="h-4">
