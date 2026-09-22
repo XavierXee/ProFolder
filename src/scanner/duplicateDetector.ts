@@ -20,20 +20,19 @@ export type SampleFileSignature = {
  * duplicates. Both thresholds guard against false positives from projects that just
  * happen to share a couple of common one-shots. */
 const MIN_MATCHING_SAMPLES = 3;
-const MIN_MATCH_RATIO = 0.6;
 
 /**
- * A NAME-GATED relaxation of MIN_MATCH_RATIO, not a global lowering of the bar: applies
- * only when both projects share the same normalized name (see `normalizeProjectName`),
- * in addition to (never instead of) the unchanged MIN_MATCHING_SAMPLES floor below. Two
- * identically-named projects sharing 24 of one side's 41 samples (ratio 0.585) is a
- * near-certain duplicate that the stricter 0.6 global ratio was missing — but simply
- * lowering MIN_MATCH_RATIO for everyone produces false positives from unrelated,
- * differently-named projects that just happen to share a couple of common one-shots
- * when one side has very few total samples. Gating the relaxation on matching project
- * names keeps that false-positive risk out while still catching the real case.
+ * Fixed 10-percentage-point relaxation applied to the (now caller-supplied) base match
+ * ratio for same-named project pairs — preserves the exact 0.6→0.5 relationship the
+ * name-gated relaxation originally shipped with, now that the base threshold is
+ * configurable elsewhere in this cycle rather than a hardcoded 0.6. The relaxed
+ * threshold is derived as `Math.max(0, minMatchRatio - MIN_MATCH_RATIO_SAME_NAME_OFFSET)`
+ * in `findDuplicateMatches` below, so by construction it can never exceed or equal the
+ * base threshold — structurally ruling out an "inversion" where same-named pairs would
+ * need to clear a *stricter* bar than the general case if a user configures a very low
+ * base threshold.
  */
-const MIN_MATCH_RATIO_SAME_NAME = 0.5;
+const MIN_MATCH_RATIO_SAME_NAME_OFFSET = 0.1;
 
 const MAX_DEPTH = 8;
 
@@ -153,10 +152,12 @@ function isNestedPath(a: string, b: string): boolean {
 export function findDuplicateMatches(
   targetSamples: SampleFileSignature[],
   targetProject: Project,
-  candidates: { project: Project; samples: SampleFileSignature[] }[]
+  candidates: { project: Project; samples: SampleFileSignature[] }[],
+  minMatchRatio: number
 ): ProjectDuplicateMatch[] {
   if (targetSamples.length === 0 || !targetProject.dawType) return [];
   const targetKeys = new Set(targetSamples.map(sampleKey));
+  const sameNameRatio = Math.max(0, minMatchRatio - MIN_MATCH_RATIO_SAME_NAME_OFFSET);
 
   const matches: ProjectDuplicateMatch[] = [];
   for (const { project, samples } of candidates) {
@@ -175,9 +176,9 @@ export function findDuplicateMatches(
     const sameName =
       normalizeProjectName(targetProject.name) === normalizeProjectName(project.name) &&
       normalizeProjectName(targetProject.name) !== "";
-    const qualifiesByOverlap = matchingSampleCount >= MIN_MATCHING_SAMPLES && matchRatio >= MIN_MATCH_RATIO;
+    const qualifiesByOverlap = matchingSampleCount >= MIN_MATCHING_SAMPLES && matchRatio >= minMatchRatio;
     const qualifiesByRelaxedName =
-      sameName && matchingSampleCount >= MIN_MATCHING_SAMPLES && matchRatio >= MIN_MATCH_RATIO_SAME_NAME;
+      sameName && matchingSampleCount >= MIN_MATCHING_SAMPLES && matchRatio >= sameNameRatio;
 
     if (qualifiesByOverlap || qualifiesByRelaxedName) {
       const matchReasons: MatchReason[] = [];

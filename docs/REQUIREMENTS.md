@@ -54,6 +54,8 @@
 
 3.4. Regardless of the Samples-folder exclusion setting, a project's own Contents/Duplicate-detection views still read the Samples folder live from disk — the exclusion only controls what gets indexed into the Audio Files list, so the Files tab isn't polluted with imported samples.
 
+3.5. A third Scan setting, the duplicate-detection match-ratio threshold (an integer percentage, 10-100, default 58), is also persisted, but — unlike the two toggles above — takes effect immediately rather than only on the next scan: it's read live from the settings store every time a project's Duplicates panel is opened (see §10.3), since duplicate detection itself runs on-demand rather than being computed/cached during a scan.
+
 ## 4. Scan Exclusions (Per-Folder Opt-Out)
 
 4.1. The user can pick specific subfolders (by browsing a folder tree) to exclude from scanning entirely; the scanner does not descend into an excluded folder or anything beneath it.
@@ -126,7 +128,7 @@
 
 10.2. Sample files are matched by (filename, size) pair, case-insensitive on filename; a folder is only searched for "Samples" content by name match (any depth) or, at the project's top level only, a folder named "Imported" (deep "Imported" folders are excluded, since Ableton's own Max-for-Live device cache uses that name and would produce false positives).
 
-10.3. A candidate is flagged as a possible duplicate if it shares at least 3 matching sample files **and either**: (a) the match ratio (matches ÷ the smaller of the two projects' sample counts) is at least 0.6 unconditionally, **or** (b) the two projects' names are equal after trimming whitespace and lowercasing, and the match ratio is at least 0.5 (a relaxed bar that only applies when the name itself is already strong independent evidence — the absolute 3-sample floor is never relaxed, and differently-named pairs are never affected by the 0.5 bar). Each match reports which of these signals contributed via a `matchReasons` list (`"sameName"`, `"sampleOverlap"`, or both).
+10.3. A candidate is flagged as a possible duplicate if it shares at least 3 matching sample files **and either**: (a) the match ratio (matches ÷ the smaller of the two projects' sample counts) is at least the user-configured base threshold (the "Duplicate match threshold" Scan setting, §3.5; an integer percentage, 10-100, default 58%) unconditionally, **or** (b) the two projects' names are equal after trimming whitespace and lowercasing, and the match ratio is at least the base threshold minus 10 percentage points (clamped at 0 if the base is configured below 10%) — a relaxed bar that only applies when the name itself is already strong independent evidence. The absolute 3-sample floor is never relaxed by either path, and differently-named pairs are never affected by the relaxed bar. Each match reports which of these signals contributed via a `matchReasons` list (`"sameName"`, `"sampleOverlap"`, or both).
 
 10.4. A plain container folder (no DAW type) is never treated as a duplicate candidate or target, and two projects are never compared if one's folder is an ancestor of the other's (that's containment, not duplication).
 
@@ -162,7 +164,7 @@
 
 13.2. A dedicated panel lets the user choose which top-level (and nested) subfolders to include/exclude from scanning (§4), and trigger a scan directly from that panel.
 
-13.3. A separate Settings panel exposes the two scan-time ignore toggles (§3) with save-state feedback ("Saving…"/"Saved"/"Failed").
+13.3. A separate Settings panel exposes the two scan-time ignore toggles (§3) with save-state feedback ("Saving…"/"Saved"/"Failed"), plus a third, buffered numeric control for the duplicate-detection match-ratio threshold (§3.5) — typed into a text field and applied via its own "Apply" button (disabled until the value is a valid, changed integer in 10-100), rather than auto-saving on every keystroke like the two toggles. A rejected value surfaces the backend's own validation message inline.
 
 13.4. "Reveal in Finder" is refused (server-side) for any path outside the currently configured music root, even if requested directly.
 

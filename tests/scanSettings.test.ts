@@ -19,6 +19,7 @@ describe("scanSettings", () => {
     expect(getScanSettings(db)).toEqual({
       excludeSamplesFolders: true,
       excludeBackupFolders: true,
+      duplicateMatchThresholdPercent: 58,
     });
   });
 
@@ -28,6 +29,7 @@ describe("scanSettings", () => {
     expect(getScanSettings(db)).toEqual({
       excludeSamplesFolders: false,
       excludeBackupFolders: true,
+      duplicateMatchThresholdPercent: 58,
     });
   });
 
@@ -37,6 +39,7 @@ describe("scanSettings", () => {
     expect(getScanSettings(db)).toEqual({
       excludeSamplesFolders: false,
       excludeBackupFolders: false,
+      duplicateMatchThresholdPercent: 58,
     });
   });
 
@@ -45,5 +48,71 @@ describe("scanSettings", () => {
     setScanSettings(db, { excludeBackupFolders: true });
 
     expect(getScanSettings(db).excludeBackupFolders).toBe(true);
+  });
+
+  it("round-trips a valid duplicateMatchThresholdPercent value", () => {
+    setScanSettings(db, { duplicateMatchThresholdPercent: 45 });
+
+    expect(getScanSettings(db)).toEqual({
+      excludeSamplesFolders: true,
+      excludeBackupFolders: true,
+      duplicateMatchThresholdPercent: 45,
+    });
+  });
+
+  it("rejects a non-integer duplicateMatchThresholdPercent", () => {
+    expect(() => setScanSettings(db, { duplicateMatchThresholdPercent: 50.5 })).toThrow(
+      /duplicateMatchThresholdPercent must be an integer between 10 and 100/
+    );
+  });
+
+  it("rejects a duplicateMatchThresholdPercent below the minimum", () => {
+    expect(() => setScanSettings(db, { duplicateMatchThresholdPercent: 5 })).toThrow(
+      /duplicateMatchThresholdPercent must be an integer between 10 and 100/
+    );
+  });
+
+  it("rejects a duplicateMatchThresholdPercent above the maximum", () => {
+    expect(() => setScanSettings(db, { duplicateMatchThresholdPercent: 101 })).toThrow(
+      /duplicateMatchThresholdPercent must be an integer between 10 and 100/
+    );
+  });
+
+  it("atomically rejects a multi-field patch: valid excludeSamplesFolders + invalid duplicateMatchThresholdPercent leaves excludeSamplesFolders unchanged", () => {
+    // Start from a non-default value (false) so the assertion below can actually distinguish
+    // "the patch's excludeSamplesFolders write was atomically suppressed" from "it was written
+    // early and just happens to equal the untouched default" — asserting against the default
+    // value itself (true) would pass either way and not prove atomicity.
+    setScanSettings(db, { excludeSamplesFolders: false });
+
+    expect(() =>
+      setScanSettings(db, { excludeSamplesFolders: true, duplicateMatchThresholdPercent: 5 })
+    ).toThrow();
+
+    // excludeSamplesFolders was valid on its own, but since the overall patch failed, it must
+    // not have been persisted — it should still be at its prior value (false), not flipped to
+    // the patch's requested true.
+    expect(getScanSettings(db)).toEqual({
+      excludeSamplesFolders: false,
+      excludeBackupFolders: true,
+      duplicateMatchThresholdPercent: 58,
+    });
+  });
+
+  it("atomically rejects a multi-field patch: valid duplicateMatchThresholdPercent + invalid excludeBackupFolders leaves duplicateMatchThresholdPercent unchanged (order shouldn't matter)", () => {
+    expect(() =>
+      setScanSettings(db, {
+        duplicateMatchThresholdPercent: 45,
+        excludeBackupFolders: "not-a-boolean" as unknown as boolean,
+      })
+    ).toThrow();
+
+    // duplicateMatchThresholdPercent was valid on its own, but since the overall patch failed,
+    // it must not have been persisted — it should still be at its untouched default (58).
+    expect(getScanSettings(db)).toEqual({
+      excludeSamplesFolders: true,
+      excludeBackupFolders: true,
+      duplicateMatchThresholdPercent: 58,
+    });
   });
 });

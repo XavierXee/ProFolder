@@ -32,6 +32,7 @@ function makeSettings(overrides: Partial<ScanSettings> = {}): ScanSettings {
   return {
     excludeSamplesFolders: false,
     excludeBackupFolders: false,
+    duplicateMatchThresholdPercent: 58,
     ...overrides,
   };
 }
@@ -431,5 +432,116 @@ describe("SettingsPanel - Pagination section", () => {
       expect(screen.getByText("itemsPerPage must be an integer between 10 and 500")).toBeInTheDocument()
     );
     expect(mockSetItemsPerPageGlobally).not.toHaveBeenCalled();
+  });
+});
+
+describe("SettingsPanel - Duplicate match threshold section", () => {
+  it("renders the duplicate match threshold input pre-filled with the fetched value", async () => {
+    mockGetScanSettings.mockReset().mockResolvedValue(makeSettings({ duplicateMatchThresholdPercent: 70 }));
+    renderPanel();
+
+    const input = await screen.findByLabelText("Duplicate match threshold (%)");
+    expect(input).toHaveValue(70);
+  });
+
+  it("disables Apply when the input is unchanged from the currently-applied value", async () => {
+    mockGetScanSettings.mockReset().mockResolvedValue(makeSettings({ duplicateMatchThresholdPercent: 58 }));
+    renderPanel();
+
+    const input = await screen.findByLabelText("Duplicate match threshold (%)");
+    expect(input).toHaveValue(58);
+    expect(screen.getByRole("button", { name: "Apply duplicate match threshold" })).toBeDisabled();
+  });
+
+  it("disables Apply when the input is below the minimum of 10", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Duplicate match threshold (%)");
+    await user.clear(input);
+    await user.type(input, "5");
+
+    expect(screen.getByRole("button", { name: "Apply duplicate match threshold" })).toBeDisabled();
+  });
+
+  it("disables Apply when the input is above the maximum of 100", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Duplicate match threshold (%)");
+    await user.clear(input);
+    await user.type(input, "150");
+
+    expect(screen.getByRole("button", { name: "Apply duplicate match threshold" })).toBeDisabled();
+  });
+
+  it("disables Apply when the input is a non-integer value", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Duplicate match threshold (%)");
+    await user.clear(input);
+    await user.type(input, "58.5");
+
+    expect(screen.getByRole("button", { name: "Apply duplicate match threshold" })).toBeDisabled();
+  });
+
+  it("calls setScanSettings with the typed value when the disambiguated Apply button is clicked, then resyncs the input from the response", async () => {
+    mockSetScanSettings.mockReset().mockResolvedValue(makeSettings({ duplicateMatchThresholdPercent: 45 }));
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Duplicate match threshold (%)");
+    await user.clear(input);
+    await user.type(input, "45");
+
+    const applyButton = screen.getByRole("button", { name: "Apply duplicate match threshold" });
+    expect(applyButton).not.toBeDisabled();
+    await user.click(applyButton);
+
+    expect(mockSetScanSettings).toHaveBeenCalledWith({ duplicateMatchThresholdPercent: 45 });
+    await waitFor(() => expect(input).toHaveValue(45));
+  });
+
+  it("shows the real backend error message when setScanSettings rejects for a client-valid value", async () => {
+    mockSetScanSettings.mockReset().mockRejectedValue(
+      new Error("duplicateMatchThresholdPercent must be an integer between 10 and 100")
+    );
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Duplicate match threshold (%)");
+    await user.clear(input);
+    await user.type(input, "45");
+    await user.click(screen.getByRole("button", { name: "Apply duplicate match threshold" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("duplicateMatchThresholdPercent must be an integer between 10 and 100")
+      ).toBeInTheDocument()
+    );
+  });
+
+  it("does not call setScanSettings while typing, only when Apply is clicked", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Duplicate match threshold (%)");
+    await user.clear(input);
+    await user.type(input, "45");
+
+    expect(mockSetScanSettings).not.toHaveBeenCalled();
+  });
+
+  it("shows the reworded scan-settings footer copy and the new row's own distinct caption, with no trace of the old blanket wording", async () => {
+    renderPanel();
+
+    await screen.findByLabelText("Duplicate match threshold (%)");
+
+    expect(screen.getByText("Folder exclusion changes apply the next time you run a scan.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Applies immediately — used the next time you open a project's Duplicates panel.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Changes apply the next time you run a scan.")).not.toBeInTheDocument();
   });
 });

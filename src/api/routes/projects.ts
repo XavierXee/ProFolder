@@ -574,7 +574,8 @@ export function createProjectsRouter(db: Database.Database): Router {
         ),
       ]);
 
-      const matches = findDuplicateMatches(targetSamples, project, candidates);
+      const minMatchRatio = getScanSettings(db).duplicateMatchThresholdPercent / 100;
+      const matches = findDuplicateMatches(targetSamples, project, candidates, minMatchRatio);
       res.json({ projectId: id, sampleCount: countUniqueSamples(targetSamples), matches });
     })
   );

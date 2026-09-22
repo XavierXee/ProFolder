@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "../src/database/db.js";
 import { upsertProject, markRemoved } from "../src/database/repositories/projectRepository.js";
 import { setExcludedPaths } from "../src/database/repositories/scanExclusionRepository.js";
+import { setScanSettings } from "../src/config/scanSettings.js";
 import { createServer } from "../src/api/server.js";
 import type { DawType } from "../src/scanner/dawTypes.js";
 
@@ -165,6 +166,11 @@ describe("GET /api/projects/:id/duplicates", () => {
   });
 
   it("orders matches descending by matchRatio when multiple candidates qualify", async () => {
+    // Pinned explicitly rather than relying on the default (58%): "Track Low" below is
+    // fixtured to sit exactly at the historical 0.6 boundary, which the new 58% default
+    // would also happen to satisfy — pinning here keeps this test's assertion tied to an
+    // explicit, intentional threshold rather than a coincidence of the current default.
+    setScanSettings(db, { duplicateMatchThresholdPercent: 60 });
     const targetSamples: SampleSpec[] = [
       { filename: "kick.wav", size: 100 },
       { filename: "snare.wav", size: 200 },
@@ -234,7 +240,7 @@ describe("GET /api/projects/:id/duplicates", () => {
 
     // Shares only 3 of the target's 10 samples, plus 7 of its own unrelated ones (10
     // total) -> matchingSampleCount 3 (meets the count minimum) but matchRatio
-    // 3/min(10,10) = 0.3, below MIN_MATCH_RATIO (0.6).
+    // 3/min(10,10) = 0.3, below the base minMatchRatio (0.6).
     const candidatePath = path.join(root, "Track Diluted");
     seedProject({ id: "Track Diluted", projectPath: candidatePath, dawType: "ableton" });
     writeSamples(candidatePath, [
@@ -418,6 +424,11 @@ describe("GET /api/projects/:id/duplicates", () => {
     "flags a same-named pair via the name-gated relaxation through the real route (matchReasons " +
       '["sameName"] when ratio clears 0.5 but not the strict 0.6 threshold)',
     async () => {
+      // Pinned explicitly to 60% (rather than relying on the new 58% default) so this
+      // test's fixture (ratio 5/9 ≈ 0.556) keeps testing the exact "clears 0.5 but not
+      // 0.6" relationship its own name/comments describe, independent of whatever the
+      // default happens to be.
+      setScanSettings(db, { duplicateMatchThresholdPercent: 60 });
       // Names differ only by surrounding whitespace and case — normalizeProjectName's
       // trim+lowercase should treat them as identical, proving normalization survives the
       // full route/DB/filesystem path, not just the pure function Task 1 already unit-tested.
@@ -436,7 +447,7 @@ describe("GET /api/projects/:id/duplicates", () => {
 
       // Shares the target's first 5 samples, plus 4 of its own unique ones (9 unique total)
       // -> matchingSampleCount 5, matchRatio 5/min(9,9) = 5/9 ≈ 0.556. That clears
-      // MIN_MATCH_RATIO_SAME_NAME (0.5) but falls short of the strict MIN_MATCH_RATIO (0.6),
+      // the derived same-name relaxed ratio (0.5) but falls short of the strict the base minMatchRatio (0.6),
       // so this pair must NOT qualify via qualifiesByOverlap — only via the same-name
       // relaxation, giving matchReasons exactly ["sameName"].
       const candidatePath = path.join(root, "Track Candidate Name");
@@ -463,4 +474,40 @@ describe("GET /api/projects/:id/duplicates", () => {
       });
     }
   );
+
+  it("applies a changed duplicateMatchThresholdPercent immediately to the same fixture data, with no rescan required", async () => {
+    const targetSamples: SampleSpec[] = [
+      { filename: "kick.wav", size: 100 },
+      { filename: "snare.wav", size: 200 },
+      { filename: "hat.wav", size: 50 },
+      { filename: "clap.wav", size: 75 },
+      { filename: "perc.wav", size: 60 },
+    ];
+    const targetPath = path.join(root, "Track A");
+    seedProject({ id: "Track A", projectPath: targetPath, dawType: "ableton" });
+    writeSamples(targetPath, targetSamples);
+
+    // Shares only the first 3 of the target's 5 samples, plus 2 of its own unrelated ones
+    // (5 total) -> matchingSampleCount 3, matchRatio 3/min(5,5) = 0.6.
+    const candidatePath = path.join(root, "Track Mid");
+    seedProject({ id: "Track Mid", projectPath: candidatePath, dawType: "ableton" });
+    writeSamples(candidatePath, [
+      ...targetSamples.slice(0, 3),
+      { filename: "unique1.wav", size: 11 },
+      { filename: "unique2.wav", size: 22 },
+    ]);
+
+    // At a 60% threshold, the fixture's 0.6 ratio just clears the bar.
+    setScanSettings(db, { duplicateMatchThresholdPercent: 60 });
+    const lowThresholdRes = await request(app).get(`/api/projects/${encodeURIComponent("Track A")}/duplicates`);
+    expect(lowThresholdRes.status).toBe(200);
+    expect(lowThresholdRes.body.matches.map((m: { projectId: string }) => m.projectId)).toEqual(["Track Mid"]);
+
+    // Same fixture data, no rescan — only the setting changes. At 70%, the same 0.6 ratio
+    // no longer qualifies, proving the route reads the setting live on every request.
+    setScanSettings(db, { duplicateMatchThresholdPercent: 70 });
+    const highThresholdRes = await request(app).get(`/api/projects/${encodeURIComponent("Track A")}/duplicates`);
+    expect(highThresholdRes.status).toBe(200);
+    expect(highThresholdRes.body.matches).toEqual([]);
+  });
 });

@@ -11,18 +11,6 @@
 - [x] Full regression tests path should be implemented (either with unit tests, playwright e2e tests or both) *(closed out by the frontend unit-test initiative — see the tracker below: 181 backend unit tests, 278 frontend component/hook unit tests, 68 e2e scenarios, 459 tests total)*
 - [x] if test data files or folder have to be moved around make sure the test suite cleans them out afterward
 
-
-Improve (and fix) duplicate detection feature. I believe we introduce a regression in earlier prompts from today.
-When I test the app with real data I see for example 2 projects that are obvious duplicates but they are not detected.
-I'm pretty sure they were detected before, so I think something got broken earlier today.
-They have a fair amount of overlapping Samples from their respective Samples folder (actually in sub-folders of Samples folder)
-Btw they also share the same name, that must be captured as a potential duplicate clue too.
-Earlier today you flagged that some of the sample count and overlap percentage might be wrongly inflated, I believe this assumption you made was incorrect and broke the feature.
-Please analyse the root cause of this feature being degrade, propose a fix, ask me to validate the agent dispatching if need be, add name parity detection too and finally update tests when all discussed above is covered.
-
---> the assistant said it's basically a false negative cause overlap is 0.55 (just below) 0.6 default thresh
-Now I want to be able to change this threshold as a scan setting so I can lower it when needed 
-
 ## 2. Make this app a desktop app
 
 - Make the architect run an audit to bundle this app into a desktop app

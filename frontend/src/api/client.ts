@@ -349,6 +349,7 @@ export async function chooseMusicRoot(): Promise<string | undefined> {
 export type ScanSettings = {
   excludeSamplesFolders: boolean;
   excludeBackupFolders: boolean;
+  duplicateMatchThresholdPercent: number;
 };
 
 export function getScanSettings(): Promise<ScanSettings> {

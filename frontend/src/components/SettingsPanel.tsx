@@ -7,6 +7,8 @@ import {Theme} from "../types";
 
 const MIN_ITEMS_PER_PAGE = 10;
 const MAX_ITEMS_PER_PAGE = 500;
+const MIN_DUPLICATE_MATCH_THRESHOLD_PERCENT = 10;
+const MAX_DUPLICATE_MATCH_THRESHOLD_PERCENT = 100;
 
 type Props = {
   theme: Theme;
@@ -50,6 +52,9 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
   const [loading, setLoading] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState<string | undefined>();
+  const [duplicateThresholdInputValue, setDuplicateThresholdInputValue] = useState("");
+  const [duplicateThresholdSaveState, setDuplicateThresholdSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [duplicateThresholdError, setDuplicateThresholdError] = useState<string | undefined>();
   const [confirmSettings, setConfirmSettings] = useState<ConfirmationSettings | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmSaveState, setConfirmSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -66,9 +71,14 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
     setLoading(true);
     setError(undefined);
     setSaveState("idle");
+    setDuplicateThresholdError(undefined);
+    setDuplicateThresholdSaveState("idle");
     api
       .getScanSettings()
-      .then(setSettings)
+      .then((settings) => {
+        setSettings(settings);
+        setDuplicateThresholdInputValue(String(settings.duplicateMatchThresholdPercent));
+      })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load settings"))
       .finally(() => setLoading(false));
     setConfirmLoading(true);
@@ -109,6 +119,34 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
       .then(setSettings)
       .then(() => setSaveState("saved"))
       .catch(() => setSaveState("error"));
+  }
+
+  const parsedDuplicateThresholdInput = Number(duplicateThresholdInputValue);
+  const isDuplicateThresholdInputValid =
+    duplicateThresholdInputValue.trim() !== "" &&
+    Number.isInteger(parsedDuplicateThresholdInput) &&
+    parsedDuplicateThresholdInput >= MIN_DUPLICATE_MATCH_THRESHOLD_PERCENT &&
+    parsedDuplicateThresholdInput <= MAX_DUPLICATE_MATCH_THRESHOLD_PERCENT;
+  const isDuplicateThresholdInputUnchanged =
+    settings !== null && parsedDuplicateThresholdInput === settings.duplicateMatchThresholdPercent;
+  const isDuplicateThresholdApplyDisabled =
+    duplicateThresholdSaveState === "saving" || !isDuplicateThresholdInputValid || isDuplicateThresholdInputUnchanged;
+
+  function handleDuplicateThresholdApply() {
+    if (isDuplicateThresholdApplyDisabled) return;
+    setDuplicateThresholdSaveState("saving");
+    setDuplicateThresholdError(undefined);
+    api
+      .setScanSettings({ duplicateMatchThresholdPercent: parsedDuplicateThresholdInput })
+      .then((result) => {
+        setSettings(result);
+        setDuplicateThresholdInputValue(String(result.duplicateMatchThresholdPercent));
+        setDuplicateThresholdSaveState("saved");
+      })
+      .catch((err) => {
+        setDuplicateThresholdError(err instanceof Error ? err.message : "Failed to save settings");
+        setDuplicateThresholdSaveState("error");
+      });
   }
 
   function handleConfirmChange(patch: Partial<ConfirmationSettings>) {
@@ -264,7 +302,43 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
               />
             </div>
           ) : null}
-          <p className={`text-xs mt-4 mb-2 ${meta}`}>Changes apply the next time you run a scan.</p>
+          <p className={`text-xs mt-4 mb-2 ${meta}`}>Folder exclusion changes apply the next time you run a scan.</p>
+
+          <div className="flex items-center justify-between mt-4">
+            <label htmlFor="duplicate-threshold-input" className="text-sm font-medium text-ink">Duplicate match threshold (%)</label>
+            <div className="h-4">
+              {duplicateThresholdSaveState === "saving" && <span className={`text-xs font-mono ${meta}`}>Saving…</span>}
+              {duplicateThresholdSaveState === "saved" && <span className="text-xs font-mono text-emerald-400">Saved</span>}
+              {duplicateThresholdSaveState === "error" && <span className="text-xs font-mono text-red-400">Failed to save</span>}
+            </div>
+          </div>
+          {settings ? (
+            <div className="py-3">
+              <div className="flex items-center gap-2">
+                <input
+                  id="duplicate-threshold-input"
+                  type="number"
+                  min={MIN_DUPLICATE_MATCH_THRESHOLD_PERCENT}
+                  max={MAX_DUPLICATE_MATCH_THRESHOLD_PERCENT}
+                  value={duplicateThresholdInputValue}
+                  disabled={duplicateThresholdSaveState === "saving"}
+                  onChange={(e) => setDuplicateThresholdInputValue(e.target.value)}
+                  className="px-2 py-1 text-sm rounded-[var(--rt-radius)] border border-border bg-surface text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleDuplicateThresholdApply}
+                  disabled={isDuplicateThresholdApplyDisabled}
+                  aria-label="Apply duplicate match threshold"
+                  className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
+                >
+                  Apply
+                </button>
+              </div>
+              {duplicateThresholdError ? <p className="text-sm mt-2 text-red-400">{duplicateThresholdError}</p> : null}
+            </div>
+          ) : null}
+          <p className={`text-xs mt-1 mb-2 ${meta}`}>Applies immediately — used the next time you open a project's Duplicates panel.</p>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="flex items-center justify-between mb-1 mt-2">

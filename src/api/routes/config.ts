@@ -62,9 +62,10 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
   router.put(
     "/scan-settings",
     asyncHandler(async (req, res) => {
-      const { excludeSamplesFolders, excludeBackupFolders } = req.body as {
+      const { excludeSamplesFolders, excludeBackupFolders, duplicateMatchThresholdPercent } = req.body as {
         excludeSamplesFolders?: unknown;
         excludeBackupFolders?: unknown;
+        duplicateMatchThresholdPercent?: unknown;
       };
       if (excludeSamplesFolders !== undefined && typeof excludeSamplesFolders !== "boolean") {
         res.status(400).json({ error: "excludeSamplesFolders must be a boolean" });
@@ -74,7 +75,17 @@ export function createConfigRouter(db: Database.Database, folderPicker: FolderPi
         res.status(400).json({ error: "excludeBackupFolders must be a boolean" });
         return;
       }
-      res.json(setScanSettings(db, { excludeSamplesFolders, excludeBackupFolders }));
+      if (duplicateMatchThresholdPercent !== undefined && typeof duplicateMatchThresholdPercent !== "number") {
+        res.status(400).json({ error: "duplicateMatchThresholdPercent must be a number" });
+        return;
+      }
+      try {
+        res.json(
+          setScanSettings(db, { excludeSamplesFolders, excludeBackupFolders, duplicateMatchThresholdPercent })
+        );
+      } catch (err) {
+        res.status(400).json({ error: err instanceof Error ? err.message : "Invalid duplicateMatchThresholdPercent" });
+      }
     })
   );
 
