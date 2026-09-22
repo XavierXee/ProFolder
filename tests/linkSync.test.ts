@@ -18,6 +18,24 @@ import {
   applyProjectMetadataToNewFile,
 } from "../src/database/repositories/linkSync.js";
 import { createServer } from "../src/api/server.js";
+import { MacFinderService } from "../src/services/FinderService.js";
+import { MacFolderPickerService } from "../src/services/FolderPickerService.js";
+import { MacTrashService } from "../src/services/TrashService.js";
+import { NodeFileOpsService } from "../src/services/FileOpsService.js";
+import { getEffectiveMusicRoot } from "../src/config/musicRoot.js";
+
+// createServer now takes its platform services as explicit DI params instead of
+// constructing them internally (see src/api/server.ts). This helper constructs the same
+// real Mac* classes the plain web-mode entrypoint uses, matching this test's pre-refactor
+// behavior exactly.
+function makeServerServices(db: Database.Database) {
+  return {
+    finderService: new MacFinderService(() => getEffectiveMusicRoot(db)),
+    folderPickerService: new MacFolderPickerService(),
+    trashService: new MacTrashService(() => getEffectiveMusicRoot(db)),
+    fileOpsService: new NodeFileOpsService(() => getEffectiveMusicRoot(db)),
+  };
+}
 
 let db: Database.Database;
 
@@ -218,7 +236,7 @@ describe("file<->project link-sync directions don't cascade into each other (via
   let app: ReturnType<typeof createServer>;
 
   beforeEach(() => {
-    app = createServer(db);
+    app = createServer(db, makeServerServices(db));
   });
 
   it("PATCH /api/files/:id/score recomputes the project's score but does not touch a sibling file's own score", async () => {

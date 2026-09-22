@@ -6,8 +6,25 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "../src/database/db.js";
 import { insertAudioFile, type AudioFileUpsertInput } from "../src/database/repositories/audioFileRepository.js";
-import { setMusicRootOverride } from "../src/config/musicRoot.js";
+import { setMusicRootOverride, getEffectiveMusicRoot } from "../src/config/musicRoot.js";
 import { createServer } from "../src/api/server.js";
+import { MacFinderService } from "../src/services/FinderService.js";
+import { MacFolderPickerService } from "../src/services/FolderPickerService.js";
+import { MacTrashService } from "../src/services/TrashService.js";
+import { NodeFileOpsService } from "../src/services/FileOpsService.js";
+
+// createServer now takes its platform services as explicit DI params instead of
+// constructing them internally (see src/api/server.ts). This helper constructs the same
+// real Mac* classes the plain web-mode entrypoint uses, matching this test's pre-refactor
+// behavior exactly — this route doesn't exercise Finder/Trash/FolderPicker/FileOps itself.
+function makeServerServices(db: Database.Database) {
+  return {
+    finderService: new MacFinderService(() => getEffectiveMusicRoot(db)),
+    folderPickerService: new MacFolderPickerService(),
+    trashService: new MacTrashService(() => getEffectiveMusicRoot(db)),
+    fileOpsService: new NodeFileOpsService(() => getEffectiveMusicRoot(db)),
+  };
+}
 
 // Covers docs/REQUIREMENTS.md §11.5: "The audio-streaming endpoint only ever serves the
 // path stored in the database for that file id (populated exclusively by the scanner) —
@@ -49,7 +66,7 @@ describe("GET /api/files/:id/audio", () => {
     runMigrations(db);
     root = fs.mkdtempSync(path.join(os.tmpdir(), "audio-stream-route-test-"));
     setMusicRootOverride(db, root);
-    app = createServer(db);
+    app = createServer(db, makeServerServices(db));
   });
 
   afterEach(() => {

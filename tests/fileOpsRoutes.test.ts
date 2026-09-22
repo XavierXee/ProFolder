@@ -6,8 +6,25 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runMigrations } from "../src/database/db.js";
 import { insertAudioFile, findById } from "../src/database/repositories/audioFileRepository.js";
-import { setMusicRootOverride } from "../src/config/musicRoot.js";
+import { setMusicRootOverride, getEffectiveMusicRoot } from "../src/config/musicRoot.js";
 import { createServer } from "../src/api/server.js";
+import { MacFinderService } from "../src/services/FinderService.js";
+import { MacFolderPickerService } from "../src/services/FolderPickerService.js";
+import { MacTrashService } from "../src/services/TrashService.js";
+import { NodeFileOpsService } from "../src/services/FileOpsService.js";
+
+// createServer now takes its platform services as explicit DI params instead of
+// constructing them internally (see src/api/server.ts). This helper constructs the same
+// real Mac* classes the plain web-mode entrypoint uses, matching this test's pre-refactor
+// behavior exactly.
+function makeServerServices(db: Database.Database) {
+  return {
+    finderService: new MacFinderService(() => getEffectiveMusicRoot(db)),
+    folderPickerService: new MacFolderPickerService(),
+    trashService: new MacTrashService(() => getEffectiveMusicRoot(db)),
+    fileOpsService: new NodeFileOpsService(() => getEffectiveMusicRoot(db)),
+  };
+}
 
 // The Copy/Move/Delete feature wires FileOpsService/
 // TrashService + audioFileRepository's moveFile/cloneFile into the /api/files routes. This
@@ -23,7 +40,8 @@ import { createServer } from "../src/api/server.js";
 // need "Full Disk Access" to clean up afterward (see tests/trashService.test.ts's own doc
 // comment on this exact problem), and isn't portable off macOS at all. So — mirroring
 // trashService.test.ts's own established pattern exactly — we keep the REAL MacTrashService
-// class (constructed by the real createServer(db), not a hand-rolled stand-in) and only
+// class (constructed by makeServerServices below and passed into the real createServer, not
+// a hand-rolled stand-in) and only
 // intercept its one point of OS interaction, node:child_process's execFile. The mock
 // performs the real filesystem side effect a successful Finder trash would have (removing
 // the source path from disk), so DELETE route tests still prove an actual, real removal —
@@ -96,7 +114,7 @@ describe("/api/files copy/move/delete routes", () => {
     db = new Database(":memory:");
     runMigrations(db);
     setMusicRootOverride(db, root);
-    app = createServer(db);
+    app = createServer(db, makeServerServices(db));
   });
 
   afterEach(() => {

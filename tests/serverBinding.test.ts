@@ -8,6 +8,24 @@ import { describe, expect, it, afterEach, beforeEach } from "vitest";
 import { resolveHost, config } from "../src/config/config.js";
 import { runMigrations } from "../src/database/db.js";
 import { createServer } from "../src/api/server.js";
+import { MacFinderService } from "../src/services/FinderService.js";
+import { MacFolderPickerService } from "../src/services/FolderPickerService.js";
+import { MacTrashService } from "../src/services/TrashService.js";
+import { NodeFileOpsService } from "../src/services/FileOpsService.js";
+import { getEffectiveMusicRoot } from "../src/config/musicRoot.js";
+
+// createServer now takes its platform services as explicit DI params instead of
+// constructing them internally (see src/api/server.ts). This helper constructs the same
+// real Mac* classes the plain web-mode entrypoint uses, matching this test's pre-refactor
+// behavior exactly.
+function makeServerServices(db: Database.Database) {
+  return {
+    finderService: new MacFinderService(() => getEffectiveMusicRoot(db)),
+    folderPickerService: new MacFolderPickerService(),
+    trashService: new MacTrashService(() => getEffectiveMusicRoot(db)),
+    fileOpsService: new NodeFileOpsService(() => getEffectiveMusicRoot(db)),
+  };
+}
 
 describe("resolveHost", () => {
   it("defaults to loopback when no env value is given", () => {
@@ -87,7 +105,7 @@ describe("API server network binding", () => {
     // to the default 127.0.0.1.
     expect(config.host).toBe("127.0.0.1");
 
-    app = createServer(db);
+    app = createServer(db, makeServerServices(db));
     const server = app.listen(0, config.host);
     await new Promise<void>((resolve) => server.once("listening", resolve));
 
@@ -123,7 +141,7 @@ describe("API server network binding", () => {
       return;
     }
 
-    app = createServer(db);
+    app = createServer(db, makeServerServices(db));
     // Deliberately reproduces the pre-fix behavior: no host argument at all binds all
     // interfaces. Without this control, the "unreachable from LAN" assertion above could pass
     // vacuously in an environment where LAN probes always fail for unrelated reasons (firewall,

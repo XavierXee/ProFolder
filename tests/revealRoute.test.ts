@@ -18,8 +18,25 @@ vi.mock("node:child_process", () => ({
 }));
 
 import { runMigrations } from "../src/database/db.js";
-import { setMusicRootOverride } from "../src/config/musicRoot.js";
+import { setMusicRootOverride, getEffectiveMusicRoot } from "../src/config/musicRoot.js";
 import { createServer } from "../src/api/server.js";
+import { MacFinderService } from "../src/services/FinderService.js";
+import { MacFolderPickerService } from "../src/services/FolderPickerService.js";
+import { MacTrashService } from "../src/services/TrashService.js";
+import { NodeFileOpsService } from "../src/services/FileOpsService.js";
+
+// createServer now takes its platform services as explicit DI params instead of
+// constructing them internally (see src/api/server.ts). This helper constructs the same
+// real Mac* classes the plain web-mode entrypoint uses, matching this test's pre-refactor
+// behavior exactly.
+function makeServerServices(db: Database.Database) {
+  return {
+    finderService: new MacFinderService(() => getEffectiveMusicRoot(db)),
+    folderPickerService: new MacFolderPickerService(),
+    trashService: new MacTrashService(() => getEffectiveMusicRoot(db)),
+    fileOpsService: new NodeFileOpsService(() => getEffectiveMusicRoot(db)),
+  };
+}
 
 describe("POST /api/reveal", () => {
   let db: Database.Database;
@@ -32,7 +49,7 @@ describe("POST /api/reveal", () => {
     runMigrations(db);
     root = fs.mkdtempSync(path.join(os.tmpdir(), "reveal-route-test-"));
     setMusicRootOverride(db, root);
-    app = createServer(db);
+    app = createServer(db, makeServerServices(db));
   });
 
   afterEach(() => {

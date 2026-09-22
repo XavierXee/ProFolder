@@ -4,10 +4,10 @@ import express from "express";
 import { config } from "../config/config.js";
 import { getEffectiveMusicRoot } from "../config/musicRoot.js";
 import { openDb } from "../database/db.js";
-import { MacFinderService } from "../services/FinderService.js";
-import { MacFolderPickerService } from "../services/FolderPickerService.js";
-import { MacTrashService } from "../services/TrashService.js";
-import { NodeFileOpsService } from "../services/FileOpsService.js";
+import { MacFinderService, type FinderService } from "../services/FinderService.js";
+import { MacFolderPickerService, type FolderPickerService } from "../services/FolderPickerService.js";
+import { MacTrashService, type TrashService } from "../services/TrashService.js";
+import { NodeFileOpsService, type FileOpsService } from "../services/FileOpsService.js";
 import { createFilesRouter } from "./routes/files.js";
 import { createProjectsRouter } from "./routes/projects.js";
 import { createScanRouter } from "./routes/scan.js";
@@ -19,18 +19,29 @@ import { createTagsRouter } from "./routes/tags.js";
 import { createCustomTabsRouter } from "./routes/customTabs.js";
 import { createStatusesRouter } from "./routes/statuses.js";
 
-export function createServer(db: ReturnType<typeof openDb>) {
-  const finderService = new MacFinderService(() => getEffectiveMusicRoot(db));
-  const folderPickerService = new MacFolderPickerService();
-  const trashService = new MacTrashService(() => getEffectiveMusicRoot(db));
-  const fileOpsService = new NodeFileOpsService(() => getEffectiveMusicRoot(db));
+/** Platform-specific services `createServer` needs but does not itself construct — the
+ * plain web-mode entrypoint at the bottom of this file passes the existing Mac* classes;
+ * the upcoming Electron packaging will pass its own Electron*Service implementations
+ * instead. Every router that needs one of these services (currently `files.ts` and
+ * `projects.ts`) receives it as an explicit constructor param from here rather than
+ * constructing a `Mac*`/`Node*` class itself — this file's own bottom-of-file entrypoint is
+ * the ONLY place in the repo that still does so for the plain web-mode path. */
+export interface ServerServices {
+  finderService: FinderService;
+  folderPickerService: FolderPickerService;
+  trashService: TrashService;
+  fileOpsService: FileOpsService;
+}
+
+export function createServer(db: ReturnType<typeof openDb>, services: ServerServices) {
+  const { finderService, folderPickerService, trashService, fileOpsService } = services;
 
   const app = express();
   app.use(express.json());
 
   app.use("/api/config", createConfigRouter(db, folderPickerService));
   app.use("/api/files", createFilesRouter(db, fileOpsService, trashService));
-  app.use("/api/projects", createProjectsRouter(db));
+  app.use("/api/projects", createProjectsRouter(db, fileOpsService, trashService));
   app.use("/api/scan", createScanRouter(db));
   app.use("/api/reveal", createRevealRouter(finderService));
   app.use("/api/stats", createStatsRouter(db));
@@ -85,7 +96,12 @@ export function createServer(db: ReturnType<typeof openDb>) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const db = openDb(config.dbPath);
-  const app = createServer(db);
+  const app = createServer(db, {
+    finderService: new MacFinderService(() => getEffectiveMusicRoot(db)),
+    folderPickerService: new MacFolderPickerService(),
+    trashService: new MacTrashService(() => getEffectiveMusicRoot(db)),
+    fileOpsService: new NodeFileOpsService(() => getEffectiveMusicRoot(db)),
+  });
   app.listen(config.port, config.host, () => {
     console.log(`API server listening on http://${config.host}:${config.port}`);
     console.log(`Music root: ${getEffectiveMusicRoot(db)}`);

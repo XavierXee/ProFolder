@@ -15,6 +15,24 @@ import {
 } from "../src/database/repositories/projectRepository.js";
 import type { Project } from "../src/models/Project.js";
 import { createServer } from "../src/api/server.js";
+import { MacFinderService } from "../src/services/FinderService.js";
+import { MacFolderPickerService } from "../src/services/FolderPickerService.js";
+import { MacTrashService } from "../src/services/TrashService.js";
+import { NodeFileOpsService } from "../src/services/FileOpsService.js";
+import { getEffectiveMusicRoot } from "../src/config/musicRoot.js";
+
+// createServer now takes its platform services as explicit DI params instead of
+// constructing them internally (see src/api/server.ts). This helper constructs the same
+// real Mac* classes the plain web-mode entrypoint uses, matching this test's pre-refactor
+// behavior exactly.
+function makeServerServices(db: Database.Database) {
+  return {
+    finderService: new MacFinderService(() => getEffectiveMusicRoot(db)),
+    folderPickerService: new MacFolderPickerService(),
+    trashService: new MacTrashService(() => getEffectiveMusicRoot(db)),
+    fileOpsService: new NodeFileOpsService(() => getEffectiveMusicRoot(db)),
+  };
+}
 
 // PATCH /api/projects/batch/tags had no
 // coverage proving the per-project cascade actually reaches every selected project's files
@@ -70,7 +88,7 @@ describe("PATCH /api/projects/batch/tags — cascade + unknown-id handling", () 
   beforeEach(() => {
     db = new Database(":memory:");
     runMigrations(db);
-    app = createServer(db);
+    app = createServer(db, makeServerServices(db));
   });
 
   afterEach(() => {

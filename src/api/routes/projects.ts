@@ -34,11 +34,11 @@ import { toStringArray } from "../queryParams.js";
 import { parsePositiveInt, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "../pagination.js";
 import { getEffectiveMusicRoot } from "../../config/musicRoot.js";
 import {
-  NodeFileOpsService,
+  type FileOpsService,
   PathOutsideRootError as FileOpsPathOutsideRootError,
   NameConflictError,
 } from "../../services/FileOpsService.js";
-import { MacTrashService, PathOutsideRootError as TrashPathOutsideRootError } from "../../services/TrashService.js";
+import { type TrashService, PathOutsideRootError as TrashPathOutsideRootError } from "../../services/TrashService.js";
 
 function parseIdsBody(body: unknown): string[] | undefined {
   const ids = (body as { ids?: unknown })?.ids;
@@ -77,19 +77,8 @@ function findSubtreeIds(db: Database.Database, projectId: string): { projectIds:
   return { projectIds, fileIds };
 }
 
-export function createProjectsRouter(db: Database.Database): Router {
+export function createProjectsRouter(db: Database.Database, fileOpsService: FileOpsService, trashService: TrashService): Router {
   const router = Router();
-
-  // Takes a provider function rather than a fixed root, since the configured music root
-  // can change at runtime — same pattern as `server.ts`'s own instantiation of these
-  // services for other routers. Instantiated here (rather than accepted as constructor
-  // params threaded through from `server.ts`) so this task doesn't need to touch
-  // `server.ts`'s wiring — a sibling task wires the equivalent services into
-  // `files.ts` concurrently, and changing `createProjectsRouter`'s signature would mean
-  // both tasks editing `server.ts`'s call sites, a real collision risk for no benefit
-  // (these services are cheap, stateless wrappers around a root-provider closure).
-  const fileOpsService = new NodeFileOpsService(() => getEffectiveMusicRoot(db));
-  const trashService = new MacTrashService(() => getEffectiveMusicRoot(db));
 
   router.get(
     "/",
