@@ -125,7 +125,7 @@ function normalizeProjectName(name: string): string {
  * `findDuplicateMatches` below, so a caller reporting a project's own sample count
  * (e.g. the `/duplicates` route's top-level `sampleCount`) stays internally consistent
  * with the match percentages it displays alongside it, rather than reporting a raw,
- * un-deduplicated file count (docs/TODO.md item 19). */
+ * un-deduplicated file count. */
 export function countUniqueSamples(samples: SampleFileSignature[]): number {
   return new Set(samples.map(sampleKey)).size;
 }

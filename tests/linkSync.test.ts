@@ -208,7 +208,7 @@ describe("applyProjectMetadataToNewFile", () => {
   }
 });
 
-// Regression coverage for docs/TODO.md's Task 9 follow-up item 11's §12.3 gap: proves the two
+// Regression coverage proving the two
 // link-sync directions (file->project via syncProjectFromFiles, project->file via
 // cascadeProjectScoreToFiles/cascadeProjectTagsToFiles) genuinely don't cross-call/cascade into
 // each other. Exercised through the real HTTP routes (not linkSync.ts directly), since the

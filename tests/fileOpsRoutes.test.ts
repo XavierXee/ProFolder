@@ -9,7 +9,7 @@ import { insertAudioFile, findById } from "../src/database/repositories/audioFil
 import { setMusicRootOverride } from "../src/config/musicRoot.js";
 import { createServer } from "../src/api/server.js";
 
-// Task 5 of the Copy/Move/Delete feature (docs/TODO.md item 5): wires FileOpsService/
+// The Copy/Move/Delete feature wires FileOpsService/
 // TrashService + audioFileRepository's moveFile/cloneFile into the /api/files routes. This
 // is an integration test — real filesystem operations under a scratch tmpdir, plus a real
 // in-memory DB — proving the whole composed chain (route -> FileOpsService -> repository)

@@ -203,7 +203,7 @@ export default function CustomFilesTabPanel({
     if (operation !== "copy") {
       setSelectedId(null);
       // A move/delete invalidates every id in the batch selection too — see App.tsx's
-      // identical comment on its own handleFileOpSuccess (docs/TODO.md item 132).
+      // identical comment on its own handleFileOpSuccess.
       setSelectedFileIds(new Set());
     }
     setBanner(fileOpSuccessMessage(operation, outcome));

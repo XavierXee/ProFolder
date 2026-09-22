@@ -934,7 +934,7 @@ describe("moveFile/cloneFile reject an out-of-root destination instead of silent
     expect(total).toBe(26); // 25 base fixtures + the one ProjectA/track1.wav inserted above
   });
 
-  // docs/TODO.md item 114: a destination exactly equal to musicRoot itself (no filename segment
+  // A destination exactly equal to musicRoot itself (no filename segment
   // at all) resolves to `relativePath === ""`, which is none of the `..`-prefixed/absolute
   // shapes the original check rejected — this boundary previously slipped through and produced
   // a corrupted row (empty id/relativePath, containingFolder outside the root).

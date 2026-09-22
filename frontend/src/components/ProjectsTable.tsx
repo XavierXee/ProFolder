@@ -91,7 +91,7 @@ export function ProjectsTable({
   // `total` is already the FILTERED count, so `total === 0` can't distinguish "empty library"
   // from "filtered to zero" (it's always 0 whenever this empty state renders at all) — check the
   // content-filtering fields directly instead (sortBy/page intentionally excluded: they never
-  // reduce the result count to zero, docs/TODO.md's ProjectsTable empty-state message item).
+  // reduce the result count to zero).
   const hasActiveFilter = Boolean(filters.search) || (filters.statuses?.length ?? 0) > 0 || (filters.scores?.length ?? 0) > 0 || (filters.tags?.length ?? 0) > 0;
 
   return (

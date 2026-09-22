@@ -421,7 +421,7 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
       // copyPath auto-renames on a physical name collision (see FileOpsService's
       // resolveCopyDestinationName), so cloneFile colliding at the DB level here should be
       // unreachable in normal operation — defend against it anyway rather than trusting
-      // that invariant to hold forever (per docs/TODO.md item 5's task brief).
+      // that invariant to hold forever.
       try {
         const musicRoot = getEffectiveMusicRoot(db);
         const created = cloneFile(db, id, copyResult.newAbsolutePath, musicRoot);

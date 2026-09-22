@@ -322,7 +322,7 @@ describe("SettingsPanel - Confirmation Settings section", () => {
   });
 });
 
-// docs/TODO.md item 134 / the project notes' documented 50ms auto-focus hazard: SettingsPanel.tsx's
+// the project notes' documented 50ms auto-focus hazard: SettingsPanel.tsx's
 // mount effect does `setTimeout(() => closeRef.current?.focus(), 50)`. Under real-timer
 // userEvent's default inter-keystroke delays, a `.clear()`/`.type()` sequence run shortly after
 // mount can straddle that window and have focus stolen mid-type, dropping input. Every `user`

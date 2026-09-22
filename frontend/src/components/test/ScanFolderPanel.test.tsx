@@ -343,7 +343,7 @@ describe("ScanFolderPanel - handleStartScan", () => {
     expect(onScanComplete).toHaveBeenCalledWith(expect.objectContaining({ rootPath: "/music" }));
   });
 
-  it("calls onScanStart before triggering the scan, so a caller can clear a stale banner from a previous attempt (docs/TODO.md Task 7.1 finding)", async () => {
+  it("calls onScanStart before triggering the scan, so a caller can clear a stale banner from a previous attempt", async () => {
     const callOrder: string[] = [];
     const onScanStart = vi.fn(() => callOrder.push("onScanStart"));
     mockTriggerScan.mockImplementation(async () => {

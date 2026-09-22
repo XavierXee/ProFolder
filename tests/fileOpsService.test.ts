@@ -282,7 +282,7 @@ describe("NodeFileOpsService", () => {
       }
     });
 
-    it("rejects with an accurate 'does not exist' message, not the outside-root message, when the destination directory simply hasn't been created yet (docs/TODO.md item 128)", async () => {
+    it("rejects with an accurate 'does not exist' message, not the outside-root message, when the destination directory simply hasn't been created yet", async () => {
       const sourceDir = path.join(root, "source");
       fs.mkdirSync(sourceDir, { recursive: true });
       const sourcePath = path.join(sourceDir, "kick.wav");

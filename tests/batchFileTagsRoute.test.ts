@@ -11,15 +11,15 @@ import {
 import { upsertProject, findById as findProjectById } from "../src/database/repositories/projectRepository.js";
 import { createServer } from "../src/api/server.js";
 
-// Covers docs/TODO.md's "Task 9 follow-ups" item 3: PATCH /api/files/batch/tags (and, per
+// PATCH /api/files/batch/tags (and, per
 // the user's decision, its sibling PATCH /api/files/batch/score) previously choked on any
 // unknown id in the batch. For batch/tags, addTagsToFiles wraps everything in one
 // db.transaction(...) and does INSERT OR IGNORE INTO audio_file_tags, which does NOT
 // suppress a FOREIGN KEY constraint violation when audio_file_id references a row that
 // doesn't exist — the whole transaction rolled back, losing tags for every valid file in
 // the same batch (and any brand-new tag names) just because one id in the batch was bogus.
-// The fix filters `ids` down to ids that actually exist and are active (updated per
-// docs/TODO.md item 20's product decision to also exclude soft-removed files, not just
+// The fix filters `ids` down to ids that actually exist and are active (per
+// a product decision to also exclude soft-removed files, not just
 // unknown ids) via filterExistingFileIds before calling into either repository function,
 // and reports the filtered count as `updated`.
 
@@ -102,7 +102,7 @@ describe("PATCH /api/files/batch/tags and /api/files/batch/score — unknown-id 
       expect(findById(db, "real-file-1")!.tags).toEqual(["brand-new-tag"]);
     });
 
-    it("excludes a soft-removed file from the batch (active-only filter, docs/TODO.md item 20)", async () => {
+    it("excludes a soft-removed file from the batch (active-only filter)", async () => {
       insertAudioFile(db, makeFile({ id: "removed-file" }));
       markRemoved(db, ["removed-file"], new Date().toISOString());
 

@@ -10,8 +10,8 @@ import type { CopyMoveDeleteItemType, CopyMoveDeleteOperation } from "./CopyMove
  * an ancestor project in the batch is processed first, its subtree (including any
  * still-pending descendant id from the same batch) gets rekeyed to the new location as a side
  * effect, so the loop then moves the descendant a *second* time, out from under its just-moved
- * ancestor and flattening it into the destination instead of staying nested (see docs/TODO.md's
- * Copy/Move/Delete Task 8 follow-up). Excluding the descendant client-side avoids ever sending
+ * ancestor and flattening it into the destination instead of staying nested. Excluding the
+ * descendant client-side avoids ever sending
  * that combination. Not applicable to Files batches — files have no nesting relationship to
  * each other. Exported because it's directly unit-tested (this app's convention, see
  * the project notes).

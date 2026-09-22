@@ -168,7 +168,7 @@ describe("FilterToolbar - clearAll", () => {
       sortDir: undefined,
     });
     expect(getSearchInput()).toHaveValue("");
-    // docs/TODO.md item 125: `toHaveBeenCalledWith`'s object-equality treats a key explicitly
+    // `toHaveBeenCalledWith`'s object-equality treats a key explicitly
     // set to `undefined` as equivalent to the key being absent, so the assertion above alone
     // would still pass even if `clearAll` stopped emitting `sortBy`/`sortDir` entirely — check
     // the actual keys the emitted patch carries, not just its deep-equal value.
@@ -192,7 +192,7 @@ describe("FilterToolbar - Clear button disabled state (activeFilterCount)", () =
     expect(screen.getByRole("button", { name: "Clear all filters" })).toBeEnabled();
   });
 
-  it("is enabled once a column-header sort is active (sortBy set externally), unlocked mode (docs/TODO.md item 125)", () => {
+  it("is enabled once a column-header sort is active (sortBy set externally), unlocked mode", () => {
     render(<Harness initialFilters={{ sortBy: "modifiedAt", sortDir: "asc" }} />);
 
     expect(screen.getByRole("button", { name: "Clear all filters" })).toBeEnabled();
@@ -432,7 +432,7 @@ describe("FilterToolbar - locked mode", () => {
     expect(patch).not.toHaveProperty("statuses");
     expect(patch).not.toHaveProperty("scores");
     expect(patch).not.toHaveProperty("tags");
-    // docs/TODO.md item 125: also confirm search/sortBy/sortDir are actual keys on the emitted
+    // Also confirm search/sortBy/sortDir are actual keys on the emitted
     // patch, not merely absent-and-therefore-deep-equal-to-undefined (see the unlocked clearAll
     // test's identical note above).
     expect(Object.keys(patch)).toEqual(expect.arrayContaining(["search", "sortBy", "sortDir"]));

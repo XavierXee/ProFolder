@@ -1,7 +1,7 @@
 @scan-lock
 Feature: Metrics panel — real scan-run persistence reaches the UI
 
-  # Closes item 5 of docs/TODO.md's "Task 9 follow-ups" list (§6.3): the backend layers (scan-run
+  # The backend layers (scan-run
   # repository, scanner integration, HTTP route `GET /api/scan/last`) are already fully tested —
   # this is the missing UI-layer proof that a real, persisted scan run actually reaches the user's
   # screen via the header's Metrics panel (MetricsPanel.tsx).

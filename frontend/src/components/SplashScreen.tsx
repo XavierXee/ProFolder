@@ -5,7 +5,7 @@ const SPLASH_DURATION_MS = 1000;
 
 /**
  * A brief, full-viewport splash shown once per app refresh. Purely a UI placeholder for a
- * future "scan on startup" feature (per docs/TODO.md item 9) — it doesn't trigger any real scan
+ * future "scan on startup" feature — it doesn't trigger any real scan
  * or block the rest of App's data-fetching, which proceeds normally underneath it in parallel.
  *
  * Uses `bg-canvas`/`text-ink` (Task 1's runtime-switchable tokens) rather than a hardcoded

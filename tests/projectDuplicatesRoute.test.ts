@@ -11,7 +11,7 @@ import { setScanSettings } from "../src/config/scanSettings.js";
 import { createServer } from "../src/api/server.js";
 import type { DawType } from "../src/scanner/dawTypes.js";
 
-// Covers docs/TODO.md's "Task 9 follow-ups" item 2: GET /api/projects/:id/duplicates had zero
+// GET /api/projects/:id/duplicates had zero
 // HTTP-level test coverage. The underlying pure matching functions (`collectSampleFiles`,
 // `findDuplicateMatches`) are already unit-tested in tests/duplicateDetector.test.ts — this
 // file specifically exercises the ROUTE: real DB rows via upsertProject/markRemoved/
@@ -128,7 +128,7 @@ describe("GET /api/projects/:id/duplicates", () => {
     expect(res.body.projectId).toBe("Track A");
 
     // The top-level `sampleCount` is deduplicated by (lowercased filename, size) — the same
-    // key `findDuplicateMatches` uses for its own per-match counts (docs/TODO.md item 19) —
+    // key `findDuplicateMatches` uses for its own per-match counts —
     // via `countUniqueSamples`. No duplicate filename+size pairs in this fixture, so the
     // deduped and raw counts happen to coincide; see the dedicated test below for a fixture
     // that actually distinguishes them.
@@ -150,7 +150,7 @@ describe("GET /api/projects/:id/duplicates", () => {
     ]);
   });
 
-  it("deduplicates the top-level sampleCount by (filename, size) across multiple Samples subfolders (docs/TODO.md item 19)", async () => {
+  it("deduplicates the top-level sampleCount by (filename, size) across multiple Samples subfolders", async () => {
     const targetPath = path.join(root, "Track Dup");
     seedProject({ id: "Track Dup", projectPath: targetPath, dawType: "ableton" });
     // Same (filename, size) pair written into two distinct "Samples" folders the scanner

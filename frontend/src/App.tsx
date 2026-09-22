@@ -392,7 +392,7 @@ export default function App() {
       // A move/delete invalidates every id in the batch selection too (moved ids change,
       // deleted ids no longer exist) — without this, the batch panel keeps showing a stale
       // "N selected" count and a follow-up batch action silently resends already-processed
-      // ids (docs/TODO.md item 132). A copy leaves the originals untouched, so selection
+      // ids. A copy leaves the originals untouched, so selection
       // staying intact there is fine (and arguably useful — same items are still valid).
       setSelectedFileIds(new Set());
     }
@@ -406,7 +406,7 @@ export default function App() {
     const operation = projectOpDialog?.operation ?? "copy";
     if (operation !== "copy") {
       setSelectedProjectId(null);
-      // See handleFileOpSuccess's identical comment above (docs/TODO.md item 132).
+      // See handleFileOpSuccess's identical comment above.
       setSelectedProjectIds(new Set());
     }
     setBanner(copyMoveDeleteSuccessMessage(operation, "Folder", outcome));

@@ -221,7 +221,7 @@ export default function FileDetailPanel({ file, allTags = [], onClose, onSaveSta
                   {/* Transient fallback for the window before useStatusCatalog()'s mount-time
                       fetch resolves: buildStatusOptions(catalogStatuses) is just [unknown] until
                       then, so the file's real (non-unknown) status would otherwise have no pill
-                      showing it selected (docs/TODO.md item 138). Self-corrects once the catalog
+                      showing it selected. Self-corrects once the catalog
                       loads and this status's real pill takes over. Not clickable — it's not a
                       real catalog entry, just a placeholder for "whatever this already is". */}
                   {status !== UNKNOWN_STATUS_KEY && !catalogStatuses.some((s) => s.key === status) && (

@@ -158,10 +158,10 @@ describe("App - pagination clears row selection (Files tab)", () => {
   });
 });
 
-// docs/TODO.md item 23: a negative control proving an unrelated re-render (opening the
+// A negative control proving an unrelated re-render (opening the
 // Metrics panel touches only `showMetrics` state, never `page`/`filters`) leaves Files-tab
 // selection untouched — the deliberate contrast case this suite lost when the former sort
-// "negative control" test had to flip into a positive assertion once item 22 fixed sort to
+// "negative control" test had to flip into a positive assertion once sort was fixed to
 // also clear selection.
 describe("App - an unrelated re-render does not clear row selection (Files tab)", () => {
   it("leaves the Batch Edit button state and checked row checkboxes intact when the Metrics panel is opened", async () => {
@@ -222,7 +222,7 @@ describe("App - pagination clears row selection (Files tab sort)", () => {
     // filter/page-change handler — so sort-header clicks clear selection consistently with
     // the rest of the app rather than being an exception. (Previously handleSortChange called
     // updateFilters directly, leaving stale/off-screen selection intact after the page reset
-    // to 1 that a sort change causes — see docs/TODO.md Task 9 follow-up item 22.)
+    // to 1 that a sort change causes.)
     const user = userEvent.setup();
     render(<App />);
     await switchToFilesTab(user);

@@ -60,7 +60,7 @@ Feature: Projects tab filtering
     And I should see project "Projects E2E Delta Untouched" in the table
 
   # ProjectsTable.tsx picks its empty-state message off whether a content filter (search/status/
-  # score/tag) is active, not off the filtered `total` alone (docs/TODO.md item 95 — `total` is
+  # score/tag) is active, not off the filtered `total` alone (`total` is
   # already the filtered count, so it can't distinguish "empty library" from "filtered to zero").
   # A search matching zero projects IS an active filter, so this renders "No folders match your
   # filters.", not "No folders found yet."

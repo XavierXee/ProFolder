@@ -434,7 +434,7 @@ function deriveLocationFields(musicRoot: string, absolutePath: string) {
   // `relativePath === ""` means `absolutePath` IS musicRoot itself (no filename segment at
   // all) — not `".."`/`".." + sep`-prefixed/absolute, so it would otherwise slip past this
   // guard and produce a corrupted row (empty id/relativePath, containingFolder computed as
-  // musicRoot's own parent — genuinely outside the root). docs/TODO.md item 114.
+  // musicRoot's own parent — genuinely outside the root).
   if (
     relativePath === ".." ||
     relativePath.startsWith(`..${path.sep}`) ||

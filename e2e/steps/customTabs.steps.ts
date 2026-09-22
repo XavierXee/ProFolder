@@ -164,7 +164,7 @@ async function createCustomTab(
   ]);
   const created = (await response.json()) as { id: number };
   // CreateCustomTabModal.tsx now stays permanently mounted and slides off-screen via a CSS
-  // transform on close (its own slide-animation fix, docs/TODO.md item 25), rather than
+  // transform on close (its own slide-animation fix), rather than
   // unmounting — so "closed" is asserted via the off-screen transform class, not DOM absence/
   // visibility (a `translate-x-full`-positioned element is still `visible` to Playwright, since
   // CSS transforms don't affect the visibility/display computation). Mirrors the same fix
@@ -309,7 +309,7 @@ Then("I should not see a {string} filter control", async ({ page }, triggerLabel
   // "Score" sort header) alongside FilterToolbar's own Status/Score/Tags picker triggers, so an
   // unscoped name match would collide — aria-haspopup="listbox" alone used to be enough to
   // disambiguate (sort-header buttons carry no such attribute), but CreateCustomTabModal.tsx now
-  // stays permanently mounted (its own slide-animation fix, docs/TODO.md item 25) and renders its
+  // stays permanently mounted (its own slide-animation fix) and renders its
   // own identically-labeled, aria-haspopup="listbox" Status/Score/Tags pickers even while
   // closed/off-screen. Scope to FilterToolbar's own role="toolbar" landmark instead, which
   // CreateCustomTabModal's create-tab form never renders (see files.steps.ts's/projects.steps.ts's

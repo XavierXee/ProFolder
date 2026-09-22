@@ -196,8 +196,8 @@ describe("CustomProjectsTabPanel - locked pickers are hidden, search/sort stay l
     // ProjectsTable.tsx's SortTh), so an unscoped name query would match both it and the
     // FilterToolbar's Score picker. The picker is a MultiSelectDropdown trigger, uniquely
     // identified by aria-haspopup="listbox" (the sort header has no such attribute). Matching
-    // on the exact name "Score" alone is NOT sufficient to find it though (docs/TODO.md item
-    // 126): LOCKED_PARAMS pre-selects 2 scores, so the picker's real accessible name (if it
+    // on the exact name "Score" alone is NOT sufficient to find it though:
+    // LOCKED_PARAMS pre-selects 2 scores, so the picker's real accessible name (if it
     // leaked through despite being locked) would be "Score (2)", never plain "Score" — an
     // exact-match query here would vacuously find nothing whether or not the underlying bug
     // this test exists to catch were reintroduced. Match the "Score"-prefix instead.
@@ -356,7 +356,7 @@ describe("CustomProjectsTabPanel - editing score inside the panel", () => {
     await waitFor(() => expect(mockUpdateProjectScore).toHaveBeenCalledWith("p1", 4));
     await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(callsBefore + 1));
     expect(props.refetchFiles).toHaveBeenCalledTimes(1);
-    // docs/TODO.md item 26: the cascade can turn a previously-unscored file into a scored
+    // A project-score cascade can turn a previously-unscored file into a scored
     // one, so the header stats (unscoredCount) must be refreshed too.
     expect(props.refreshStats).toHaveBeenCalledTimes(1);
   });
@@ -383,7 +383,7 @@ describe("CustomProjectsTabPanel - batch edit", () => {
     await waitFor(() => expect(mockBatchUpdateProjectScore).toHaveBeenCalledWith(["p1", "p2"], 3));
     await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(callsBefore + 1));
     expect(props.refetchFiles).toHaveBeenCalledTimes(1);
-    // docs/TODO.md item 26: the cascade can turn a previously-unscored file into a scored
+    // A project-score cascade can turn a previously-unscored file into a scored
     // one, so the header stats (unscoredCount) must be refreshed too.
     expect(props.refreshStats).toHaveBeenCalledTimes(1);
   });

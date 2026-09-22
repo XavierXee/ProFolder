@@ -16,7 +16,7 @@ import {
 import type { Project } from "../src/models/Project.js";
 import { createServer } from "../src/api/server.js";
 
-// Covers docs/TODO.md's "Task 9 follow-ups" item 3: PATCH /api/projects/batch/tags had no
+// PATCH /api/projects/batch/tags had no
 // coverage proving the per-project cascade actually reaches every selected project's files
 // (not just an HTTP 200 shape), plus a real bug found during scoping: addTagsToProjects wraps
 // the whole batch in one db.transaction() and does `INSERT OR IGNORE INTO project_tags`, but
@@ -24,7 +24,7 @@ import { createServer } from "../src/api/server.js";
 // SqliteError: FOREIGN KEY constraint failed and rolls back the ENTIRE transaction, losing
 // tags for every valid project in the same batch (and even new tag names from the global
 // `tags` dictionary insert, which shares the same transaction). The fix filters the id list
-// down to existing, active rows (filterExistingProjectIds — updated per docs/TODO.md item 20's
+// down to existing, active rows (filterExistingProjectIds — per a
 // product decision to also exclude soft-removed projects, not just unknown ids) before calling
 // addTagsToProjects/cascadeProjectTagsToFiles. The same helper is also applied to the sibling
 // PATCH /api/projects/batch/score route so both routes report an honest `updated` count and
@@ -203,7 +203,7 @@ describe("PATCH /api/projects/batch/tags — cascade + unknown-id handling", () 
     expect(after).toBeDefined();
   });
 
-  it("excludes a soft-removed PROJECT from the batch (active-only filter, docs/TODO.md item 20)", async () => {
+  it("excludes a soft-removed PROJECT from the batch (active-only filter)", async () => {
     upsertProject(db, makeProject({ id: "Project Removed" }));
     insertAudioFile(db, makeFile({ id: "r1.wav", projectId: "Project Removed" }));
     markProjectRemoved(db, ["Project Removed"], new Date().toISOString());

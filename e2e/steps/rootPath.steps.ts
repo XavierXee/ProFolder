@@ -58,9 +58,9 @@ function saveButton(page: Page) {
 }
 
 function cancelButton(page: Page) {
-  // Scoped to the header landmark (docs/TODO.md item 140-147): an unscoped exact "Cancel" match
+  // Scoped to the header landmark: an unscoped exact "Cancel" match
   // collides with CreateCustomTabModal.tsx's own form Cancel button, which stays permanently
-  // mounted (its own slide-animation fix, item 25) even while closed/off-screen.
+  // mounted (its own slide-animation fix) even while closed/off-screen.
   return page.getByRole("banner").getByRole("button", { name: "Cancel", exact: true });
 }
 

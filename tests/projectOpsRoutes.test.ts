@@ -41,7 +41,7 @@ vi.mock("node:child_process", async () => {
   };
 });
 
-// Covers Task 6 of docs/TODO.md item 5: wiring FileOpsService/TrashService +
+// Wiring FileOpsService/TrashService +
 // subtreeRekey.ts's moveProjectSubtree/cloneProjectSubtree into the projects routes.
 // Real filesystem IO against real tmp-dir project folders (FileOpsService's containment
 // checks resolve via fs.realpathSync, so fake paths like "/Music/..." won't pass them —

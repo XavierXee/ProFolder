@@ -305,9 +305,9 @@ When("I confirm deleting my status {string}", async ({ page }, baseName: string)
 // same way that step already does for other filter labels).
 
 function statusFilterTrigger(page: Page) {
-  // Scoped to FilterToolbar's own role="toolbar" landmark (docs/TODO.md item 140-147):
+  // Scoped to FilterToolbar's own role="toolbar" landmark:
   // aria-haspopup="listbox" alone is no longer sufficient — CreateCustomTabModal.tsx stays
-  // permanently mounted (its own slide-animation fix, item 25) and renders its own identically
+  // permanently mounted (its own slide-animation fix) and renders its own identically
   // named, aria-haspopup="listbox" Status picker even while closed/off-screen.
   return page.getByRole("toolbar", { name: "Filters" }).getByRole("button", { name: "Status", exact: true });
 }
@@ -358,7 +358,7 @@ Then("the file detail panel should show my status {string}", async ({ page }, ba
   await expect(fileDetailPanel(page).locator(`[aria-label="Status: ${fullName}"]`)).toBeVisible();
 });
 
-// docs/TODO.md item 148: the color half of a status rename/edit was never actually verified —
+// The color half of a status rename/edit was never actually verified —
 // every existing assertion checks the badge's aria-label (name propagation) only. StatusBadge.tsx
 // sets its color via inline `color-mix(...)` style properties embedding the literal hex, so the
 // raw `style` HTML attribute (not the CSSOM-normalized `element.style.*` getters, which a real

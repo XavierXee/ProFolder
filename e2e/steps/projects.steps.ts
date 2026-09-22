@@ -118,11 +118,11 @@ function escapeRegExp(value: string): string {
 async function toggleFilterOption(page: Page, triggerLabel: string, optionText: string): Promise<void> {
   // The trigger's accessible name is `${triggerLabel}` when nothing is selected, or
   // `${triggerLabel} (N)` once N options are selected (see FilterToolbar.tsx) — match the prefix.
-  // Scoped to FilterToolbar's own role="toolbar" landmark (docs/TODO.md item 140-147): an
+  // Scoped to FilterToolbar's own role="toolbar" landmark: an
   // unscoped name match on "Status" collides with the header's "Statuses and tags" button
   // (also starts with "Status"), and aria-haspopup="listbox" alone is no longer sufficient
   // either — CreateCustomTabModal.tsx stays permanently mounted since its own slide-animation
-  // fix (item 25) and renders its own same-named Status/Score/Tags MultiSelectDropdown triggers
+  // fix and renders its own same-named Status/Score/Tags MultiSelectDropdown triggers
   // even while closed/off-screen. FilterToolbar is the only role="toolbar" landmark in the page,
   // so scoping to it excludes both collisions at once.
   const trigger = page
@@ -253,7 +253,7 @@ const ALL_PROJECTS_E2E_FIXTURES = [
   // "loose-exports" and "Smoke Test Project" — Task 1's inert smoke-scaffolding fixtures (see
   // ALL_FILES_E2E_FIXTURES's own note on "loose-exports/silence-stub.wav"). Both get their own
   // project row like any other visited folder (same rationale as "Scanning E2E Exclusion Toggle"
-  // above); previously untracked in this table (docs/TODO.md item 111).
+  // above); previously untracked in this table.
   "loose-exports",
   "Smoke Test Project",
 ];
@@ -296,8 +296,8 @@ Then("I should see these projects in this order: {string}", async ({ page }, nam
 });
 
 // ProjectsTable.tsx picks between two empty-result messages based on whether a content filter
-// (search/status/score/tag) is currently active, not off the filtered `total` alone (docs/
-// TODO.md item 95 — `total` is already the filtered count, so `total === 0` can't distinguish
+// (search/status/score/tag) is currently active, not off the filtered `total` alone (`total`
+// is already the filtered count, so `total === 0` can't distinguish
 // "empty library" from "filtered to zero"). A search matching zero projects IS an active filter,
 // so "No folders match your filters." is what renders here.
 Then("I should see the projects empty-results message", async ({ page }) => {

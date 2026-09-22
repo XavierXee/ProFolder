@@ -17,7 +17,7 @@ type Props = {
   allTags: string[];
   /** App-level refresh for the header stats (draft/unscored counts). Status/tags handlers
    * below don't call it (those mutations don't change how many files are scored), but the
-   * score handlers do (docs/TODO.md item 26): a project-score edit cascades onto its member
+   * score handlers do: a project-score edit cascades onto its member
    * files' scores, which can turn a previously-unscored file into a scored one — mirroring
    * App.tsx's own handleProjectScoreSave/handleBatchProjectScore. Copy/Move/Delete are
    * different again: they add, relocate, or remove file rows outright, which can also change
@@ -198,7 +198,7 @@ export default function CustomProjectsTabPanel({
     if (operation !== "copy") {
       setSelectedProjectId(null);
       // A move/delete invalidates every id in the batch selection too — see App.tsx's
-      // identical comment on its own handleProjectOpSuccess (docs/TODO.md item 132).
+      // identical comment on its own handleProjectOpSuccess.
       setSelectedProjectIds(new Set());
     }
     setBanner(projectOpSuccessMessage(operation, outcome));

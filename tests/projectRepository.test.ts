@@ -293,8 +293,8 @@ describe("projectRepository.markRemoved", () => {
     setTags(db, "Project 00", ["favorite", "mix-ready"]);
     const siblingBefore = findById(db, "Project 01")!;
 
-    // Forced 1s ahead of wall-clock `now` (the project notes' backend-testing-conventions idiom,
-    // docs/TODO.md item 102): the in-memory-SQLite `beforeEach` fixture seed also stamps
+    // Forced 1s ahead of wall-clock `now` (the project notes' backend-testing-conventions idiom):
+    // the in-memory-SQLite `beforeEach` fixture seed also stamps
     // `lastSeenAt` via `new Date().toISOString()`, and both calls are fast enough to land in the
     // same millisecond a meaningful fraction of the time — which would let a regression that
     // dropped `markRemoved`'s `last_seen_at = ?` SET clause entirely slip through by coincidence

@@ -76,7 +76,7 @@ type Props = {
   /** Called the instant a new scan attempt starts (before the request is even sent), so the
    * caller can clear a stale banner from a previous scan — otherwise, if this new attempt
    * fails, the previous attempt's success banner would keep silently claiming a scan completed
-   * (docs/TODO.md item, Task 7.1 finding). */
+   * (a real, previously-reported bug). */
   onScanStart: () => void;
 };
 
