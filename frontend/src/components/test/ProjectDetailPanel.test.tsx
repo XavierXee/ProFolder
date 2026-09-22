@@ -278,6 +278,7 @@ describe("ProjectDetailPanel - duplicates banner", () => {
             matchingSampleCount: 2,
             sampleCount: 3,
             matchRatio: 0.6666,
+            matchReasons: ["sampleOverlap"],
           },
         ],
       })
@@ -300,6 +301,7 @@ describe("ProjectDetailPanel - duplicates banner", () => {
             matchingSampleCount: 1,
             sampleCount: 1,
             matchRatio: 1,
+            matchReasons: ["sampleOverlap"],
           },
           {
             projectId: "p3",
@@ -308,6 +310,7 @@ describe("ProjectDetailPanel - duplicates banner", () => {
             matchingSampleCount: 4,
             sampleCount: 4,
             matchRatio: 1,
+            matchReasons: ["sampleOverlap"],
           },
         ],
       })
@@ -329,6 +332,7 @@ describe("ProjectDetailPanel - duplicates banner", () => {
             matchingSampleCount: 2,
             sampleCount: 3,
             matchRatio: 0.6666,
+            matchReasons: ["sampleOverlap"],
           },
         ],
       })
@@ -352,6 +356,7 @@ describe("ProjectDetailPanel - duplicates banner", () => {
               matchingSampleCount: 2,
               sampleCount: 3,
               matchRatio: 0.6666,
+              matchReasons: ["sampleOverlap"],
             },
           ],
         })
@@ -385,6 +390,73 @@ describe("ProjectDetailPanel - duplicates banner", () => {
 
     await waitFor(() => expect(mockGetProjectDuplicates).toHaveBeenCalledWith("p3"));
     expect(screen.queryByText(/Possible duplicate/)).not.toBeInTheDocument();
+  });
+
+  it("shows the 'Same name' badge on a match whose matchReasons includes sameName", async () => {
+    mockGetProjectDuplicates.mockReset().mockResolvedValue(
+      makeDuplicatesResult({
+        matches: [
+          {
+            projectId: "p2",
+            projectName: "My Song",
+            projectPath: "/music/My Song (copy)",
+            matchingSampleCount: 0,
+            sampleCount: 0,
+            matchRatio: 0,
+            matchReasons: ["sameName"],
+          },
+        ],
+      })
+    );
+    renderPanel();
+
+    expect(await screen.findByText("Same name")).toBeInTheDocument();
+  });
+
+  it("does not show the 'Same name' badge on a match whose matchReasons is exactly ['sampleOverlap']", async () => {
+    mockGetProjectDuplicates.mockReset().mockResolvedValue(
+      makeDuplicatesResult({
+        matches: [
+          {
+            projectId: "p2",
+            projectName: "Other Song",
+            projectPath: "/music/Other Song",
+            matchingSampleCount: 2,
+            sampleCount: 3,
+            matchRatio: 0.6666,
+            matchReasons: ["sampleOverlap"],
+          },
+        ],
+      })
+    );
+    renderPanel();
+
+    await screen.findByText("Other Song");
+    expect(screen.queryByText("Same name")).not.toBeInTheDocument();
+  });
+
+  it("renders both the 'Same name' badge and the existing overlap/name/path content when matchReasons contains both reasons", async () => {
+    mockGetProjectDuplicates.mockReset().mockResolvedValue(
+      makeDuplicatesResult({
+        matches: [
+          {
+            projectId: "p2",
+            projectName: "My Song (Duplicate)",
+            projectPath: "/music/My Song (Duplicate)",
+            matchingSampleCount: 2,
+            sampleCount: 3,
+            matchRatio: 0.6666,
+            matchReasons: ["sameName", "sampleOverlap"],
+          },
+        ],
+      })
+    );
+    renderPanel();
+
+    expect(await screen.findByText("Same name")).toBeInTheDocument();
+    expect(screen.getByText("2 matching samples (67% overlap)")).toBeInTheDocument();
+    expect(screen.getByText("My Song (Duplicate)")).toBeInTheDocument();
+    expect(screen.getByText("/music/My Song (Duplicate)")).toBeInTheDocument();
   });
 
   it("shows no banner, does not crash, and still renders the rest of the panel when getProjectDuplicates rejects", async () => {
@@ -827,6 +899,7 @@ describe("ProjectDetailPanel - token-driven classes", () => {
             matchingSampleCount: 2,
             sampleCount: 3,
             matchRatio: 0.6666,
+            matchReasons: ["sampleOverlap"],
           },
         ],
       })

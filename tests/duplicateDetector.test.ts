@@ -115,6 +115,9 @@ describe("findDuplicateMatches", () => {
     expect(matches).toHaveLength(1);
     expect(matches[0]).toMatchObject({ projectId: "Track B", matchingSampleCount: 3, sampleCount: 4 });
     expect(matches[0]!.matchRatio).toBeCloseTo(1, 5);
+    // Different names ("Track A" vs "Track B"), so this qualifies purely on sample
+    // overlap clearing the strict thresholds — not via the name-gated relaxation.
+    expect(matches[0]!.matchReasons).toEqual(["sampleOverlap"]);
   });
 
   it("does not flag a candidate with too few matching files", () => {
@@ -243,5 +246,171 @@ describe("findDuplicateMatches", () => {
     ]);
 
     expect(matches).toHaveLength(0);
+  });
+
+  describe("name-gated relaxed match ratio", () => {
+    // Helper for building sets of distinct (filename, size) sample signatures. Samples
+    // generated with the same prefix+index by two separate calls are identical
+    // signatures (used to model "shared" samples between target and candidate);
+    // different prefixes/indices never collide.
+    function makeSamples(count: number, prefix: string) {
+      return Array.from({ length: count }, (_, i) => ({
+        relativePath: `${prefix}-${i}.wav`,
+        filename: `${prefix}-${i}.wav`,
+        size: i,
+      }));
+    }
+
+    function withName(project: Project, name: string): Project {
+      return { ...project, name };
+    }
+
+    it("flags a same-named candidate whose ratio falls in the relaxed 0.5-0.6 band (regression case)", () => {
+      // 5 shared samples out of 9 unique samples on each side => ratio 5/9 ≈ 0.556 —
+      // above the new MIN_MATCH_RATIO_SAME_NAME (0.5) but below the old/global
+      // MIN_MATCH_RATIO (0.6). This mirrors the real "Almost Summer Project" bug
+      // (24/41 ≈ 0.585 was missed) with smaller representative numbers.
+      const shared = makeSamples(5, "shared");
+      const target = withName(
+        makeProject("Target", "/music/Target", "ableton"),
+        "Almost Summer Project"
+      );
+      const targetSamples9 = [...shared, ...makeSamples(4, "target-only")];
+      const candidate = withName(
+        makeProject("Candidate", "/music/Candidate", "ableton"),
+        "Almost Summer Project"
+      );
+      const candidateSamples9 = [...shared, ...makeSamples(4, "candidate-only")];
+
+      const matches = findDuplicateMatches(targetSamples9, target, [
+        { project: candidate, samples: candidateSamples9 },
+      ]);
+
+      expect(matches).toHaveLength(1);
+      expect(matches[0]!.matchRatio).toBeCloseTo(5 / 9, 5);
+      expect(matches[0]!.matchReasons).toEqual(["sameName"]);
+    });
+
+    it("does not flag a same-named candidate once ratio drops below the relaxed 0.5 floor", () => {
+      // 4 shared out of 9 unique samples each side => ratio 4/9 ≈ 0.444, below 0.5.
+      const shared = makeSamples(4, "shared");
+      const target = withName(
+        makeProject("Target", "/music/Target", "ableton"),
+        "Almost Summer Project"
+      );
+      const targetSamples9 = [...shared, ...makeSamples(5, "target-only")];
+      const candidate = withName(
+        makeProject("Candidate", "/music/Candidate", "ableton"),
+        "Almost Summer Project"
+      );
+      const candidateSamples9 = [...shared, ...makeSamples(5, "candidate-only")];
+
+      const matches = findDuplicateMatches(targetSamples9, target, [
+        { project: candidate, samples: candidateSamples9 },
+      ]);
+
+      expect(matches).toHaveLength(0);
+    });
+
+    it("does not relax the absolute MIN_MATCHING_SAMPLES floor for same-named pairs even at ratio 1.0", () => {
+      // Only 2 matching samples, both sides otherwise empty => ratio 2/2 = 1.0, but the
+      // shared MIN_MATCHING_SAMPLES (3) floor is deliberately NOT relaxed for the
+      // same-name path — this proves that's still enforced, not an oversight.
+      const shared = makeSamples(2, "shared");
+      const target = withName(makeProject("Target", "/music/Target", "ableton"), "Same Name");
+      const candidate = withName(makeProject("Candidate", "/music/Candidate", "ableton"), "Same Name");
+
+      const matches = findDuplicateMatches(shared, target, [{ project: candidate, samples: shared }]);
+
+      expect(matches).toHaveLength(0);
+    });
+
+    it("does NOT flag the same numeric fixture as the regression case when project names differ (false-positive guard)", () => {
+      // Identical sample overlap/ratio (5/9 ≈ 0.556) as the first regression test above,
+      // but with different project names — proves the relaxation is genuinely
+      // name-gated, not an accidental global lowering of MIN_MATCH_RATIO.
+      const shared = makeSamples(5, "shared");
+      const target = withName(makeProject("Target", "/music/Target", "ableton"), "Almost Summer Project");
+      const targetSamples9 = [...shared, ...makeSamples(4, "target-only")];
+      const candidate = withName(makeProject("Candidate", "/music/Candidate", "ableton"), "Totally Different Name");
+      const candidateSamples9 = [...shared, ...makeSamples(4, "candidate-only")];
+
+      const matches = findDuplicateMatches(targetSamples9, target, [
+        { project: candidate, samples: candidateSamples9 },
+      ]);
+
+      expect(matches).toHaveLength(0);
+    });
+
+    it("reports both matchReasons when a same-named pair also clears the strict global thresholds", () => {
+      // 6 shared out of 9 unique samples each side => ratio 6/9 ≈ 0.667, which clears
+      // both MIN_MATCH_RATIO (0.6) and MIN_MATCHING_SAMPLES (3) on its own.
+      const shared = makeSamples(6, "shared");
+      const target = withName(makeProject("Target", "/music/Target", "ableton"), "Same Name");
+      const targetSamples9 = [...shared, ...makeSamples(3, "target-only")];
+      const candidate = withName(makeProject("Candidate", "/music/Candidate", "ableton"), "Same Name");
+      const candidateSamples9 = [...shared, ...makeSamples(3, "candidate-only")];
+
+      const matches = findDuplicateMatches(targetSamples9, target, [
+        { project: candidate, samples: candidateSamples9 },
+      ]);
+
+      expect(matches).toHaveLength(1);
+      expect(matches[0]!.matchReasons).toEqual(expect.arrayContaining(["sameName", "sampleOverlap"]));
+      expect(matches[0]!.matchReasons).toHaveLength(2);
+    });
+
+    it("treats names differing only by case and/or surrounding whitespace as the same name", () => {
+      const shared = makeSamples(5, "shared");
+      const target = withName(makeProject("Target", "/music/Target", "ableton"), "Track Alpha");
+      const targetSamples9 = [...shared, ...makeSamples(4, "target-only")];
+      const candidate = withName(makeProject("Candidate", "/music/Candidate", "ableton"), "  TRACK alpha  ");
+      const candidateSamples9 = [...shared, ...makeSamples(4, "candidate-only")];
+
+      const matches = findDuplicateMatches(targetSamples9, target, [
+        { project: candidate, samples: candidateSamples9 },
+      ]);
+
+      expect(matches).toHaveLength(1);
+      expect(matches[0]!.matchReasons).toEqual(["sameName"]);
+    });
+
+    it("does not treat names differing only by punctuation/spacing as the same name (scoped-out fuzzy matching)", () => {
+      // Same relaxed-band ratio (5/9 ≈ 0.556) as the regression case, but the names
+      // differ only by punctuation ("Almost Summer Project" vs "Almost-Summer-Project")
+      // — normalization is exact-match-after-trim+lowercase only, so this must NOT be
+      // treated as a name match, and thus must NOT be flagged.
+      const shared = makeSamples(5, "shared");
+      const target = withName(
+        makeProject("Target", "/music/Target", "ableton"),
+        "Almost Summer Project"
+      );
+      const targetSamples9 = [...shared, ...makeSamples(4, "target-only")];
+      const candidate = withName(
+        makeProject("Candidate", "/music/Candidate", "ableton"),
+        "Almost-Summer-Project"
+      );
+      const candidateSamples9 = [...shared, ...makeSamples(4, "candidate-only")];
+
+      const matches = findDuplicateMatches(targetSamples9, target, [
+        { project: candidate, samples: candidateSamples9 },
+      ]);
+
+      expect(matches).toHaveLength(0);
+    });
+
+    it("does not treat two empty/whitespace-only project names as a name match", () => {
+      const shared = makeSamples(5, "shared");
+      const target = withName(makeProject("Target", "/music/Target", "ableton"), "");
+      const targetSamples9 = [...shared, ...makeSamples(4, "target-only")];
+      const candidate = withName(makeProject("Candidate", "/music/Candidate", "ableton"), "   ");
+      const candidateSamples9 = [...shared, ...makeSamples(4, "candidate-only")];
+
+      const matches = findDuplicateMatches(targetSamples9, target, [
+        { project: candidate, samples: candidateSamples9 },
+      ]);
+
+      expect(matches).toHaveLength(0);
+    });
   });
 });

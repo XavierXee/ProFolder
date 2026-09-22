@@ -56,13 +56,16 @@ describe("GET /api/projects/:id/duplicates", () => {
 
   /** Seeds a `projects` row. `projectPath` should be a real directory under `root` — the
    * route does live filesystem IO regardless of DB state. `id` doubles as the relative
-   * path used by the route's exclusion-prefix check, matching how real project ids work. */
-  function seedProject(overrides: { id: string; projectPath: string; dawType?: DawType }): void {
+   * path used by the route's exclusion-prefix check, matching how real project ids work.
+   * `name` defaults to `id` (matching every existing fixture in this file) but can be
+   * overridden independently, since `findDuplicateMatches`'s name-gated relaxation keys off
+   * the DB `name` column, not the id/path. */
+  function seedProject(overrides: { id: string; projectPath: string; dawType?: DawType; name?: string }): void {
     const now = new Date().toISOString();
     fs.mkdirSync(overrides.projectPath, { recursive: true });
     upsertProject(db, {
       id: overrides.id,
-      name: overrides.id,
+      name: overrides.name ?? overrides.id,
       path: overrides.projectPath,
       dawType: overrides.dawType,
       hasVideo: false,
@@ -102,7 +105,7 @@ describe("GET /api/projects/:id/duplicates", () => {
     expect(res.body).toEqual({ projectId: "Plain Folder", sampleCount: 0, matches: [] });
   });
 
-  it("reports a genuine match with all six per-match fields, plus the top-level sampleCount", async () => {
+  it("reports a genuine match with all seven per-match fields, plus the top-level sampleCount", async () => {
     const targetSamples: SampleSpec[] = [
       { filename: "kick.wav", size: 100 },
       { filename: "snare.wav", size: 200 },
@@ -130,6 +133,9 @@ describe("GET /api/projects/:id/duplicates", () => {
     // that actually distinguishes them.
     expect(res.body.sampleCount).toBe(5);
 
+    // "Track A" and "Track A Copy" are differently-named after normalization, so this
+    // match qualifies solely via the original strict overlap thresholds (5 matching, ratio
+    // 1.0), not the name-gated relaxation — hence matchReasons is exactly ["sampleOverlap"].
     expect(res.body.matches).toEqual([
       {
         projectId: "Track A Copy",
@@ -138,6 +144,7 @@ describe("GET /api/projects/:id/duplicates", () => {
         matchingSampleCount: 5,
         sampleCount: 5,
         matchRatio: 1,
+        matchReasons: ["sampleOverlap"],
       },
     ]);
   });
@@ -406,4 +413,54 @@ describe("GET /api/projects/:id/duplicates", () => {
       matchRatio: 1,
     });
   });
+
+  it(
+    "flags a same-named pair via the name-gated relaxation through the real route (matchReasons " +
+      '["sameName"] when ratio clears 0.5 but not the strict 0.6 threshold)',
+    async () => {
+      // Names differ only by surrounding whitespace and case — normalizeProjectName's
+      // trim+lowercase should treat them as identical, proving normalization survives the
+      // full route/DB/filesystem path, not just the pure function Task 1 already unit-tested.
+      const targetSamples: SampleSpec[] = Array.from({ length: 9 }, (_, i) => ({
+        filename: `s${i}.wav`,
+        size: 100 + i,
+      }));
+      const targetPath = path.join(root, "Track Match Name");
+      seedProject({
+        id: "Track Match Name",
+        projectPath: targetPath,
+        dawType: "ableton",
+        name: "Track Match Name",
+      });
+      writeSamples(targetPath, targetSamples);
+
+      // Shares the target's first 5 samples, plus 4 of its own unique ones (9 unique total)
+      // -> matchingSampleCount 5, matchRatio 5/min(9,9) = 5/9 ≈ 0.556. That clears
+      // MIN_MATCH_RATIO_SAME_NAME (0.5) but falls short of the strict MIN_MATCH_RATIO (0.6),
+      // so this pair must NOT qualify via qualifiesByOverlap — only via the same-name
+      // relaxation, giving matchReasons exactly ["sameName"].
+      const candidatePath = path.join(root, "Track Candidate Name");
+      seedProject({
+        id: "Track Candidate Name",
+        projectPath: candidatePath,
+        dawType: "ableton",
+        name: "  TRACK MATCH NAME  ",
+      });
+      writeSamples(candidatePath, [
+        ...targetSamples.slice(0, 5),
+        ...Array.from({ length: 4 }, (_, i) => ({ filename: `u${i}.wav`, size: 900 + i })),
+      ]);
+
+      const res = await request(app).get(`/api/projects/${encodeURIComponent("Track Match Name")}/duplicates`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.matches).toHaveLength(1);
+      expect(res.body.matches[0]).toMatchObject({
+        projectId: "Track Candidate Name",
+        matchingSampleCount: 5,
+        matchRatio: 5 / 9,
+        matchReasons: ["sameName"],
+      });
+    }
+  );
 });

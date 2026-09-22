@@ -170,16 +170,16 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 15/87 (17%). The remaining 2 row
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 10.1 | `GET /api/projects/:id/duplicates` route itself | WRONG-LAYER | No `duplicat*` hits in `e2e/features/`; route (`src/api/routes/projects.ts:214`) has zero test coverage at any layer, only underlying pure functions unit-tested |
+| 10.1 | `GET /api/projects/:id/duplicates` route itself | COVERED-INTEGRATION / WRONG-LAYER | `tests/projectDuplicatesRoute.test.ts:418` proves the route wires the name-gated relaxation end-to-end (real HTTP + real DB + real files), but still no e2e coverage (`e2e/features/` has no `duplicat*` hits) |
 | 10.2a | (filename,size) pair matching | COVERED-UNIT | `tests/duplicateDetector.test.ts:101,155` |
 | 10.2b | filename matching case-insensitive | PARTIAL | implemented (`sampleKey` lowercases) but no test uses actually-different-case filenames |
 | 10.2c | Samples search any-depth; top-level-only "Imported" exclusion | COVERED-UNIT | `tests/duplicateDetector.test.ts:71,79` |
-| 10.3 | >=3 matches AND ratio >=0.6 threshold | COVERED-UNIT | `tests/duplicateDetector.test.ts:120,131` — spot-checked directly, confirms both the too-few-matches and below-ratio-threshold negative cases |
+| 10.3 | >=3 matches AND (ratio >=0.6 unconditionally, OR ratio >=0.5 when normalized names match) | COVERED-UNIT | `tests/duplicateDetector.test.ts:120,131` (original too-few-matches/below-ratio negatives) plus the name-gated relaxation suite at `tests/duplicateDetector.test.ts:268,294,315,328,345,363,378,402` — regression case, below-relaxed-floor, count-floor-not-relaxed, false-positive name-gating guard, both-reasons, case/whitespace normalization, punctuation-boundary (fuzzy matching scoped out), and empty-name boundary; also route-level end-to-end proof at `tests/projectDuplicatesRoute.test.ts:418` |
 | 10.4 | Plain folder never candidate/target; ancestor/descendant excluded | COVERED-UNIT | `tests/duplicateDetector.test.ts:236,204` |
 | 10.5a | Excludes different-DAW candidates | COVERED-UNIT | `tests/duplicateDetector.test.ts:225` |
 | 10.5b | Excludes scan-excluded candidates (§4) | NONE | Filter only implemented in the untested route (10.1), not in unit-tested functions |
 | 10.6 | Sorted by descending match ratio | COVERED-UNIT | `tests/duplicateDetector.test.ts:178` |
-| 10.6b | UI display (name/path/count/overlap%) | NONE / WRONG-LAYER | Same as 10.1, no e2e proof the Project-detail-panel duplicate-warning block (§8.3) ever renders |
+| 10.6b | UI display (name/path/count/overlap%, "Same name" badge) | COVERED-UNIT / WRONG-LAYER | `frontend/src/components/test/ProjectDetailPanel.test.tsx:395,416,438` cover the badge's presence/absence/co-existence with existing content at the component-test layer, but still no e2e proof the Project-detail-panel duplicate-warning block (§8.3) ever renders |
 
 ## §11 Playback
 

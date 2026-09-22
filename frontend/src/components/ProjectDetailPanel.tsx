@@ -224,9 +224,16 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
                   <div className="space-y-1.5">
                     {duplicates.matches.map((m) => (
                       <div key={m.projectId} className="px-2.5 py-1.5 rounded-[var(--rt-radius)] bg-surface-hover">
-                        <p className="text-xs font-mono truncate text-ink">
-                          {m.projectName}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-mono truncate text-ink">
+                            {m.projectName}
+                          </p>
+                          {m.matchReasons.includes("sameName") && (
+                            <span className="inline-flex items-center flex-shrink-0 px-2 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium ring-1 bg-info-surface text-info ring-info/30">
+                              Same name
+                            </span>
+                          )}
+                        </div>
                         <p className={`text-xs font-mono truncate ${meta}`} title={m.projectPath}>
                           {m.projectPath}
                         </p>

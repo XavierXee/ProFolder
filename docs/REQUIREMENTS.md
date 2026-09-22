@@ -126,13 +126,13 @@
 
 10.2. Sample files are matched by (filename, size) pair, case-insensitive on filename; a folder is only searched for "Samples" content by name match (any depth) or, at the project's top level only, a folder named "Imported" (deep "Imported" folders are excluded, since Ableton's own Max-for-Live device cache uses that name and would produce false positives).
 
-10.3. A candidate is flagged as a possible duplicate only if it shares at least 3 matching sample files **and** the match ratio (matches ÷ the smaller of the two projects' sample counts) is at least 0.6.
+10.3. A candidate is flagged as a possible duplicate if it shares at least 3 matching sample files **and either**: (a) the match ratio (matches ÷ the smaller of the two projects' sample counts) is at least 0.6 unconditionally, **or** (b) the two projects' names are equal after trimming whitespace and lowercasing, and the match ratio is at least 0.5 (a relaxed bar that only applies when the name itself is already strong independent evidence — the absolute 3-sample floor is never relaxed, and differently-named pairs are never affected by the 0.5 bar). Each match reports which of these signals contributed via a `matchReasons` list (`"sameName"`, `"sampleOverlap"`, or both).
 
 10.4. A plain container folder (no DAW type) is never treated as a duplicate candidate or target, and two projects are never compared if one's folder is an ancestor of the other's (that's containment, not duplication).
 
 10.5. Matches are excluded if the candidate project is currently scan-excluded (via §4) or belongs to a different DAW.
 
-10.6. Results are sorted by descending match ratio and displayed with project name, path, matching-sample count, and overlap percentage.
+10.6. Results are sorted by descending match ratio and displayed with project name, path, matching-sample count, overlap percentage, and a "Same name" badge when `matchReasons` includes `"sameName"`.
 
 ## 11. Playback
 

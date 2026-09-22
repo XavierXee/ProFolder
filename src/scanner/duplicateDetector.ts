@@ -7,7 +7,7 @@ import {
 } from "./ignoreRules.js";
 import { walkDirectory } from "./walk.js";
 import type { Project } from "../models/Project.js";
-import type { ProjectDuplicateMatch } from "../models/ProjectDuplicate.js";
+import type { MatchReason, ProjectDuplicateMatch } from "../models/ProjectDuplicate.js";
 
 export type SampleFileSignature = {
   relativePath: string;
@@ -21,6 +21,19 @@ export type SampleFileSignature = {
  * happen to share a couple of common one-shots. */
 const MIN_MATCHING_SAMPLES = 3;
 const MIN_MATCH_RATIO = 0.6;
+
+/**
+ * A NAME-GATED relaxation of MIN_MATCH_RATIO, not a global lowering of the bar: applies
+ * only when both projects share the same normalized name (see `normalizeProjectName`),
+ * in addition to (never instead of) the unchanged MIN_MATCHING_SAMPLES floor below. Two
+ * identically-named projects sharing 24 of one side's 41 samples (ratio 0.585) is a
+ * near-certain duplicate that the stricter 0.6 global ratio was missing — but simply
+ * lowering MIN_MATCH_RATIO for everyone produces false positives from unrelated,
+ * differently-named projects that just happen to share a couple of common one-shots
+ * when one side has very few total samples. Gating the relaxation on matching project
+ * names keeps that false-positive risk out while still catching the real case.
+ */
+const MIN_MATCH_RATIO_SAME_NAME = 0.5;
 
 const MAX_DEPTH = 8;
 
@@ -100,6 +113,14 @@ function sampleKey(sample: SampleFileSignature): string {
   return `${sample.filename.toLowerCase()}::${sample.size}`;
 }
 
+/** Normalizes a project name for exact (not fuzzy) name-match comparisons: trims
+ * surrounding whitespace and lowercases. Punctuation/spacing differences (e.g. "Song A"
+ * vs "Song A (copy)" or "Almost Summer Project" vs "Almost-Summer-Project") are
+ * deliberately NOT treated as equivalent — that's out of scope for this cycle. */
+function normalizeProjectName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 /** Number of distinct (filename, size) sample signatures — the same dedup key each
  * match's own `sampleCount`/`matchingSampleCount` is computed against in
  * `findDuplicateMatches` below, so a caller reporting a project's own sample count
@@ -150,7 +171,19 @@ export function findDuplicateMatches(
     }
 
     const matchRatio = matchingSampleCount / Math.min(targetKeys.size, candidateKeys.size);
-    if (matchingSampleCount >= MIN_MATCHING_SAMPLES && matchRatio >= MIN_MATCH_RATIO) {
+
+    const sameName =
+      normalizeProjectName(targetProject.name) === normalizeProjectName(project.name) &&
+      normalizeProjectName(targetProject.name) !== "";
+    const qualifiesByOverlap = matchingSampleCount >= MIN_MATCHING_SAMPLES && matchRatio >= MIN_MATCH_RATIO;
+    const qualifiesByRelaxedName =
+      sameName && matchingSampleCount >= MIN_MATCHING_SAMPLES && matchRatio >= MIN_MATCH_RATIO_SAME_NAME;
+
+    if (qualifiesByOverlap || qualifiesByRelaxedName) {
+      const matchReasons: MatchReason[] = [];
+      if (sameName) matchReasons.push("sameName");
+      if (qualifiesByOverlap) matchReasons.push("sampleOverlap");
+
       matches.push({
         projectId: project.id,
         projectName: project.name,
@@ -158,6 +191,7 @@ export function findDuplicateMatches(
         matchingSampleCount,
         sampleCount: candidateKeys.size,
         matchRatio,
+        matchReasons,
       });
     }
   }
