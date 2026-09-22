@@ -10,6 +10,12 @@ export function openDb(dbPath: string): Database.Database {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+  // WAL mode allows multiple local processes to share one file, but a writer
+  // that loses a write-lock race gets an immediate SQLITE_BUSY instead of a
+  // short wait-and-retry. 5000ms comfortably covers a single short write
+  // transaction (the kind this app performs) without masking a genuinely
+  // stuck/deadlocked connection for an unreasonable amount of time.
+  db.pragma("busy_timeout = 5000");
   runMigrations(db);
   return db;
 }
