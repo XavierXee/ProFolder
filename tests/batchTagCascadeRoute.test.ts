@@ -31,6 +31,7 @@ function makeServerServices(db: Database.Database) {
     folderPickerService: new MacFolderPickerService(),
     trashService: new MacTrashService(() => getEffectiveMusicRoot(db)),
     fileOpsService: new NodeFileOpsService(() => getEffectiveMusicRoot(db)),
+    runtimeMode: "web" as const,
   };
 }
 

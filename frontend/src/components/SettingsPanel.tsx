@@ -64,6 +64,17 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
   const [paginationLoading, setPaginationLoading] = useState(false);
   const [paginationSaveState, setPaginationSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [paginationError, setPaginationError] = useState<string | undefined>();
+  // Desktop-only "Data Location" section: `runtimeMode` starts `null` (unknown) so the whole
+  // section stays unrendered until `api.getConfig()` resolves, rather than flashing visible then
+  // disappearing for web-mode users.
+  const [runtimeMode, setRuntimeMode] = useState<"web" | "desktop" | null>(null);
+  const [dbPath, setDbPath] = useState<string | undefined>();
+  const [dbLoading, setDbLoading] = useState(false);
+  const [dbLoadError, setDbLoadError] = useState<string | undefined>();
+  const [pendingDbPath, setPendingDbPath] = useState<string | undefined>();
+  const [dbChoosing, setDbChoosing] = useState(false);
+  const [dbApplyState, setDbApplyState] = useState<"idle" | "applying" | "restarting" | "error">("idle");
+  const [dbError, setDbError] = useState<string | undefined>();
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -100,6 +111,26 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
       })
       .catch((err) => setPaginationError(err instanceof Error ? err.message : "Failed to load settings"))
       .finally(() => setPaginationLoading(false));
+    setRuntimeMode(null);
+    setDbPath(undefined);
+    setDbLoadError(undefined);
+    setPendingDbPath(undefined);
+    setDbChoosing(false);
+    setDbApplyState("idle");
+    setDbError(undefined);
+    api
+      .getConfig()
+      .then((config) => {
+        setRuntimeMode(config.runtimeMode);
+        if (config.runtimeMode !== "desktop") return;
+        setDbLoading(true);
+        api
+          .getDbLocation()
+          .then((result) => setDbPath(result.dbPath))
+          .catch((err) => setDbLoadError(err instanceof Error ? err.message : "Failed to load settings"))
+          .finally(() => setDbLoading(false));
+      })
+      .catch(() => setRuntimeMode("web"));
     setTimeout(() => closeRef.current?.focus(), 50);
   }, [open]);
 
@@ -186,6 +217,43 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
         setPaginationError(err instanceof Error ? err.message : "Failed to save settings");
         setPaginationSaveState("error");
       });
+  }
+
+  async function handleChooseDbLocation() {
+    setDbChoosing(true);
+    setDbError(undefined);
+    try {
+      const chosen = await api.chooseDbLocation();
+      if (chosen) setPendingDbPath(chosen);
+    } catch (err) {
+      setDbError(err instanceof Error ? err.message : "Could not open the file picker");
+    } finally {
+      setDbChoosing(false);
+    }
+  }
+
+  function handleCancelDbLocation() {
+    setPendingDbPath(undefined);
+    setDbError(undefined);
+    setDbApplyState("idle");
+  }
+
+  // Deliberately does NOT auto-apply on selection the way RootPathControl's folder browse does:
+  // this action restarts the whole app, so it needs an explicit confirm step rather than firing
+  // from a single misclick.
+  async function handleApplyDbLocation() {
+    if (!pendingDbPath) return;
+    setDbApplyState("applying");
+    setDbError(undefined);
+    try {
+      await api.setDbLocation(pendingDbPath);
+      // Success: the app is about to relaunch. There is nothing more to poll or confirm, and the
+      // resulting connection drop is expected, not an error.
+      setDbApplyState("restarting");
+    } catch (err) {
+      setDbError(err instanceof Error ? err.message : "Could not update the database location");
+      setDbApplyState("error");
+    }
   }
 
   const panel = "bg-surface border-border text-ink";
@@ -340,7 +408,7 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
           ) : null}
           <p className={`text-xs mt-4 mb-2 ${meta}`}>Folder exclusion changes apply the next time you run a scan.</p>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-2">
+        <div className={`flex-1 overflow-y-auto px-6 py-2 ${runtimeMode === "desktop" ? `border-b ${divider}` : ""}`}>
           <div className="flex items-center justify-between mb-1 mt-2">
             <p className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Confirmation Settings</p>
             <div className="h-4">
@@ -401,6 +469,68 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
             </div>
           ) : null}
         </div>
+        {runtimeMode === "desktop" ? (
+          <div className="flex-1 overflow-y-auto px-6 py-2">
+            <div className="flex items-center justify-between mb-1 mt-2">
+              <p className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Data Location</p>
+              <div className="h-4">
+                {dbApplyState === "applying" && <span className={`text-xs font-mono ${meta}`}>Saving…</span>}
+                {dbApplyState === "error" && <span className="text-xs font-mono text-red-400">Failed to save</span>}
+              </div>
+            </div>
+
+            {dbLoading ? (
+              <p className={`text-sm mt-3 ${meta}`}>Loading…</p>
+            ) : dbLoadError ? (
+              <p className="text-sm mt-3 text-red-400">{dbLoadError}</p>
+            ) : dbApplyState === "restarting" ? (
+              <p className="text-sm mt-3 text-emerald-400">Restarting… the app will relaunch shortly to use the new database location.</p>
+            ) : pendingDbPath ? (
+              <div>
+                <p className={`text-xs mt-1 mb-2 ${meta}`}>New database location:</p>
+                <span className="block text-xs font-mono truncate max-w-[280px] text-slate-500" title={pendingDbPath}>
+                  {pendingDbPath}
+                </span>
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={handleApplyDbLocation}
+                    disabled={dbApplyState === "applying"}
+                    className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
+                  >
+                    {dbApplyState === "applying" ? "Applying…" : "Apply & Restart"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelDbLocation}
+                    disabled={dbApplyState === "applying"}
+                    className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {dbError ? <p className="text-sm mt-2 text-red-400">{dbError}</p> : null}
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono truncate max-w-[220px] text-slate-500" title={dbPath}>
+                    {dbPath ?? "…"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleChooseDbLocation}
+                    disabled={dbChoosing}
+                    className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {dbChoosing ? "Waiting…" : "Choose…"}
+                  </button>
+                </div>
+                {dbError ? <p className="text-sm mt-2 text-red-400">{dbError}</p> : null}
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </>
   );

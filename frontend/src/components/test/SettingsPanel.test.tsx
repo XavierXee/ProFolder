@@ -11,6 +11,10 @@ vi.mock("../../api/client.js", () => ({
   setConfirmationSettings: vi.fn(),
   getPaginationSettings: vi.fn(),
   setPaginationSettings: vi.fn(),
+  getConfig: vi.fn(),
+  getDbLocation: vi.fn(),
+  chooseDbLocation: vi.fn(),
+  setDbLocation: vi.fn(),
 }));
 
 vi.mock("../../hooks/useItemsPerPage.js", () => ({
@@ -27,6 +31,10 @@ const mockSetConfirmationSettings = vi.mocked(api.setConfirmationSettings);
 const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 const mockSetPaginationSettings = vi.mocked(api.setPaginationSettings);
 const mockSetItemsPerPageGlobally = vi.mocked(setItemsPerPageGlobally);
+const mockGetConfig = vi.mocked(api.getConfig);
+const mockGetDbLocation = vi.mocked(api.getDbLocation);
+const mockChooseDbLocation = vi.mocked(api.chooseDbLocation);
+const mockSetDbLocation = vi.mocked(api.setDbLocation);
 
 function makeSettings(overrides: Partial<ScanSettings> = {}): ScanSettings {
   return {
@@ -75,6 +83,12 @@ beforeEach(() => {
   mockGetPaginationSettings.mockReset().mockResolvedValue(makePaginationSettings());
   mockSetPaginationSettings.mockReset().mockResolvedValue(makePaginationSettings());
   mockSetItemsPerPageGlobally.mockReset();
+  // Default to web mode so existing tests above (written before the Data Location section
+  // existed) don't need to know about it; desktop-mode behavior gets its own describe block.
+  mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music", runtimeMode: "web" });
+  mockGetDbLocation.mockReset().mockResolvedValue({ dbPath: "/Users/test/Library/data/library.db" });
+  mockChooseDbLocation.mockReset().mockResolvedValue(undefined);
+  mockSetDbLocation.mockReset().mockResolvedValue({ dbPath: "/Users/test/Library/data/library.db" });
 });
 
 describe("SettingsPanel - load-on-open", () => {
@@ -540,5 +554,120 @@ describe("SettingsPanel - Duplicate match threshold section", () => {
 
     expect(screen.getByText("Folder exclusion changes apply the next time you run a scan.")).toBeInTheDocument();
     expect(screen.queryByText("Changes apply the next time you run a scan.")).not.toBeInTheDocument();
+  });
+});
+
+describe("SettingsPanel - Data Location section (desktop-only)", () => {
+  it("does not render the Data Location section at all in web mode, not even while the mode check is loading", async () => {
+    let resolveConfig!: (config: { musicRoot: string; runtimeMode: "web" | "desktop" }) => void;
+    mockGetConfig.mockReset().mockReturnValue(
+      new Promise((resolve) => {
+        resolveConfig = resolve;
+      })
+    );
+    renderPanel();
+
+    // Still resolving getConfig -- must not flash the section before we know the mode.
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: /Confirm tab deletion/ })).toBeInTheDocument());
+    expect(screen.queryByText("Data Location")).not.toBeInTheDocument();
+
+    resolveConfig({ musicRoot: "/music", runtimeMode: "web" });
+
+    // Give any pending microtasks a chance to flush, then confirm it's still absent.
+    await waitFor(() => expect(mockGetConfig).toHaveBeenCalled());
+    expect(screen.queryByText("Data Location")).not.toBeInTheDocument();
+    expect(mockGetDbLocation).not.toHaveBeenCalled();
+  });
+
+  it("renders the section with the current db path when runtimeMode is desktop", async () => {
+    mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music", runtimeMode: "desktop" });
+    mockGetDbLocation.mockReset().mockResolvedValue({ dbPath: "/Users/test/Library/data/library.db" });
+    renderPanel();
+
+    expect(await screen.findByText("Data Location")).toBeInTheDocument();
+    expect(await screen.findByText("/Users/test/Library/data/library.db")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Choose…" })).toBeInTheDocument();
+  });
+
+  it("shows a pending confirm step (Apply & Restart / Cancel) after choosing a file, without calling setDbLocation yet", async () => {
+    mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music", runtimeMode: "desktop" });
+    mockChooseDbLocation.mockReset().mockResolvedValue("/Volumes/External/new-library.db");
+    const user = userEvent.setup();
+    renderPanel();
+
+    const chooseButton = await screen.findByRole("button", { name: "Choose…" });
+    await user.click(chooseButton);
+
+    expect(await screen.findByText("/Volumes/External/new-library.db")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply & Restart" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(mockSetDbLocation).not.toHaveBeenCalled();
+  });
+
+  it("calls setDbLocation and shows a restarting state when Apply & Restart is confirmed", async () => {
+    mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music", runtimeMode: "desktop" });
+    mockChooseDbLocation.mockReset().mockResolvedValue("/Volumes/External/new-library.db");
+    mockSetDbLocation.mockReset().mockResolvedValue({ dbPath: "/Volumes/External/new-library.db" });
+    const user = userEvent.setup();
+    renderPanel();
+
+    const chooseButton = await screen.findByRole("button", { name: "Choose…" });
+    await user.click(chooseButton);
+    const applyButton = await screen.findByRole("button", { name: "Apply & Restart" });
+    await user.click(applyButton);
+
+    expect(mockSetDbLocation).toHaveBeenCalledWith("/Volumes/External/new-library.db");
+    await waitFor(() => expect(screen.getByText(/Restarting…/)).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "Apply & Restart" })).not.toBeInTheDocument();
+  });
+
+  it("shows an inline error and lets the user retry when setDbLocation rejects", async () => {
+    mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music", runtimeMode: "desktop" });
+    mockChooseDbLocation.mockReset().mockResolvedValue("/Volumes/External/corrupt.db");
+    mockSetDbLocation.mockReset().mockRejectedValue(new Error("Not a valid SQLite database file"));
+    const user = userEvent.setup();
+    renderPanel();
+
+    const chooseButton = await screen.findByRole("button", { name: "Choose…" });
+    await user.click(chooseButton);
+    await user.click(await screen.findByRole("button", { name: "Apply & Restart" }));
+
+    await waitFor(() => expect(screen.getByText("Not a valid SQLite database file")).toBeInTheDocument());
+    // Not stuck: the pending confirm step (with Apply & Restart still available) remains so the
+    // user can retry or cancel, rather than the panel getting stuck in a dead-end state.
+    expect(screen.getByRole("button", { name: "Apply & Restart" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+  });
+
+  it("shows an inline error and lets the user retry when chooseDbLocation rejects", async () => {
+    mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music", runtimeMode: "desktop" });
+    mockChooseDbLocation.mockReset().mockRejectedValue(new Error("Could not open the file picker"));
+    const user = userEvent.setup();
+    renderPanel();
+
+    const chooseButton = await screen.findByRole("button", { name: "Choose…" });
+    await user.click(chooseButton);
+
+    await waitFor(() => expect(screen.getByText("Could not open the file picker")).toBeInTheDocument());
+    // Still able to retry: the Choose… button remains, no pending confirm step was entered.
+    expect(screen.getByRole("button", { name: "Choose…" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Apply & Restart" })).not.toBeInTheDocument();
+  });
+
+  it("leaves the current path unchanged with no pending state when the picker is canceled", async () => {
+    mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music", runtimeMode: "desktop" });
+    mockGetDbLocation.mockReset().mockResolvedValue({ dbPath: "/Users/test/Library/data/library.db" });
+    mockChooseDbLocation.mockReset().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderPanel();
+
+    const chooseButton = await screen.findByRole("button", { name: "Choose…" });
+    await screen.findByText("/Users/test/Library/data/library.db");
+    await user.click(chooseButton);
+
+    await waitFor(() => expect(mockChooseDbLocation).toHaveBeenCalled());
+    expect(screen.getByText("/Users/test/Library/data/library.db")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Apply & Restart" })).not.toBeInTheDocument();
+    expect(mockSetDbLocation).not.toHaveBeenCalled();
   });
 });

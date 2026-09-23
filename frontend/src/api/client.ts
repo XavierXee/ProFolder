@@ -332,7 +332,7 @@ export function reveal(path: string): Promise<void> {
   return request(`/reveal`, { method: "POST", body: JSON.stringify({ path }) });
 }
 
-export function getConfig(): Promise<{ musicRoot: string }> {
+export function getConfig(): Promise<{ musicRoot: string; runtimeMode: "web" | "desktop" }> {
   return request(`/config`);
 }
 
@@ -344,6 +344,24 @@ export function setMusicRoot(musicRoot: string): Promise<{ musicRoot: string }> 
 export async function chooseMusicRoot(): Promise<string | undefined> {
   const result = await request<{ path?: string }>(`/config/music-root/choose`, { method: "POST" });
   return result.path;
+}
+
+/** Desktop-only; 400s in web mode. Returns the current SQLite database file path. */
+export function getDbLocation(): Promise<{ dbPath: string }> {
+  return request(`/config/db-location`);
+}
+
+/** Opens the native file picker restricted to `.db` files. Resolves with the chosen path, or
+ * undefined if the user canceled. Desktop-only; 400s in web mode. */
+export async function chooseDbLocation(): Promise<string | undefined> {
+  const result = await request<{ path?: string }>(`/config/db-location/choose`, { method: "POST" });
+  return result.path;
+}
+
+/** Persists the new database file path and triggers an app restart. Desktop-only; 400s in web
+ * mode, and 400s if the target isn't a real, openable SQLite database file. */
+export function setDbLocation(dbPath: string): Promise<{ dbPath: string }> {
+  return request(`/config/db-location`, { method: "PUT", body: JSON.stringify({ dbPath }) });
 }
 
 export type ScanSettings = {

@@ -8,6 +8,7 @@ import { MacFinderService, type FinderService } from "../services/FinderService.
 import { MacFolderPickerService, type FolderPickerService } from "../services/FolderPickerService.js";
 import { MacTrashService, type TrashService } from "../services/TrashService.js";
 import { NodeFileOpsService, type FileOpsService } from "../services/FileOpsService.js";
+import type { DbFilePickerService } from "../services/DbFilePickerService.js";
 import { createFilesRouter } from "./routes/files.js";
 import { createProjectsRouter } from "./routes/projects.js";
 import { createScanRouter } from "./routes/scan.js";
@@ -31,15 +32,58 @@ export interface ServerServices {
   folderPickerService: FolderPickerService;
   trashService: TrashService;
   fileOpsService: FileOpsService;
+  /**
+   * "web" for the plain Express entrypoint at the bottom of this file, "desktop" for
+   * `electron/main.ts`'s `createProductionWindow()`. Passed explicitly as DI rather than the
+   * route layer sniffing `process.versions.electron`/similar itself, per this codebase's
+   * established "selection by which script launches the process, never runtime detection"
+   * principle (see the Trash/Finder/FolderPicker cross-platform abstraction section).
+   */
+  runtimeMode: "web" | "desktop";
+  /**
+   * Desktop-only, used by `PUT /api/config/db-location`'s "choose an existing DB file" flow
+   * (Task 16 wires the actual UI trigger for this). Optional because web mode has no such
+   * concept at all — `GET`/`PUT /api/config/db-location` 400 in web mode before ever touching
+   * this, rather than relying on its absence to fail safely.
+   */
+  dbFilePickerService?: DbFilePickerService;
+  /**
+   * Desktop-only: absolute path to `electron/main.ts`'s `desktop-prefs.json` (the same path
+   * Task 14's startup-time `getDbPathOverride` read uses), needed by
+   * `PUT /api/config/db-location` to call `setDbPathOverride`.
+   */
+  dbPrefsFilePath?: string;
+  /**
+   * Desktop-only: restarts the whole app (`app.relaunch()` + `app.exit()`) after a successful
+   * DB location change. A live DB handle can't be safely relocated mid-process, so this route
+   * never attempts a hot DB-handle swap — it always restarts instead.
+   */
+  relaunchApp?: () => void;
 }
 
 export function createServer(db: ReturnType<typeof openDb>, services: ServerServices) {
-  const { finderService, folderPickerService, trashService, fileOpsService } = services;
+  const {
+    finderService,
+    folderPickerService,
+    trashService,
+    fileOpsService,
+    runtimeMode,
+    dbFilePickerService,
+    dbPrefsFilePath,
+    relaunchApp,
+  } = services;
 
   const app = express();
   app.use(express.json());
 
-  app.use("/api/config", createConfigRouter(db, folderPickerService));
+  app.use(
+    "/api/config",
+    createConfigRouter(db, folderPickerService, runtimeMode, {
+      dbFilePickerService,
+      dbPrefsFilePath,
+      relaunchApp,
+    })
+  );
   app.use("/api/files", createFilesRouter(db, fileOpsService, trashService));
   app.use("/api/projects", createProjectsRouter(db, fileOpsService, trashService));
   app.use("/api/scan", createScanRouter(db));
@@ -101,6 +145,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     folderPickerService: new MacFolderPickerService(),
     trashService: new MacTrashService(() => getEffectiveMusicRoot(db)),
     fileOpsService: new NodeFileOpsService(() => getEffectiveMusicRoot(db)),
+    runtimeMode: "web",
   });
   app.listen(config.port, config.host, () => {
     console.log(`API server listening on http://${config.host}:${config.port}`);

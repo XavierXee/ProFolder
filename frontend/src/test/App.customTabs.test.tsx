@@ -116,7 +116,7 @@ const NEW_TAB: CustomTab = {
 beforeEach(() => {
   mockGetFiles.mockReset().mockResolvedValue(FILES_PAGE);
   mockGetProjects.mockReset().mockResolvedValue(PROJECTS_PAGE);
-  mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music" });
+  mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music", runtimeMode: "web" });
   mockGetLastScan.mockReset().mockResolvedValue(undefined);
   mockGetStats.mockReset().mockResolvedValue(STATS);
   mockGetAllTags.mockReset().mockResolvedValue([]);

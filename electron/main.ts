@@ -97,8 +97,28 @@ async function createWindow(): Promise<void> {
  */
 async function createProductionWindow(): Promise<void> {
   try {
+    // Computed unconditionally (not just inside the `!process.env.DB_PATH` branch below) since
+    // Task 15's `PUT /api/config/db-location` route also needs this same path to call
+    // `setDbPathOverride` — it must match Task 14's startup-time `getDbPathOverride` read
+    // exactly, or a write from the running app's own settings UI would silently target a
+    // different file than the one actually consulted on next launch.
+    const prefsFilePath = path.join(app.getPath("userData"), "desktop-prefs.json");
+
+    // Tracks whether an override was ACTUALLY read from the prefs file this launch — distinct
+    // from simply checking `process.env.DB_PATH` afterward, since that env var could in
+    // principle already be set by something else (e.g. an operator-provided value for manual
+    // testing) even when no prefs-file override exists. This is consulted below if `openDb()`
+    // throws, to decide whether there's a sensible "reset to default" recovery available or not.
+    let dbPathOverrideInEffect: string | undefined;
     if (!process.env.DB_PATH) {
-      process.env.DB_PATH = path.join(app.getPath("userData"), "library.db");
+      // Task 14: a user-configured DB location override (written by Task 15's
+      // `setDbPathOverride` call in the `/api/config/db-location` route, via the desktop
+      // settings UI — Task 16) takes priority over the plain `userData/library.db` default
+      // when present. The prefs file lives next to `library.db` inside the same `userData`
+      // dir, matching that existing naming.
+      const { getDbPathOverride } = await import("../src/config/desktopPrefs.js");
+      dbPathOverrideInEffect = getDbPathOverride(prefsFilePath);
+      process.env.DB_PATH = dbPathOverrideInEffect ?? path.join(app.getPath("userData"), "library.db");
     }
     if (!process.env.MUSIC_ROOT) {
       // Web mode defaults MUSIC_ROOT to "~/Music" (see config.ts) when nothing else is
@@ -118,6 +138,7 @@ async function createProductionWindow(): Promise<void> {
       { ElectronFolderPickerService },
       { ElectronTrashService },
       { NodeFileOpsService },
+      { ElectronDbFilePickerService },
     ] = await Promise.all([
       import("../src/database/db.js"),
       import("../src/config/musicRoot.js"),
@@ -127,9 +148,66 @@ async function createProductionWindow(): Promise<void> {
       import("../src/services/ElectronFolderPickerService.js"),
       import("../src/services/ElectronTrashService.js"),
       import("../src/services/FileOpsService.js"),
+      import("../src/services/ElectronDbFilePickerService.js"),
     ]);
 
-    const db = openDb(config.dbPath);
+    // Task 17: `openDb()` throwing here is only recoverable in-app when a user-configured DB
+    // path override (see `dbPathOverrideInEffect` above) was actually in effect for this launch
+    // — e.g. the external drive it lives on got unmounted, or the file was deleted/corrupted by
+    // something outside the app. If there's no override in effect, the plain default
+    // `userData/library.db` path itself is somehow broken, there's nothing sensible to "reset"
+    // to, and this is left to propagate to the outer catch below unchanged (its existing generic
+    // "Failed to start" dialog + quit).
+    let db: Database.Database;
+    try {
+      db = openDb(config.dbPath);
+    } catch (err) {
+      if (dbPathOverrideInEffect === undefined) {
+        throw err;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`ProFolder could not open the custom database location "${dbPathOverrideInEffect}":`, err);
+      // The actual choice-to-side-effects branching (reset-then-relaunch vs. quit) lives in
+      // `recoverFromDbOpenFailure`, a pure function with zero Electron dependency, so that
+      // branch gets real unit test coverage — this file only supplies the real Electron-backed
+      // callbacks (showing the native dialog, `clearDbPathOverride`, `app.relaunch`/`app.quit`),
+      // none of which can be meaningfully unit-tested outside a real Electron process.
+      const [{ recoverFromDbOpenFailure }, { clearDbPathOverride }] = await Promise.all([
+        import("../src/config/dbOpenRecovery.js"),
+        import("../src/config/desktopPrefs.js"),
+      ]);
+      recoverFromDbOpenFailure(prefsFilePath, {
+        showRecoveryDialog: () => {
+          const choice = dialog.showMessageBoxSync({
+            type: "error",
+            title: "Cannot open database",
+            message: "ProFolder could not open your custom database location.",
+            detail:
+              `The database at "${dbPathOverrideInEffect}" could not be opened (${message}).\n\n` +
+              "This can happen if the drive it lives on was unmounted, or the file was moved, " +
+              "deleted, or corrupted outside the app.\n\n" +
+              'Choose "Reset to Default Location" to switch back to the default database location ' +
+              'and restart the app, or "Quit" to fix the issue yourself first (e.g. reconnect the ' +
+              "drive) and relaunch.",
+            buttons: ["Reset to Default Location", "Quit"],
+            defaultId: 0,
+            cancelId: 1,
+          });
+          return choice === 0 ? "reset" : "quit";
+        },
+        clearDbPathOverride,
+        // Same relaunch mechanism as the `/api/config/db-location` route's own `relaunchApp`
+        // below, for consistency: `app.relaunch()` schedules a fresh launch of the app once the
+        // current process exits, and `app.exit()` (not `app.quit()`, which would instead emit
+        // `before-quit`/`window-all-closed` and could be intercepted) exits it immediately.
+        relaunch: () => {
+          app.relaunch();
+          app.exit();
+        },
+        quit: () => app.quit(),
+      });
+      return;
+    }
     embeddedDb = db;
 
     const expressApp = createServer(db, {
@@ -137,6 +215,13 @@ async function createProductionWindow(): Promise<void> {
       folderPickerService: new ElectronFolderPickerService(),
       trashService: new ElectronTrashService(() => getEffectiveMusicRoot(db)),
       fileOpsService: new NodeFileOpsService(() => getEffectiveMusicRoot(db)),
+      runtimeMode: "desktop",
+      dbFilePickerService: new ElectronDbFilePickerService(),
+      dbPrefsFilePath: prefsFilePath,
+      relaunchApp: () => {
+        app.relaunch();
+        app.exit();
+      },
     });
 
     try {

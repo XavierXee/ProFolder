@@ -49,7 +49,7 @@ beforeEach(() => {
   localStorage.clear();
   mockGetFiles.mockReset().mockResolvedValue({ files: [], total: 0, page: 1, pageSize: 50, totalPages: 1 });
   mockGetProjects.mockReset().mockResolvedValue({ projects: [], total: 0, page: 1, pageSize: 50, totalPages: 1 });
-  mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music" });
+  mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music", runtimeMode: "web" });
   mockGetLastScan.mockReset().mockResolvedValue(undefined);
   mockGetStats.mockReset().mockResolvedValue({
     files: { total: 0, byStatus: { unknown: 0, draft: 0, needs_mixing: 0, done: 0, released: 0 } },
