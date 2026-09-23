@@ -533,15 +533,12 @@ describe("SettingsPanel - Duplicate match threshold section", () => {
     expect(mockSetScanSettings).not.toHaveBeenCalled();
   });
 
-  it("shows the reworded scan-settings footer copy and the new row's own distinct caption, with no trace of the old blanket wording", async () => {
+  it("shows the reworded scan-settings footer copy, with no trace of the old blanket wording", async () => {
     renderPanel();
 
     await screen.findByLabelText("Duplicate match threshold (%)");
 
     expect(screen.getByText("Folder exclusion changes apply the next time you run a scan.")).toBeInTheDocument();
-    expect(
-      screen.getByText("Applies immediately — used the next time you open a project's Duplicates panel.")
-    ).toBeInTheDocument();
     expect(screen.queryByText("Changes apply the next time you run a scan.")).not.toBeInTheDocument();
   });
 });

@@ -1,0 +1,16 @@
+appId: com.profolder.app
+productName: ProFolder
+
+directories:
+  output: release
+
+mac:
+  target: dmg
+
+win:
+  target: nsis
+
+linux:
+  target:
+    - AppImage
+    - deb

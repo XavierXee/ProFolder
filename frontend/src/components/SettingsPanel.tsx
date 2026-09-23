@@ -305,7 +305,6 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
               {duplicateThresholdError ? <p className="text-sm mt-2 text-red-400">{duplicateThresholdError}</p> : null}
             </div>
           ) : null}
-          {/*<p className={`text-xs mt-1 mb-2 ${meta}`}>Applies immediately — used the next time you open a project's Duplicates panel.</p>*/}
         </div>
         <div className={`flex-0.5 overflow-y-auto px-6 py-2 border-b ${divider}`}>
           <div className="flex items-center justify-between mb-1 mt-2">

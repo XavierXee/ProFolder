@@ -4,10 +4,14 @@
   "description": "Local macOS app for scanning, indexing, and tagging a music-production folder (Ableton projects, exports, drafts, sample libraries).",
   "type": "module",
   "private": true,
+  "main": "dist-electron/electron/main.js",
   "scripts": {
     "dev:api": "tsx watch src/api/server.ts",
     "dev:frontend": "vite",
     "dev": "concurrently -n api,web -c blue,green --kill-others-on-fail \"npm:dev:api\" \"npm:dev:frontend\"",
+    "build:electron": "tsc -p tsconfig.electron.json && mkdir -p dist-electron/src/database/migrations && cp src/database/migrations/*.sql dist-electron/src/database/migrations/",
+    "dev:electron": "npm run build:electron && concurrently -n api,web,electron -c blue,green,magenta --kill-others-on-fail \"npm:dev:api\" \"npm:dev:frontend\" \"electron .\"",
+    "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
     "scan": "tsx src/cli/scan.ts",
     "build:backend": "tsc -p tsconfig.json && mkdir -p dist/src/database/migrations && cp src/database/migrations/*.sql dist/src/database/migrations/",
     "build:frontend": "vite build",
@@ -23,20 +27,21 @@
     "playwright:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
-    "better-sqlite3": "^11.9.1",
+    "better-sqlite3": "^13.0.3",
     "express": "^4.21.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@cucumber/cucumber": "^13.2.1",
+    "@electron/rebuild": "^4.2.0",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.0.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
-    "@types/better-sqlite3": "^7.6.12",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
@@ -45,6 +50,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
     "electron": "^44.4.3",
+    "electron-builder": "^26.15.3",
     "jsdom": "^25.0.1",
     "playwright": "^1.62.1",
     "playwright-bdd": "^9.2.0",
@@ -53,6 +59,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vite": "^6.0.7",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "wait-on": "^9.1.0"
   }
 }
