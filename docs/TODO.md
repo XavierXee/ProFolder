@@ -112,6 +112,7 @@ Key architecture calls: (a) service selection (AppleScript vs. Electron-native) 
 
 ## 6.  I now want to share this repository, making it open source, public and usable by others
 
+- Rewrite entire git history so all commits committed or authors by the assistant are now authored by me
 - Perform audit on the whole codebase for any cyber-security risk
 - Potential risk includes but not limited to credential stealing, API keys left in the codebase, dependency vulnerabilities
 - Perform all checks such as npm audit and other vulnerability checks

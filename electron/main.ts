@@ -38,6 +38,14 @@ const VITE_DEV_SERVER_URL = "http://localhost:5173";
 // use) rather than risking concurrent writers silently corrupting each other's data.
 const API_DEV_SERVER_PORT = 5175;
 
+// The app icon (the same logo mark rendered by `frontend/src/components/Logo.tsx`'s splash
+// screen), used for the dev-mode window/Dock icon below. `app.getAppPath()` resolves to the
+// project root under `electron .` (dev mode) — this is NOT used for a packaged build's icon,
+// which comes from the bundle itself via `electron-builder.yml`'s `mac.icon`/`win.icon`/
+// `linux.icon` config instead (`build/` is a build-time-only asset directory, never copied into
+// the packaged app, so this path wouldn't resolve there anyway).
+const DEV_ICON_PATH = path.join(app.getAppPath(), "build/icon.png");
+
 // Populated only by `createProductionWindow` (dev mode has nothing of its own to track here —
 // its dev servers are separate processes, unaffected by this Electron window closing). Read by
 // the `before-quit` graceful-shutdown handler below. Typed via the type-only imports above so
@@ -63,7 +71,14 @@ async function createWindow(): Promise<void> {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
+    icon: DEV_ICON_PATH,
   });
+
+  // BrowserWindow's `icon` option above covers the window/taskbar icon on Windows/Linux, but is
+  // ignored on macOS — macOS instead takes the Dock icon from the running app process itself
+  // (Electron's own icon by default under `electron .`), so it needs setting explicitly here.
+  // Only relevant in dev mode: a packaged build's Dock icon comes from the bundle automatically.
+  app.dock?.setIcon(DEV_ICON_PATH);
 
   await win.loadURL(VITE_DEV_SERVER_URL);
 }
@@ -94,8 +109,38 @@ async function createWindow(): Promise<void> {
  * collision) — the outer catch is a generic safety net for everything else, and is written
  * defensively (it never assumes `config`/`expressApp`/etc. were successfully obtained, since the
  * failure that lands here might have happened before any of those existed).
+ *
+ * Reuse guard (window-lifecycle bug fix): closing every window does NOT quit the app on macOS
+ * (see the `window-all-closed` handler below) — the embedded server/db from that first window
+ * stay alive, tracked in `embeddedServer`/`embeddedDb`. Both the initial `whenReady` boot and the
+ * `activate` handler dispatch through this same function, so without this check, clicking the
+ * Dock icon (or double-clicking the app again) after closing the window would re-run the WHOLE
+ * startup sequence — opening a second `openDb()` connection and trying to `listen()` on the same
+ * port the still-running server already holds — which fails exactly like a genuine second-instance
+ * port collision, shows the "could not start its embedded server" dialog, and (since that failure
+ * path calls `app.quit()`) then tears down the perfectly good first instance via `before-quit` too.
+ * Confirmed via a real packaged-app repro (close the window, then reactivate) before this fix
+ * existed. When a server/db are already running, just open another window against them instead.
  */
 async function createProductionWindow(): Promise<void> {
+  if (embeddedServer && embeddedDb) {
+    try {
+      const { config } = await import("../src/config/config.js");
+      const win = new BrowserWindow({ width: 1400, height: 900 });
+      await win.loadURL(`http://${config.host}:${config.port}`);
+    } catch (err) {
+      // Deliberately no `app.quit()` here, unlike the fresh-startup failure paths below — the
+      // existing embedded server/db are still fine; a failure to open a NEW window on top of them
+      // shouldn't kill the whole running app.
+      console.error("ProFolder failed to reopen a window against the running embedded server:", err);
+      dialog.showErrorBox(
+        "Failed to reopen",
+        `ProFolder is still running, but a new window could not be opened: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    return;
+  }
+
   try {
     // Computed unconditionally (not just inside the `!process.env.DB_PATH` branch below) since
     // Task 15's `PUT /api/config/db-location` route also needs this same path to call
@@ -290,6 +335,16 @@ if (!gotSingleInstanceLock) {
   app.on("second-instance", () => {
     const [win] = BrowserWindow.getAllWindows();
     if (!win) {
+      // No window exists (e.g. it was closed but the app — and its embedded server, on macOS —
+      // stayed running per the `window-all-closed` gate below). `createWindowForCurrentMode()`
+      // reuses the already-running server/db in this case rather than re-initializing them.
+      createWindowForCurrentMode().catch((err) => {
+        console.error("ProFolder failed to reopen a window for a second launch attempt:", err);
+        dialog.showErrorBox(
+          "Failed to reopen",
+          `ProFolder is still running, but a new window could not be opened: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      });
       return;
     }
     if (win.isMinimized()) {
