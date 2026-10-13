@@ -31,11 +31,11 @@ import type { Server as HttpServer } from "node:http";
 // Vite's dev server: `vite.config.ts` configures no `server.port` override, so this is Vite's
 // own default port.
 const VITE_DEV_SERVER_URL = "http://localhost:5173";
-// The plain API server's default port (see `src/config/config.ts`'s `config.port`). Production
-// mode below deliberately binds its embedded server to this SAME port (see `createProductionWindow`),
-// not a different one — an intentional collision so that ever running both the plain web server
-// and the packaged desktop app against the same DB file at once fails loudly (port already in
-// use) rather than risking concurrent writers silently corrupting each other's data.
+// The plain API server's default port (see `src/config/config.ts`'s `config.port`), used ONLY
+// by dev mode below to probe the separately-running `npm run dev:api` process — unrelated to
+// the packaged production server, which binds to an OS-assigned free port instead (see
+// `createProductionWindow`) so a packaged install never conflicts with this or any other
+// localhost process.
 const API_DEV_SERVER_PORT = 5175;
 
 // The app icon (the same logo mark rendered by `frontend/src/components/Logo.tsx`'s splash
@@ -53,6 +53,9 @@ const DEV_ICON_PATH = path.join(app.getAppPath(), "build/icon.png");
 // `createProductionWindow`'s own doc comment for why those must stay dynamic imports).
 let embeddedDb: Database.Database | undefined;
 let embeddedServer: HttpServer | undefined;
+// The actual OS-assigned port the embedded server ended up bound to (see `createProductionWindow`),
+// read by the reuse-guard branch below to reopen a window against the already-running server.
+let embeddedServerPort: number | undefined;
 
 async function createWindow(): Promise<void> {
   // Block until both dev servers are actually up before loading the window — without this, the
@@ -105,29 +108,28 @@ async function createWindow(): Promise<void> {
  * handling, so a failure in the dynamic `import()`s, `openDb()`, or `win.loadURL()` was an
  * unhandled rejection with no dialog, the same "packaged app fails silently" problem Task 11
  * fixed for `listen()` specifically. The inner try/catch around `listen()` is unchanged and
- * still takes priority for that specific failure (more actionable message: likely a port
- * collision) — the outer catch is a generic safety net for everything else, and is written
- * defensively (it never assumes `config`/`expressApp`/etc. were successfully obtained, since the
- * failure that lands here might have happened before any of those existed).
+ * still takes priority for that specific failure — the outer catch is a generic safety net for
+ * everything else, and is written defensively (it never assumes `config`/`expressApp`/etc. were
+ * successfully obtained, since the failure that lands here might have happened before any of
+ * those existed).
  *
  * Reuse guard (window-lifecycle bug fix): closing every window does NOT quit the app on macOS
  * (see the `window-all-closed` handler below) — the embedded server/db from that first window
  * stay alive, tracked in `embeddedServer`/`embeddedDb`. Both the initial `whenReady` boot and the
  * `activate` handler dispatch through this same function, so without this check, clicking the
  * Dock icon (or double-clicking the app again) after closing the window would re-run the WHOLE
- * startup sequence — opening a second `openDb()` connection and trying to `listen()` on the same
- * port the still-running server already holds — which fails exactly like a genuine second-instance
- * port collision, shows the "could not start its embedded server" dialog, and (since that failure
- * path calls `app.quit()`) then tears down the perfectly good first instance via `before-quit` too.
- * Confirmed via a real packaged-app repro (close the window, then reactivate) before this fix
- * existed. When a server/db are already running, just open another window against them instead.
+ * startup sequence — opening a second, redundant `openDb()` connection against the same DB file
+ * and a second embedded server next to the still-running first one (wasteful at best; two live
+ * writer connections to the same SQLite file at worst). Confirmed via a real packaged-app repro
+ * (close the window, then reactivate) before this fix existed. When a server/db are already
+ * running, just open another window against them instead.
  */
 async function createProductionWindow(): Promise<void> {
   if (embeddedServer && embeddedDb) {
     try {
       const { config } = await import("../src/config/config.js");
       const win = new BrowserWindow({ width: 1400, height: 900 });
-      await win.loadURL(`http://${config.host}:${config.port}`);
+      await win.loadURL(`http://${config.host}:${embeddedServerPort}`);
     } catch (err) {
       // Deliberately no `app.quit()` here, unlike the fresh-startup failure paths below — the
       // existing embedded server/db are still fine; a failure to open a NEW window on top of them
@@ -269,31 +271,41 @@ async function createProductionWindow(): Promise<void> {
       },
     });
 
+    // Binds to port 0 (an OS-assigned free port) rather than `config.port` — a packaged install
+    // should never be able to collide with another localhost process (a dev server, another
+    // app, anything else bound to a fixed port). The single-instance lock requested below
+    // already prevents two copies of THIS app from racing each other against the same DB, which
+    // was the only scenario the old fixed-port collision was actually protecting against.
     try {
       embeddedServer = await new Promise<HttpServer>((resolve, reject) => {
-        const server = expressApp.listen(config.port, config.host, () => resolve(server));
+        const server = expressApp.listen(0, config.host, () => resolve(server));
         server.on("error", (err) => {
           reject(err);
         });
       });
     } catch (err) {
-      console.error(`Failed to start the embedded API server on ${config.host}:${config.port}:`, err);
+      console.error(`Failed to start the embedded API server on ${config.host}:`, err);
       dialog.showErrorBox(
         "Failed to start",
-        `ProFolder could not start its embedded server on ${config.host}:${config.port}. ` +
-          "This port is likely already in use by another instance of this app or a running " +
-          "web-mode dev server. Close the other instance/process and try again.",
+        `ProFolder could not start its embedded server on ${config.host}. ` +
+          "Close any other running instance of this app and try again.",
       );
       app.quit();
       return;
     }
+
+    const address = embeddedServer.address();
+    if (address === null || typeof address === "string") {
+      throw new Error(`Embedded server returned an unexpected address: ${String(address)}`);
+    }
+    embeddedServerPort = address.port;
 
     const win = new BrowserWindow({
       width: 1400,
       height: 900,
     });
 
-    await win.loadURL(`http://${config.host}:${config.port}`);
+    await win.loadURL(`http://${config.host}:${embeddedServerPort}`);
   } catch (err) {
     console.error("ProFolder failed to start in production mode:", err);
     dialog.showErrorBox(
@@ -317,12 +329,11 @@ function createWindowForCurrentMode(): Promise<void> {
 // of the same packaged binary while one is already running is normal, expected behavior (e.g. a
 // user double-clicking the app icon again), not an error, so it quits immediately and silently
 // here with NO dialog (unlike the error-dialog convention used for genuine startup failures
-// above). This also matters for task 1's earlier design decision to bind the embedded production
-// server to a fixed, colliding port: without this lock, a second launch would otherwise reach
-// `createProductionWindow()` and hit that same port-collision failure path (which DOES show a
-// dialog, since from that code's point of view it can't tell "another instance of this exact app"
-// apart from "some unrelated process squatting on the port") — this lock intercepts the common,
-// benign case before it ever gets there.
+// above). Without this lock, a second launch would otherwise reach `createProductionWindow()`
+// and open a second, redundant `openDb()` connection and embedded server against the same DB
+// file next to the still-running first instance (the embedded server's dynamic port means this
+// wouldn't even fail loudly — it would just silently duplicate state) — this lock intercepts
+// that case before it ever gets there.
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!gotSingleInstanceLock) {
@@ -420,6 +431,7 @@ if (!gotSingleInstanceLock) {
     const db = embeddedDb;
     embeddedServer = undefined;
     embeddedDb = undefined;
+    embeddedServerPort = undefined;
 
     const closeServer = () =>
       new Promise<void>((resolve) => {

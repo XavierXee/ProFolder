@@ -4,6 +4,18 @@ productName: ProFolder
 directories:
   output: release
 
+# Only the compiled Electron/backend output and the built frontend are needed at runtime
+# (electron/main.ts dynamically imports from dist-electron/src/..., and the embedded server
+# serves dist/frontend). Without this allowlist, electron-builder's default "**/*" packed the
+# whole repo checkout into app.asar, including raw TS source, e2e/tests/docs/.the assistant, and -
+# worse - the real local data/library.db and .env from this machine.
+files:
+  - dist-electron/**/*
+  - dist/frontend/**/*
+  - node_modules/**/*
+  - package.json
+  - "!**/*.map"
+
 mac:
   target: dmg
   icon: build/icon.icns

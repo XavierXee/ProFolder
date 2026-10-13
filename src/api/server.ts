@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import { config } from "../config/config.js";
 import { getEffectiveMusicRoot } from "../config/musicRoot.js";
@@ -105,9 +106,20 @@ export function createServer(db: ReturnType<typeof openDb>, services: ServerServ
   // FRONTEND_DIST_PATH lets tests point this at an isolated temp directory instead of the
   // real repo-relative dist/frontend, matching config.ts's existing env-override convention
   // (MUSIC_ROOT/DB_PATH) for filesystem paths.
+  //
+  // The non-override fallback is resolved relative to this file's own compiled location
+  // (via import.meta.url), NOT process.cwd(): `npm start` happens to run from the repo root
+  // so cwd matches, but a packaged Electron app launched from Finder/Dock has an unrelated
+  // cwd (typically "/"), which silently made this path never exist and the embedded server
+  // 404 everything with Express's default "Cannot GET /" instead of serving the built
+  // frontend. Both compiled trees this file ends up in (`dist/src/api/server.js` from
+  // tsconfig.json, `dist-electron/src/api/server.js` from tsconfig.electron.json) mirror
+  // `src/api/server.ts`'s own path 1:1, so three levels up from this file's directory is
+  // always the repo root (or the asar root in a packaged build) either way.
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
   const frontendDistPath = process.env.FRONTEND_DIST_PATH
     ? path.resolve(process.env.FRONTEND_DIST_PATH)
-    : path.resolve(process.cwd(), "dist/frontend");
+    : path.join(repoRoot, "dist/frontend");
   const frontendIndexPath = path.join(frontendDistPath, "index.html");
 
   app.use(express.static(frontendDistPath));
