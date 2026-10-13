@@ -715,7 +715,7 @@ export default function App() {
                   isPlaying={isPlaying}
                   onSortChange={handleSortChange}
                   onRowClick={handleRowClick}
-                  onClearFilters={() => handleFilesFilterChange({ search: undefined, statuses: undefined, scores: undefined, tags: undefined, sortBy: undefined, sortDir: undefined })}
+                  onClearFilters={() => handleFilesFilterChange({ search: undefined, statuses: undefined, scores: undefined, tags: undefined, association: undefined, sortBy: undefined, sortDir: undefined })}
                   onToggleSelect={toggleFileSelect}
                   onToggleSelectAll={toggleAllFileSelect}
                   onPlayClick={handlePlayClick}

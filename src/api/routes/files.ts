@@ -72,18 +72,21 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
   router.get(
     "/",
     asyncHandler(async (req, res) => {
-      const { search, status, score, tag, sortBy, sortDir, page, pageSize } = req.query;
+      const { search, status, score, tag, association, sortBy, sortDir, page, pageSize } = req.query;
       const pageNum = parsePositiveInt(page, 1);
       const pageSizeNum = parsePositiveInt(pageSize, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
 
       const statuses = toStringArray(status).filter((s) => isKnownStatusKey(db, s));
       const tags = toStringArray(tag);
+      const associationFilter =
+        association === "associated" || association === "unassociated" ? association : undefined;
 
       const { items, total } = findAllActivePaged(db, {
         search: typeof search === "string" ? search : undefined,
         statuses: statuses.length > 0 ? statuses : undefined,
         scores: parseScoreListQueryParam(toStringArray(score)),
         tags: tags.length > 0 ? tags : undefined,
+        association: associationFilter,
         sortBy: sortBy as "name" | "modifiedAt" | "folder" | "score" | "status" | "project" | "tags" | undefined,
         sortDir: sortDir as "asc" | "desc" | undefined,
         limit: pageSizeNum,

@@ -7,6 +7,7 @@ export function MultiSelectDropdown<T extends string | number>({
   selected,
   onChange,
   reserveLabel,
+  exclusive = false,
 }: {
   label: string;
   options: { value: T; label: ReactNode }[];
@@ -16,6 +17,12 @@ export function MultiSelectDropdown<T extends string | number>({
    * invisibly to reserve the trigger button's width so selecting/deselecting options
    * never resizes it. Falls back to `label` (no count) if omitted. */
   reserveLabel?: string;
+  /** When true, picking an option REPLACES the selection instead of toggling membership in a
+   * set (clicking the already-selected option clears it back to "everything") — for a
+   * single-value filter (e.g. Association) that still wants this component's existing
+   * accessible dropdown/listbox interaction rather than a brand-new single-select component.
+   * Defaults to false, so every existing multi-select caller is unaffected. */
+  exclusive?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -44,6 +51,10 @@ export function MultiSelectDropdown<T extends string | number>({
   }, [open]);
 
   function toggle(value: T) {
+    if (exclusive) {
+      onChange(selected.includes(value) ? [] : [value]);
+      return;
+    }
     onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
   }
 

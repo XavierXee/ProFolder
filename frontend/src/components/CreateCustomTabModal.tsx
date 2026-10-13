@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
 import type { CustomTab, CustomTabType, TrackStatus } from "../types.js";
 import { MultiSelectDropdown } from "./MultiSelectDropdown.js";
-import { SCORE_OPTIONS, SCORE_RESERVE_LABEL, TAGS_RESERVE_LABEL } from "./FilterToolbar.js";
+import {
+  SCORE_OPTIONS,
+  SCORE_RESERVE_LABEL,
+  TAGS_RESERVE_LABEL,
+  ASSOCIATION_OPTIONS,
+  ASSOCIATION_RESERVE_LABEL,
+} from "./FilterToolbar.js";
 import { buildStatusOptions } from "../statusStyles.js";
 import { useStatusCatalog } from "../contexts/StatusCatalogContext.js";
 
@@ -25,6 +31,7 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
   const [statuses, setStatuses] = useState<TrackStatus[]>([]);
   const [scores, setScores] = useState<ScoreOption[]>([]);
   const [tags, setTags] = useState<string[]>([]);
+  const [association, setAssociation] = useState<"associated" | "unassociated" | undefined>(undefined);
   const [nameError, setNameError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -37,6 +44,7 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
     setStatuses([]);
     setScores([]);
     setTags([]);
+    setAssociation(undefined);
     setNameError(undefined);
     setError(undefined);
     setSubmitting(false);
@@ -62,7 +70,14 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
     setError(undefined);
     setSubmitting(true);
     try {
-      const tab = await api.createCustomTab({ name: trimmedName, type, statuses, scores, tags });
+      const tab = await api.createCustomTab({
+        name: trimmedName,
+        type,
+        statuses,
+        scores,
+        tags,
+        association: type === "files" ? association : undefined,
+      });
       onCreated(tab);
       onClose();
     } catch (err) {
@@ -141,7 +156,10 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
                     name="custom-tab-type"
                     value="projects"
                     checked={type === "projects"}
-                    onChange={() => setType("projects")}
+                    onChange={() => {
+                      setType("projects");
+                      setAssociation(undefined);
+                    }}
                     className="accent-blue-500"
                   />
                   Project Folders
@@ -184,6 +202,16 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
                   onChange={setTags}
                   reserveLabel={TAGS_RESERVE_LABEL}
                 />
+                {type === "files" && (
+                  <MultiSelectDropdown
+                    exclusive
+                    label="Folders"
+                    options={ASSOCIATION_OPTIONS}
+                    selected={association ? [association] : []}
+                    onChange={(next) => setAssociation(next[0])}
+                    reserveLabel={ASSOCIATION_RESERVE_LABEL}
+                  />
+                )}
               </div>
             </div>
 

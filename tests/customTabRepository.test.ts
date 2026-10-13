@@ -89,6 +89,21 @@ describe("create / findAll round-trip", () => {
     expect(found.scores).toEqual([]);
     expect(found.tags).toEqual([]);
   });
+
+  it("round-trips association: 'associated'", () => {
+    create(db, makeInput({ association: "associated" }));
+    expect(findAll(db)[0]!.association).toBe("associated");
+  });
+
+  it("round-trips association: 'unassociated'", () => {
+    create(db, makeInput({ association: "unassociated" }));
+    expect(findAll(db)[0]!.association).toBe("unassociated");
+  });
+
+  it("round-trips an omitted association as undefined, not null", () => {
+    create(db, makeInput());
+    expect(findAll(db)[0]!.association).toBeUndefined();
+  });
 });
 
 describe("deleteById", () => {

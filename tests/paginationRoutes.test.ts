@@ -271,4 +271,33 @@ describe("pagination HTTP route layer", () => {
       "Project 000",
     ]);
   });
+
+  it("/api/files: association=associated/unassociated filter, round-tripped through query-param parsing", async () => {
+    seedFiles(db, 2); // file-000.wav, file-001.wav — both unassociated by default
+    upsertProject(db, makeProject({ id: "Project 000", name: "Project 000" }));
+    insertAudioFile(
+      db,
+      makeFile({ id: "file-002.wav", filename: "file-002.wav", projectId: "Project 000" })
+    );
+
+    const associated = await request(app).get("/api/files").query({ association: "associated" });
+    expect(associated.status).toBe(200);
+    expect(associated.body.files.map((f: { id: string }) => f.id)).toEqual(["file-002.wav"]);
+
+    const unassociated = await request(app).get("/api/files").query({ association: "unassociated" });
+    expect(unassociated.status).toBe(200);
+    expect(unassociated.body.files.map((f: { id: string }) => f.id).sort()).toEqual([
+      "file-000.wav",
+      "file-001.wav",
+    ]);
+  });
+
+  it("/api/files: an invalid association value is silently ignored (returns everything, not a 400)", async () => {
+    seedFiles(db, 3);
+
+    const res = await request(app).get("/api/files").query({ association: "bogus" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(3);
+  });
 });

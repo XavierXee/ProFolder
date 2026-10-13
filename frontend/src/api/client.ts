@@ -20,6 +20,8 @@ export type FileFilters = {
   scores?: (number | "unscored")[];
   /** OR'd together (has any of these tags). */
   tags?: string[];
+  /** Whether the file belongs to a project folder; omit means no filter (everything). */
+  association?: "associated" | "unassociated";
   sortBy?: "name" | "modifiedAt" | "folder" | "score" | "status" | "project" | "tags";
   sortDir?: "asc" | "desc";
   page?: number;
@@ -75,6 +77,7 @@ export function getFiles(filters: FileFilters = {}): Promise<PagedFiles> {
   for (const s of filters.statuses ?? []) params.append("status", s);
   for (const s of filters.scores ?? []) params.append("score", String(s));
   for (const t of filters.tags ?? []) params.append("tag", t);
+  if (filters.association) params.set("association", filters.association);
   if (filters.sortBy) params.set("sortBy", filters.sortBy);
   if (filters.sortDir) params.set("sortDir", filters.sortDir);
   params.set("page", String(filters.page ?? 1));
@@ -520,6 +523,7 @@ export function createCustomTab(input: {
   statuses?: TrackStatus[];
   scores?: (number | "unscored")[];
   tags?: string[];
+  association?: "associated" | "unassociated";
 }): Promise<CustomTab> {
   return request<CustomTab>(`/custom-tabs`, { method: "POST", body: JSON.stringify(input) });
 }

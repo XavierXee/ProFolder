@@ -15,6 +15,7 @@ export type FilterToolbarFilters = {
   statuses?: TrackStatus[];
   scores?: ScoreOption[];
   tags?: string[];
+  association?: "associated" | "unassociated";
   sortBy?: string;
   sortDir?: "asc" | "desc";
 };
@@ -27,6 +28,7 @@ export type FilterToolbarPatch = {
   statuses?: TrackStatus[];
   scores?: ScoreOption[];
   tags?: string[];
+  association?: "associated" | "unassociated";
   sortBy?: "modifiedAt";
   sortDir?: "asc" | "desc";
 };
@@ -51,6 +53,15 @@ export const SCORE_RESERVE_LABEL = `Score (${SCORE_OPTIONS.length})`;
  * pragmatic 2-digit reservation covers the realistic case without over-reserving space.
  * Exported for reuse by CreateCustomTabModal's own Tags filter picker. */
 export const TAGS_RESERVE_LABEL = "Tags (99)";
+/** Files-only filter: whether the file belongs to a project folder. Exported for reuse by
+ * CreateCustomTabModal's own Association filter picker. */
+export const ASSOCIATION_OPTIONS: { value: "associated" | "unassociated"; label: string }[] = [
+  { value: "associated", label: "Only files associated to a project folder" },
+  { value: "unassociated", label: "Only files unassociated to a project folder" },
+];
+/** Widest realistic "Association" trigger label: at most one of the two options can ever be
+ * selected (see MultiSelectDropdown's `exclusive` mode). */
+export const ASSOCIATION_RESERVE_LABEL = "Association (1)";
 /** Batch Edit selection is capped by the fixed page size (PAGE_SIZE rows/page, no
  * page-size selector exists), so `(${PAGE_SIZE})` is the true realistic maximum, not a guess. */
 const BATCH_EDIT_RESERVE_LABEL = `Batch Edit (${PAGE_SIZE})`;
@@ -73,6 +84,7 @@ export default function FilterToolbar({
   selectedCount,
   onOpenBatchPanel,
   locked = false,
+  showAssociationFilter = false,
 }: {
   filters: FilterToolbarFilters;
   onChange: (patch: FilterToolbarPatch) => void;
@@ -92,6 +104,10 @@ export default function FilterToolbar({
    * fixed) while keeping search and sort live. Defaults to false so existing callers (the
    * default Files/Projects tabs, via `FilterBar`/`ProjectsFilterBar`) are unaffected. */
   locked?: boolean;
+  /** Shows the Association picker (Associated/Unassociated/everything). Files-only concept —
+   * defaults to false so Projects tabs (`ProjectsFilterBar`) are unaffected without any change
+   * on their end; `FilterBar` (the Files wrapper) is the only caller that passes true. */
+  showAssociationFilter?: boolean;
 }) {
   const [searchInput, setSearchInput] = useState(filters.search ?? "");
   const { statuses: catalogStatuses } = useStatusCatalog();
@@ -125,14 +141,27 @@ export default function FilterToolbar({
 
   const activeFilterCount = locked
     ? (filters.search ? 1 : 0) + (filters.sortBy ? 1 : 0)
-    : statuses.length + scores.length + tags.length + (filters.search ? 1 : 0) + (filters.sortBy ? 1 : 0);
+    : statuses.length +
+      scores.length +
+      tags.length +
+      (filters.association ? 1 : 0) +
+      (filters.search ? 1 : 0) +
+      (filters.sortBy ? 1 : 0);
 
   function clearAll() {
     setSearchInput("");
     if (locked) {
       onChange({ search: undefined, sortBy: undefined, sortDir: undefined });
     } else {
-      onChange({ search: undefined, statuses: undefined, scores: undefined, tags: undefined, sortBy: undefined, sortDir: undefined });
+      onChange({
+        search: undefined,
+        statuses: undefined,
+        scores: undefined,
+        tags: undefined,
+        association: undefined,
+        sortBy: undefined,
+        sortDir: undefined,
+      });
     }
   }
 
@@ -157,6 +186,16 @@ export default function FilterToolbar({
 
         {!locked && (
           <>
+            {showAssociationFilter && (
+              <MultiSelectDropdown
+                exclusive
+                label="Folders"
+                options={ASSOCIATION_OPTIONS}
+                selected={filters.association ? [filters.association] : []}
+                onChange={(next) => onChange({ association: next[0] })}
+                reserveLabel={ASSOCIATION_RESERVE_LABEL}
+              />
+            )}
             <MultiSelectDropdown
               label="Status"
               options={statusOptions}

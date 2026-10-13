@@ -89,7 +89,7 @@ export function FileTable({
     <table className="w-full border-collapse table-fixed" aria-label="Audio files">
       <caption className="sr-only">Scanned audio files, sortable by column</caption>
       <thead className="sticky top-0 z-10 bg-canvas">
-        <tr>
+        <tr className="relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-[var(--color-border)]">
           <th scope="col" className={`${thBase} text-center w-[4%]`}>
             <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible files" />
           </th>

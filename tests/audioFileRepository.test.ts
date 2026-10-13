@@ -140,6 +140,36 @@ describe("findAllActivePaged", () => {
     expect(total).toBe(24); // all 25 fixtures minus file-00.wav
   });
 
+  it("filters for associated files only via association: 'associated'", () => {
+    upsertProject(db, makeProject("proj-a"));
+    upsertProject(db, makeProject("proj-b"));
+    insertAudioFile(db, makeFile({ id: "assoc-a.wav", filename: "assoc-a.wav", projectId: "proj-a" }));
+    insertAudioFile(db, makeFile({ id: "assoc-b.wav", filename: "assoc-b.wav", projectId: "proj-b" }));
+
+    const { items, total } = findAllActivePaged(db, { association: "associated", limit: 30, offset: 0 });
+
+    expect(total).toBe(2);
+    expect(items.map((f) => f.id).sort()).toEqual(["assoc-a.wav", "assoc-b.wav"]);
+  });
+
+  it("filters for unassociated files only via association: 'unassociated'", () => {
+    upsertProject(db, makeProject("proj-a"));
+    insertAudioFile(db, makeFile({ id: "assoc-a.wav", filename: "assoc-a.wav", projectId: "proj-a" }));
+
+    const { total } = findAllActivePaged(db, { association: "unassociated", limit: 30, offset: 0 });
+
+    expect(total).toBe(25); // the 25 unassociated fixtures; assoc-a.wav is excluded
+  });
+
+  it("returns every file (no association filter) when association is omitted", () => {
+    upsertProject(db, makeProject("proj-a"));
+    insertAudioFile(db, makeFile({ id: "assoc-a.wav", filename: "assoc-a.wav", projectId: "proj-a" }));
+
+    const { total } = findAllActivePaged(db, { limit: 30, offset: 0 });
+
+    expect(total).toBe(26);
+  });
+
   it("sorts by score when sortBy is 'score'", () => {
     // Isolate a small, tagged subset so the resulting order is fully deterministic
     // (the other 21 fixture files stay unscored/untagged and would otherwise tie).

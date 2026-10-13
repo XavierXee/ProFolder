@@ -27,6 +27,7 @@ function Harness({
   locked,
   resultLabel = "10 files",
   sectionLabel,
+  showAssociationFilter,
 }: {
   initialFilters?: FilterToolbarFilters;
   allTags?: string[];
@@ -36,6 +37,7 @@ function Harness({
   locked?: boolean;
   resultLabel?: string;
   sectionLabel?: string;
+  showAssociationFilter?: boolean;
 }) {
   const [filters, setFilters] = useState<FilterToolbarFilters>(initialFilters);
 
@@ -55,6 +57,7 @@ function Harness({
       selectedCount={selectedCount}
       onOpenBatchPanel={onOpenBatchPanel}
       locked={locked}
+      showAssociationFilter={showAssociationFilter}
     />
   );
 }
@@ -263,6 +266,70 @@ describe("FilterToolbar - result label and status/score/tag dropdowns", () => {
     render(<Harness allTags={["indie", "lofi"]} initialFilters={{ tags: ["indie"] }} />);
 
     expect(screen.getByRole("button", { name: "Tags (1)" })).toBeInTheDocument();
+  });
+});
+
+describe("FilterToolbar - Association filter", () => {
+  it("does not render the Association picker when showAssociationFilter is false/omitted", () => {
+    render(<Harness />);
+
+    expect(screen.queryByRole("button", { name: /Association/ })).not.toBeInTheDocument();
+  });
+
+  it("renders the Association picker when showAssociationFilter is true", async () => {
+    const user = userEvent.setup();
+    render(<Harness showAssociationFilter />);
+
+    const trigger = screen.getByRole("button", { name: "Association" });
+    expect(trigger).toBeInTheDocument();
+
+    await user.click(trigger);
+    expect(screen.getByRole("checkbox", { name: "Associated" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Unassociated" })).toBeInTheDocument();
+  });
+
+  it("emits association in the onChange patch when an option is picked, and replaces rather than accumulates", async () => {
+    const onChangeSpy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness showAssociationFilter onChangeSpy={onChangeSpy} />);
+
+    await user.click(screen.getByRole("button", { name: "Association" }));
+    await user.click(screen.getByRole("checkbox", { name: "Unassociated" }));
+
+    expect(onChangeSpy).toHaveBeenCalledWith({ association: "unassociated" });
+    expect(screen.getByRole("button", { name: "Association (1)" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: "Associated" }));
+    expect(onChangeSpy).toHaveBeenCalledWith({ association: "associated" });
+    expect(screen.getByRole("checkbox", { name: "Unassociated" })).not.toBeChecked();
+  });
+
+  it("counts an active association filter toward activeFilterCount (enables Clear)", () => {
+    render(<Harness showAssociationFilter initialFilters={{ association: "associated" }} />);
+
+    expect(screen.getByRole("button", { name: "Clear all filters" })).toBeEnabled();
+  });
+
+  it("is cleared (along with everything else) by the Clear button", async () => {
+    const onChangeSpy = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        showAssociationFilter
+        initialFilters={{ association: "associated" }}
+        onChangeSpy={onChangeSpy}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Clear all filters" }));
+
+    expect(onChangeSpy).toHaveBeenCalledWith(expect.objectContaining({ association: undefined }));
+  });
+
+  it("is hidden when locked, even with showAssociationFilter true", () => {
+    render(<Harness showAssociationFilter locked initialFilters={{ association: "associated" }} />);
+
+    expect(screen.queryByRole("button", { name: /Association/ })).not.toBeInTheDocument();
   });
 });
 

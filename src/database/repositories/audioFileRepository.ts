@@ -36,6 +36,8 @@ export type AudioFileFilters = {
   /** OR'd together (has any of these tags); omit/empty means no tag filter. */
   tags?: string[];
   projectId?: string;
+  /** Whether the file belongs to a project folder; omit/undefined means no filter (everything). */
+  association?: "associated" | "unassociated";
   sortBy?: "name" | "modifiedAt" | "folder" | "score" | "status" | "project" | "tags";
   sortDir?: "asc" | "desc";
   limit?: number;
@@ -88,6 +90,11 @@ function buildWhereClause(filters: AudioFileFilters): { where: string; params: R
   if (filters.projectId) {
     clauses.push("project_id = @projectId");
     params.projectId = filters.projectId;
+  }
+  if (filters.association === "unassociated") {
+    clauses.push("project_id IS NULL");
+  } else if (filters.association === "associated") {
+    clauses.push("project_id IS NOT NULL");
   }
 
   return { where: clauses.join(" AND "), params };

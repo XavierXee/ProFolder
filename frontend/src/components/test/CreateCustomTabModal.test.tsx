@@ -163,6 +163,66 @@ describe("CreateCustomTabModal - submit payload", () => {
   });
 });
 
+describe("CreateCustomTabModal - Association filter (files-only)", () => {
+  it("does not render the Association picker for the default 'Project Folders' type", () => {
+    renderModal();
+
+    expect(screen.queryByRole("button", { name: "Association" })).not.toBeInTheDocument();
+  });
+
+  it("renders the Association picker once 'Audio Files' is selected", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderModal();
+
+    await user.click(screen.getByRole("radio", { name: "Audio Files" }));
+
+    expect(screen.getByRole("button", { name: "Association" })).toBeInTheDocument();
+  });
+
+  it("hides the Association picker again when switching back to 'Project Folders'", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderModal();
+
+    await user.click(screen.getByRole("radio", { name: "Audio Files" }));
+    await user.click(screen.getByRole("radio", { name: "Project Folders" }));
+
+    expect(screen.queryByRole("button", { name: "Association" })).not.toBeInTheDocument();
+  });
+
+  it("includes the picked association in the submit payload for a files tab", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderModal();
+
+    await user.type(screen.getByLabelText("Name"), "Unassociated Files");
+    await user.click(screen.getByRole("radio", { name: "Audio Files" }));
+    await user.click(screen.getByRole("button", { name: "Association" }));
+    await user.click(screen.getByRole("checkbox", { name: "Unassociated" }));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(mockCreateCustomTab).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "files", association: "unassociated" })
+      )
+    );
+  });
+
+  it("clears a previously-picked association (not silently submitted) when switching back to 'Project Folders' before submitting", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderModal();
+
+    await user.type(screen.getByLabelText("Name"), "Switched Back");
+    await user.click(screen.getByRole("radio", { name: "Audio Files" }));
+    await user.click(screen.getByRole("button", { name: "Association" }));
+    await user.click(screen.getByRole("checkbox", { name: "Associated" }));
+    await user.click(screen.getByRole("radio", { name: "Project Folders" }));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(mockCreateCustomTab).toHaveBeenCalledTimes(1));
+    const payload = mockCreateCustomTab.mock.calls[0][0];
+    expect(payload.association).toBeUndefined();
+  });
+});
+
 describe("CreateCustomTabModal - dynamic status catalog", () => {
   it("shows a custom (non-default) catalog status in the Status dropdown and includes it in the submit payload", async () => {
     mockGetStatuses.mockReset().mockResolvedValue([

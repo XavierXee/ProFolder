@@ -31,6 +31,7 @@ export default function FilterBar({
       searchAriaLabel="Search by filename or path"
       selectedCount={selectedCount}
       onOpenBatchPanel={onOpenBatchPanel}
+      showAssociationFilter
     />
   );
 }

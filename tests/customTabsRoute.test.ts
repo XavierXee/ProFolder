@@ -146,6 +146,51 @@ describe("/api/custom-tabs", () => {
       expect(res.body.scores).toEqual([]);
       expect(res.body.tags).toEqual([]);
     });
+
+    it("persists a valid association for a type: 'files' tab", async () => {
+      const res = await request(app).post("/api/custom-tabs").send({
+        name: "Unassociated Files",
+        type: "files",
+        association: "unassociated",
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.association).toBe("unassociated");
+
+      const getRes = await request(app).get("/api/custom-tabs");
+      expect(getRes.body.tabs[0].association).toBe("unassociated");
+    });
+
+    it("silently drops association for a type: 'projects' tab, even if a valid value was sent", async () => {
+      const res = await request(app).post("/api/custom-tabs").send({
+        name: "Projects With Association",
+        type: "projects",
+        association: "associated",
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.association).toBeUndefined();
+    });
+
+    it("silently drops an invalid association value", async () => {
+      const res = await request(app).post("/api/custom-tabs").send({
+        name: "Bad Association",
+        type: "files",
+        association: "bogus",
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.association).toBeUndefined();
+    });
+
+    it("defaults association to undefined when omitted", async () => {
+      const res = await request(app)
+        .post("/api/custom-tabs")
+        .send({ name: "No Association", type: "files" });
+
+      expect(res.status).toBe(201);
+      expect(res.body.association).toBeUndefined();
+    });
   });
 
   describe("GET /api/custom-tabs", () => {

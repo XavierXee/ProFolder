@@ -13,10 +13,12 @@ function Harness({
   options = OPTIONS,
   initialSelected = [],
   reserveLabel,
+  exclusive,
 }: {
   options?: { value: string; label: string }[];
   initialSelected?: string[];
   reserveLabel?: string;
+  exclusive?: boolean;
 }) {
   const [selected, setSelected] = useState<string[]>(initialSelected);
   return (
@@ -26,6 +28,7 @@ function Harness({
       selected={selected}
       onChange={setSelected}
       reserveLabel={reserveLabel}
+      exclusive={exclusive}
     />
   );
 }
@@ -172,5 +175,42 @@ describe("MultiSelectDropdown - token-driven styling", () => {
     const trigger = screen.getByRole("button", { name: "Status" });
     expect(trigger.className).toContain("bg-surface");
     expect(trigger.className).toContain("border-border");
+  });
+});
+
+describe("MultiSelectDropdown - exclusive mode", () => {
+  it("picking an unselected option replaces the selection rather than adding to it", async () => {
+    const user = userEvent.setup();
+    render(<Harness exclusive initialSelected={["rock"]} />);
+    await user.click(screen.getByRole("button", { name: "Status (1)" }));
+
+    await user.click(screen.getByRole("checkbox", { name: "Jazz" }));
+
+    expect(screen.getByRole("checkbox", { name: "Jazz" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Rock" })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Status (1)" })).toBeInTheDocument();
+  });
+
+  it("picking the already-selected option clears the selection back to empty", async () => {
+    const user = userEvent.setup();
+    render(<Harness exclusive initialSelected={["rock"]} />);
+    await user.click(screen.getByRole("button", { name: "Status (1)" }));
+
+    await user.click(screen.getByRole("checkbox", { name: "Rock" }));
+
+    expect(screen.getByRole("checkbox", { name: "Rock" })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Status" })).toBeInTheDocument();
+  });
+
+  it("defaults to non-exclusive (toggle-membership) behavior when the prop is omitted", async () => {
+    const user = userEvent.setup();
+    render(<Harness initialSelected={["rock"]} />);
+    await user.click(screen.getByRole("button", { name: "Status (1)" }));
+
+    await user.click(screen.getByRole("checkbox", { name: "Jazz" }));
+
+    expect(screen.getByRole("checkbox", { name: "Rock" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Jazz" })).toBeChecked();
+    expect(screen.getByRole("button", { name: "Status (2)" })).toBeInTheDocument();
   });
 });

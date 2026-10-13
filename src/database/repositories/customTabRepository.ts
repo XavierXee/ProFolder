@@ -9,6 +9,7 @@ type CustomTabRow = {
   statuses: string;
   scores: string;
   tags: string;
+  association: string | null;
   created_at: string;
 };
 
@@ -20,6 +21,7 @@ function rowToCustomTab(row: CustomTabRow): CustomTab {
     statuses: JSON.parse(row.statuses),
     scores: JSON.parse(row.scores),
     tags: JSON.parse(row.tags),
+    association: (row.association as "associated" | "unassociated" | null) ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -36,14 +38,15 @@ export interface CreateCustomTabInput {
   statuses: TrackStatus[];
   scores: (number | "unscored")[];
   tags: string[];
+  association?: "associated" | "unassociated";
 }
 
 export function create(db: Database.Database, input: CreateCustomTabInput): CustomTab {
   const createdAt = new Date().toISOString();
   const result = db
     .prepare(
-      `INSERT INTO custom_tabs (name, type, statuses, scores, tags, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO custom_tabs (name, type, statuses, scores, tags, association, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name,
@@ -51,6 +54,7 @@ export function create(db: Database.Database, input: CreateCustomTabInput): Cust
       JSON.stringify(input.statuses),
       JSON.stringify(input.scores),
       JSON.stringify(input.tags),
+      input.association ?? null,
       createdAt
     );
 
@@ -61,6 +65,7 @@ export function create(db: Database.Database, input: CreateCustomTabInput): Cust
     statuses: input.statuses,
     scores: input.scores,
     tags: input.tags,
+    association: input.association,
     createdAt,
   };
 }

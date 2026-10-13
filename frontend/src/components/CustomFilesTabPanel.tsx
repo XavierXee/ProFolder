@@ -60,7 +60,7 @@ export default function CustomFilesTabPanel({
   musicRoot,
 }: Props) {
   const { files, total, totalPages, page, pageSize, filters, updateFilters, setPage, loading, error, refetch } =
-    useAudioFiles({ statuses: tab.statuses, scores: tab.scores, tags: tab.tags });
+    useAudioFiles({ statuses: tab.statuses, scores: tab.scores, tags: tab.tags, association: tab.association });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());

@@ -69,4 +69,24 @@ describe("FilterBar", () => {
 
     expect(onChange).toHaveBeenCalledWith({ statuses: ["unknown"] });
   });
+
+  it("shows the Association picker (files are the only tab type with this filter)", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <FilterBar
+        filters={{ page: 1, pageSize: PAGE_SIZE }}
+        onChange={onChange}
+        allTags={[]}
+        resultLabel="3 files"
+        selectedCount={0}
+        onOpenBatchPanel={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Association" }));
+    await user.click(screen.getByRole("checkbox", { name: "Unassociated" }));
+
+    expect(onChange).toHaveBeenCalledWith({ association: "unassociated" });
+  });
 });

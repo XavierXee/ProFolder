@@ -26,12 +26,13 @@ export function createCustomTabsRouter(db: Database.Database): Router {
   router.post(
     "/",
     asyncHandler(async (req, res) => {
-      const { name, type, statuses, scores, tags } = req.body as {
+      const { name, type, statuses, scores, tags, association } = req.body as {
         name?: unknown;
         type?: unknown;
         statuses?: unknown;
         scores?: unknown;
         tags?: unknown;
+        association?: unknown;
       };
 
       if (typeof name !== "string" || name.trim().length === 0) {
@@ -58,6 +59,13 @@ export function createCustomTabsRouter(db: Database.Database): Router {
             .map((t) => t.trim())
             .filter((t) => t.length > 0)
         : [];
+      // Association is a files-only concept (projects have no concept of being associated
+      // with another project), so it's forced to undefined for a "projects" tab regardless
+      // of what the client sent — a stored-but-inapplicable value would be confusing.
+      const validAssociation =
+        type === "files" && (association === "associated" || association === "unassociated")
+          ? association
+          : undefined;
 
       const tab = create(db, {
         name: name.trim(),
@@ -65,6 +73,7 @@ export function createCustomTabsRouter(db: Database.Database): Router {
         statuses: validStatuses,
         scores: validScores,
         tags: validTags,
+        association: validAssociation,
       });
       res.status(201).json(tab);
     })
