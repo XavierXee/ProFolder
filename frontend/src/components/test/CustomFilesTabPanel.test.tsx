@@ -639,3 +639,22 @@ describe("CustomFilesTabPanel - playback pass-through (App-level/global, not loc
     expect(screen.queryByRole("dialog", { name: "File detail: kick.wav" })).not.toBeInTheDocument();
   });
 });
+
+describe("CustomFilesTabPanel - arrow-key row navigation", () => {
+  it("ArrowDown moves the open detail panel to the next file in this tab's own list", async () => {
+    const files = [
+      makeFile({ id: "f1", filename: "kick.wav" }),
+      makeFile({ id: "f2", filename: "snare.wav" }),
+    ];
+    mockGetFiles.mockResolvedValue(makePaged({ files, total: 2 }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(await screen.findByText("kick.wav"));
+    await screen.findByRole("dialog", { name: "File detail: kick.wav" });
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+
+    expect(screen.getByRole("dialog", { name: "File detail: snare.wav" })).toBeInTheDocument();
+  });
+});

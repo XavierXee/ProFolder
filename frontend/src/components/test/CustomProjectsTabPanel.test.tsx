@@ -694,3 +694,22 @@ describe("CustomProjectsTabPanel - batch Copy/Move/Delete wiring", () => {
   });
 });
 
+describe("CustomProjectsTabPanel - arrow-key row navigation", () => {
+  it("ArrowDown moves the open detail panel to the next project in this tab's own list", async () => {
+    const projects = [
+      makeProject({ id: "p1", name: "Alpha Sessions" }),
+      makeProject({ id: "p2", name: "Beta Sessions" }),
+    ];
+    mockGetProjects.mockResolvedValue(makePaged({ projects, total: 2 }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(await screen.findByText("Alpha Sessions"));
+    await screen.findByRole("dialog", { name: "Folder detail: Alpha Sessions" });
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+
+    expect(screen.getByRole("dialog", { name: "Folder detail: Beta Sessions" })).toBeInTheDocument();
+  });
+});
+

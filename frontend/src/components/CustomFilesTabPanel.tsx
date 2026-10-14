@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
 import type { FileFilters } from "../api/client.js";
 import { useAudioFiles } from "../hooks/useAudioFiles.js";
+import { useArrowRowNavigation } from "../hooks/useArrowRowNavigation.js";
 import type { AudioFile, CustomTab, TrackStatus } from "../types.js";
 import FilterToolbar from "./FilterToolbar.js";
 import { FileTable } from "./FileTable.js";
@@ -69,6 +70,8 @@ export default function CustomFilesTabPanel({
   const [fileOpDialog, setFileOpDialog] = useState<{ operation: CopyMoveDeleteOperation; target: CopyMoveDeleteTarget } | null>(null);
 
   const selectedFile = files.find((f) => f.id === selectedId) ?? null;
+
+  useArrowRowNavigation({ active: true, items: files, selectedId, onSelect: setSelectedId });
 
   // Skip the initial mount so this doesn't double-fetch on first render (the hook already
   // fetches once on mount); only refetch when a scan actually completes afterward.

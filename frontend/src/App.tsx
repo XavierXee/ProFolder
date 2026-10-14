@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useAudioFiles } from "./hooks/useAudioFiles.js";
 import { useProjects } from "./hooks/useProjects.js";
+import { useArrowRowNavigation } from "./hooks/useArrowRowNavigation.js";
 import FilterBar from "./components/FilterBar.js";
 import { FileTable } from "./components/FileTable.js";
 import { Pagination } from "./components/Pagination.js";
@@ -141,6 +142,9 @@ export default function App() {
   const selectedFile = files.find((f) => f.id === selectedId) ?? null;
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
   const activeCustomTab = typeof activeTab === "number" ? customTabs.find((t) => t.id === activeTab) ?? null : null;
+
+  useArrowRowNavigation({ active: activeTab === "projects", items: projects, selectedId: selectedProjectId, onSelect: setSelectedProjectId });
+  useArrowRowNavigation({ active: activeTab === "files", items: files, selectedId, onSelect: setSelectedId });
 
   function refreshStats() {
     api.getStats().then(setStats).catch(() => {});

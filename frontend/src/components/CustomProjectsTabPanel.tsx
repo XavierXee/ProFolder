@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
 import type { ProjectFilters } from "../api/client.js";
 import { useProjects } from "../hooks/useProjects.js";
+import { useArrowRowNavigation } from "../hooks/useArrowRowNavigation.js";
 import type { CustomTab, Project, TrackStatus } from "../types.js";
 import FilterToolbar from "./FilterToolbar.js";
 import { ProjectsTable } from "./ProjectsTable.js";
@@ -69,6 +70,8 @@ export default function CustomProjectsTabPanel({
   );
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
+
+  useArrowRowNavigation({ active: true, items: projects, selectedId: selectedProjectId, onSelect: setSelectedProjectId });
 
   // Skip the initial mount so this doesn't double-fetch on first render (the hook already
   // fetches once on mount); only refetch when a scan actually completes afterward.
