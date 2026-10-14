@@ -30,6 +30,7 @@ type ProjectRow = {
   has_image: number;
   status: TrackStatus;
   score: number | null;
+  notes: string;
   first_seen_at: string;
   last_seen_at: string;
   is_removed: number;
@@ -49,6 +50,7 @@ function rowToProject(row: ProjectRow, tags: string[]): Project {
     status: row.status,
     tags,
     score: row.score,
+    notes: row.notes,
     firstSeenAt: row.first_seen_at,
     lastSeenAt: row.last_seen_at,
     isRemoved: row.is_removed === 1,
@@ -103,7 +105,7 @@ export function loadActiveDawProjectIds(db: Database.Database): Set<string> {
 
 export function upsertProject(
   db: Database.Database,
-  project: Omit<Project, "status" | "isRemoved" | "tags" | "score">
+  project: Omit<Project, "status" | "isRemoved" | "tags" | "score" | "notes">
 ): void {
   db.prepare(
     `INSERT INTO projects (id, name, path, marker_path, daw_type, detected_via, has_video, has_image, status, first_seen_at, last_seen_at, is_removed, content_modified_at)
@@ -307,6 +309,10 @@ export function updateStatus(db: Database.Database, id: string, status: TrackSta
 
 export function setScore(db: Database.Database, id: string, score: number | null): void {
   db.prepare(`UPDATE projects SET score = ? WHERE id = ?`).run(score, id);
+}
+
+export function setNotes(db: Database.Database, id: string, notes: string): void {
+  db.prepare(`UPDATE projects SET notes = ? WHERE id = ?`).run(notes, id);
 }
 
 /** Batch version of setScore — overwrites the score for every listed project. */

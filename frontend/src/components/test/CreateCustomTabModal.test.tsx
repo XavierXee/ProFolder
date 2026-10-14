@@ -167,7 +167,7 @@ describe("CreateCustomTabModal - Association filter (files-only)", () => {
   it("does not render the Association picker for the default 'Project Folders' type", () => {
     renderModal();
 
-    expect(screen.queryByRole("button", { name: "Association" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Folders" })).not.toBeInTheDocument();
   });
 
   it("renders the Association picker once 'Audio Files' is selected", async () => {
@@ -176,7 +176,7 @@ describe("CreateCustomTabModal - Association filter (files-only)", () => {
 
     await user.click(screen.getByRole("radio", { name: "Audio Files" }));
 
-    expect(screen.getByRole("button", { name: "Association" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Folders" })).toBeInTheDocument();
   });
 
   it("hides the Association picker again when switching back to 'Project Folders'", async () => {
@@ -186,7 +186,7 @@ describe("CreateCustomTabModal - Association filter (files-only)", () => {
     await user.click(screen.getByRole("radio", { name: "Audio Files" }));
     await user.click(screen.getByRole("radio", { name: "Project Folders" }));
 
-    expect(screen.queryByRole("button", { name: "Association" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Folders" })).not.toBeInTheDocument();
   });
 
   it("includes the picked association in the submit payload for a files tab", async () => {
@@ -195,8 +195,8 @@ describe("CreateCustomTabModal - Association filter (files-only)", () => {
 
     await user.type(screen.getByLabelText("Name"), "Unassociated Files");
     await user.click(screen.getByRole("radio", { name: "Audio Files" }));
-    await user.click(screen.getByRole("button", { name: "Association" }));
-    await user.click(screen.getByRole("checkbox", { name: "Unassociated" }));
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+    await user.click(screen.getByRole("checkbox", { name: "Only files unassociated to a project folder" }));
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() =>
@@ -212,8 +212,8 @@ describe("CreateCustomTabModal - Association filter (files-only)", () => {
 
     await user.type(screen.getByLabelText("Name"), "Switched Back");
     await user.click(screen.getByRole("radio", { name: "Audio Files" }));
-    await user.click(screen.getByRole("button", { name: "Association" }));
-    await user.click(screen.getByRole("checkbox", { name: "Associated" }));
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+    await user.click(screen.getByRole("checkbox", { name: "Only files associated to a project folder" }));
     await user.click(screen.getByRole("radio", { name: "Project Folders" }));
     await user.click(screen.getByRole("button", { name: "Create" }));
 

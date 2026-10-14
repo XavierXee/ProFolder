@@ -273,19 +273,19 @@ describe("FilterToolbar - Association filter", () => {
   it("does not render the Association picker when showAssociationFilter is false/omitted", () => {
     render(<Harness />);
 
-    expect(screen.queryByRole("button", { name: /Association/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Folders/ })).not.toBeInTheDocument();
   });
 
   it("renders the Association picker when showAssociationFilter is true", async () => {
     const user = userEvent.setup();
     render(<Harness showAssociationFilter />);
 
-    const trigger = screen.getByRole("button", { name: "Association" });
+    const trigger = screen.getByRole("button", { name: "Folders" });
     expect(trigger).toBeInTheDocument();
 
     await user.click(trigger);
-    expect(screen.getByRole("checkbox", { name: "Associated" })).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: "Unassociated" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Only files associated to a project folder" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Only files unassociated to a project folder" })).toBeInTheDocument();
   });
 
   it("emits association in the onChange patch when an option is picked, and replaces rather than accumulates", async () => {
@@ -293,15 +293,15 @@ describe("FilterToolbar - Association filter", () => {
     const user = userEvent.setup();
     render(<Harness showAssociationFilter onChangeSpy={onChangeSpy} />);
 
-    await user.click(screen.getByRole("button", { name: "Association" }));
-    await user.click(screen.getByRole("checkbox", { name: "Unassociated" }));
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+    await user.click(screen.getByRole("checkbox", { name: "Only files unassociated to a project folder" }));
 
     expect(onChangeSpy).toHaveBeenCalledWith({ association: "unassociated" });
-    expect(screen.getByRole("button", { name: "Association (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Folders (1)" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("checkbox", { name: "Associated" }));
+    await user.click(screen.getByRole("checkbox", { name: "Only files associated to a project folder" }));
     expect(onChangeSpy).toHaveBeenCalledWith({ association: "associated" });
-    expect(screen.getByRole("checkbox", { name: "Unassociated" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Only files unassociated to a project folder" })).not.toBeChecked();
   });
 
   it("counts an active association filter toward activeFilterCount (enables Clear)", () => {
@@ -329,7 +329,7 @@ describe("FilterToolbar - Association filter", () => {
   it("is hidden when locked, even with showAssociationFilter true", () => {
     render(<Harness showAssociationFilter locked initialFilters={{ association: "associated" }} />);
 
-    expect(screen.queryByRole("button", { name: /Association/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Folders/ })).not.toBeInTheDocument();
   });
 });
 

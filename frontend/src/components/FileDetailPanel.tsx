@@ -32,6 +32,7 @@ type Props = {
   onSaveStatus: (id: string, status: TrackStatus) => Promise<void>;
   onSaveTags: (id: string, tags: string[]) => Promise<void>;
   onSaveScore: (id: string, score: number | null) => Promise<void>;
+  onSaveNotes: (id: string, notes: string) => Promise<void>;
   onReveal: (path: string) => void;
   /** Opens the CopyMoveDeleteDialog (owned by the parent, not this panel) for this single
    * file with the given operation. The parent constructs the dialog's `target`/`itemType`
@@ -39,14 +40,17 @@ type Props = {
   onFileOperation: (operation: CopyMoveDeleteOperation, file: AudioFile) => void;
 };
 
-export default function FileDetailPanel({ file, allTags = [], onClose, onSaveStatus, onSaveTags, onSaveScore, onReveal, onFileOperation }: Props) {
+export default function FileDetailPanel({ file, allTags = [], onClose, onSaveStatus, onSaveTags, onSaveScore, onSaveNotes, onReveal, onFileOperation }: Props) {
   const { statuses: catalogStatuses } = useStatusCatalog();
   const [status, setStatus] = useState<TrackStatus>("unknown");
   const [tags, setTags] = useState<string[]>([]);
   const [score, setScore] = useState<number | null>(null);
+  const [notes, setNotes] = useState("");
+  const [savedNotes, setSavedNotes] = useState("");
   const [statusSaving, setStatusSaving] = useState(false);
   const [tagsSaving, setTagsSaving] = useState(false);
   const [scoreSaving, setScoreSaving] = useState(false);
+  const [notesSaving, setNotesSaving] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -54,6 +58,8 @@ export default function FileDetailPanel({ file, allTags = [], onClose, onSaveSta
       setStatus(file.status);
       setTags(file.tags);
       setScore(file.score);
+      setNotes(file.notes);
+      setSavedNotes(file.notes);
       setTimeout(() => closeRef.current?.focus(), 50);
     }
   }, [file?.id]);
@@ -108,6 +114,40 @@ export default function FileDetailPanel({ file, allTags = [], onClose, onSaveSta
     }
   }
 
+  /** Notes save on a short debounce while typing (matching FilterToolbar's search-debounce
+   * idiom) plus an immediate flush on blur, rather than committing on every keystroke like
+   * the other fields' click-driven handlers do — a free-text field can't use those fields'
+   * "only call the handler on a real discrete action" guard, since every keystroke IS a
+   * discrete action. Debouncing also bounds how much typed-but-unsaved text the window-level
+   * Escape-to-close handler above could otherwise discard (the panel only slides off-screen,
+   * it doesn't unmount, so Escape alone would strand an uncommitted edit in local state
+   * without this). */
+  async function commitNotes(value: string, previous: string) {
+    if (!file || value === previous || notesSaving) return;
+    setNotesSaving(true);
+    try {
+      await onSaveNotes(file.id, value);
+      setSavedNotes(value);
+    } catch {
+      setNotes(previous);
+      setSavedNotes(previous);
+    } finally {
+      setNotesSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      commitNotes(notes, savedNotes);
+    }, 250);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes]);
+
+  function handleNotesBlur() {
+    commitNotes(notes, savedNotes);
+  }
+
   const panel = "bg-surface border-border text-ink";
   const meta = "text-slate-500";
   const divider = "border-border";
@@ -115,6 +155,7 @@ export default function FileDetailPanel({ file, allTags = [], onClose, onSaveSta
     "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover";
   const dangerBtn =
     "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 border-danger-border text-danger hover:bg-danger-surface";
+  const inputBg = "bg-canvas border-border text-ink placeholder-ink-muted";
 
   return (
     <>
@@ -255,6 +296,22 @@ export default function FileDetailPanel({ file, allTags = [], onClose, onSaveSta
                   {tagsSaving && <span className="normal-case tracking-normal">Saving…</span>}
                 </p>
                 <TagEditor tags={tags} onChange={handleTagsChange} allTags={allTags} />
+              </div>
+
+              <div>
+                <p className={`text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 ${meta}`}>
+                  Notes
+                  {notesSaving && <span className="normal-case tracking-normal">Saving…</span>}
+                </p>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  onBlur={handleNotesBlur}
+                  placeholder="Add notes…"
+                  rows={4}
+                  aria-label="Notes"
+                  className={`w-full border rounded-[var(--rt-radius)] text-sm px-2.5 py-1.5 resize-y focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500/50 transition-colors ${inputBg}`}
+                />
               </div>
             </div>
           </>

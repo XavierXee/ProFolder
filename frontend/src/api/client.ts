@@ -122,6 +122,13 @@ export function batchUpdateFileScore(ids: string[], score: number | null): Promi
   return request(`/files/batch/score`, { method: "PATCH", body: JSON.stringify({ ids, score }) });
 }
 
+export function updateFileNotes(id: string, notes: string): Promise<AudioFile> {
+  return request<AudioFile>(`/files/${encodeId(id)}/notes`, {
+    method: "PATCH",
+    body: JSON.stringify({ notes }),
+  });
+}
+
 /** Adds these tags to every listed file (union — a file keeps its own existing tags too). */
 export function batchAddFileTags(ids: string[], tags: string[]): Promise<{ updated: number }> {
   return request(`/files/batch/tags`, { method: "PATCH", body: JSON.stringify({ ids, tags }) });
@@ -245,6 +252,13 @@ export function updateProjectScore(id: string, score: number | null): Promise<Pr
   return request<Project>(`/projects/${encodeId(id)}/score`, {
     method: "PATCH",
     body: JSON.stringify({ score }),
+  });
+}
+
+export function updateProjectNotes(id: string, notes: string): Promise<Project> {
+  return request<Project>(`/projects/${encodeId(id)}/notes`, {
+    method: "PATCH",
+    body: JSON.stringify({ notes }),
   });
 }
 

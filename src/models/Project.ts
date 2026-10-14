@@ -21,6 +21,8 @@ export type Project = {
   tags: string[];
   /** User-set quality/readiness score, 1 (worst) to 5 (best); null if not yet scored. */
   score: number | null;
+  /** Free-text user notes, editable from the project's detail panel. Empty string, never null. */
+  notes: string;
 
   firstSeenAt: string;
   lastSeenAt: string;

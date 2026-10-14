@@ -6,6 +6,7 @@ import {
   findById,
   setTags,
   setScore,
+  setNotes,
   setScoreForProjects,
   addTagsToProjects,
   updateStatus,
@@ -327,10 +328,11 @@ describe("projectRepository.markRemoved", () => {
 });
 
 describe("reactivating a soft-removed project (upsertProject)", () => {
-  it("reappearing project is reactivated without throwing, preserving its prior status/tags/score", () => {
+  it("reappearing project is reactivated without throwing, preserving its prior status/tags/score/notes", () => {
     updateStatus(db, "Project 00", "released");
     setScore(db, "Project 00", 5);
     setTags(db, "Project 00", ["favorite", "mix-ready"]);
+    setNotes(db, "Project 00", "Needs a final mix pass.");
 
     markRemoved(db, ["Project 00"], new Date().toISOString());
     expect(findById(db, "Project 00")!.isRemoved).toBe(true);
@@ -357,8 +359,28 @@ describe("reactivating a soft-removed project (upsertProject)", () => {
     expect(reactivated.status).toBe("released");
     expect(reactivated.score).toBe(5);
     expect(reactivated.tags.sort()).toEqual(["favorite", "mix-ready"]);
+    expect(reactivated.notes).toBe("Needs a final mix pass.");
     expect(reactivated.lastSeenAt).toBe(newLastSeenAt); // filesystem-derived fields do refresh
     expect(reactivated.contentModifiedAt).toBe("2026-05-01T00:00:00.000Z");
+  });
+});
+
+describe("projectRepository.setNotes", () => {
+  it("defaults a newly-created project's notes to an empty string, not null/undefined", () => {
+    expect(findById(db, "Project 00")!.notes).toBe("");
+  });
+
+  it("sets and clears a project's notes", () => {
+    setNotes(db, "Project 00", "Great take, needs mastering.");
+    expect(findById(db, "Project 00")!.notes).toBe("Great take, needs mastering.");
+
+    setNotes(db, "Project 00", "");
+    expect(findById(db, "Project 00")!.notes).toBe("");
+  });
+
+  it("leaves other projects' notes untouched", () => {
+    setNotes(db, "Project 00", "Only this project.");
+    expect(findById(db, "Project 01")!.notes).toBe("");
   });
 });
 

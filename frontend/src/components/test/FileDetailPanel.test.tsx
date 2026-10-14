@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import FileDetailPanel, { formatBytes, formatFull } from "../FileDetailPanel.js";
 import type { AudioFile } from "../../types.js";
@@ -60,6 +60,7 @@ function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
     status: "draft",
     tags: ["rock"],
     score: 3,
+    notes: "",
     firstSeenAt: "2026-01-01T00:00:00.000Z",
     lastSeenAt: "2026-01-01T00:00:00.000Z",
     isRemoved: false,
@@ -75,6 +76,7 @@ function renderPanel(overrides: Partial<Parameters<typeof FileDetailPanel>[0]> =
     onSaveStatus: vi.fn().mockResolvedValue(undefined),
     onSaveTags: vi.fn().mockResolvedValue(undefined),
     onSaveScore: vi.fn().mockResolvedValue(undefined),
+    onSaveNotes: vi.fn().mockResolvedValue(undefined),
     onReveal: () => {},
     onFileOperation: vi.fn(),
     ...overrides,
@@ -405,6 +407,124 @@ describe("FileDetailPanel - Saving… indicator", () => {
 
     expect(screen.getByText("Saving…")).toBeInTheDocument();
   });
+
+  it("shows a 'Saving…' indicator while a notes save is in flight", () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockReturnValue(new Promise(() => {}));
+    renderPanel({ onSaveNotes });
+
+    expect(screen.queryByText("Saving…")).not.toBeInTheDocument();
+    act(() => {
+      fireEvent.change(screen.getByRole("textbox", { name: "Notes" }), { target: { value: "New note" } });
+    });
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+});
+
+// Mirrors FilterToolbar.test.tsx's "debounced search" idiom (see that file's doc comment for
+// why fireEvent.change + vi.advanceTimersByTime is used instead of userEvent for the typing
+// itself under fake timers).
+describe("FileDetailPanel - notes", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function getNotesField() {
+    return screen.getByRole("textbox", { name: "Notes" });
+  }
+
+  it("renders the file's existing notes", () => {
+    renderPanel({ file: makeFile({ notes: "Needs a new intro." }) });
+    expect(getNotesField()).toHaveValue("Needs a new intro.");
+  });
+
+  it("does not call onSaveNotes while the debounce timer has not elapsed", () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockResolvedValue(undefined);
+    renderPanel({ onSaveNotes });
+
+    act(() => {
+      fireEvent.change(getNotesField(), { target: { value: "New note" } });
+    });
+
+    expect(onSaveNotes).not.toHaveBeenCalled();
+  });
+
+  it("calls onSaveNotes with the typed value once the 250ms debounce elapses", () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockResolvedValue(undefined);
+    renderPanel({ onSaveNotes });
+
+    act(() => {
+      fireEvent.change(getNotesField(), { target: { value: "New note" } });
+    });
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(onSaveNotes).toHaveBeenCalledWith("f1", "New note");
+  });
+
+  it("flushes an immediate save on blur without waiting for the debounce", () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockResolvedValue(undefined);
+    renderPanel({ onSaveNotes });
+
+    const textarea = getNotesField();
+    act(() => {
+      fireEvent.change(textarea, { target: { value: "New note" } });
+    });
+    act(() => {
+      fireEvent.blur(textarea);
+    });
+
+    expect(onSaveNotes).toHaveBeenCalledWith("f1", "New note");
+  });
+
+  it("does not call onSaveNotes again on blur once the debounce has already saved the same value", () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockResolvedValue(undefined);
+    renderPanel({ onSaveNotes });
+
+    const textarea = getNotesField();
+    act(() => {
+      fireEvent.change(textarea, { target: { value: "New note" } });
+    });
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+    act(() => {
+      fireEvent.blur(textarea);
+    });
+
+    expect(onSaveNotes).toHaveBeenCalledTimes(1);
+  });
+
+  it("rolls back to the previous notes when the save rejects", async () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockRejectedValue(new Error("save failed"));
+    renderPanel({ file: makeFile({ notes: "Original" }), onSaveNotes });
+
+    const textarea = getNotesField();
+    act(() => {
+      fireEvent.change(textarea, { target: { value: "Edited" } });
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+    // waitFor's own internal retry polling relies on real timers, which are still faked here
+    // (vi.advanceTimersByTime only fires already-scheduled callbacks, it doesn't make waitFor's
+    // polling interval ever elapse) — switch back before using it, or it hangs until the test
+    // timeout instead of ever re-checking.
+    vi.useRealTimers();
+
+    await waitFor(() => expect(textarea).toHaveValue("Original"));
+  });
 });
 
 describe("FileDetailPanel - re-sync on file id change", () => {
@@ -433,6 +553,7 @@ describe("FileDetailPanel - re-sync on file id change", () => {
           onSaveStatus={onSaveStatus}
           onSaveTags={vi.fn().mockResolvedValue(undefined)}
           onSaveScore={vi.fn().mockResolvedValue(undefined)}
+          onSaveNotes={vi.fn().mockResolvedValue(undefined)}
           onReveal={() => {}}
           onFileOperation={vi.fn()}
         />

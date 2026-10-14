@@ -8,6 +8,7 @@ import {
   updateStatus,
   setTags,
   setScore,
+  setNotes,
   setScoreForProjects,
   addTagsToProjects,
   filterExistingProjectIds,
@@ -364,6 +365,24 @@ export function createProjectsRouter(db: Database.Database, fileOpsService: File
       }
       setScore(db, id, score);
       cascadeProjectScoreToFiles(db, id, score);
+      res.json(findById(db, id));
+    })
+  );
+
+  router.patch(
+    "/:id/notes",
+    asyncHandler(async (req, res) => {
+      const id = req.params.id!;
+      const { notes } = req.body as { notes?: unknown };
+      if (typeof notes !== "string") {
+        res.status(400).json({ error: "notes must be a string" });
+        return;
+      }
+      if (!findById(db, id)) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+      setNotes(db, id, notes);
       res.json(findById(db, id));
     })
   );

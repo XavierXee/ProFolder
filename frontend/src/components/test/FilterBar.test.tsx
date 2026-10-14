@@ -84,8 +84,8 @@ describe("FilterBar", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Association" }));
-    await user.click(screen.getByRole("checkbox", { name: "Unassociated" }));
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+    await user.click(screen.getByRole("checkbox", { name: "Only files unassociated to a project folder" }));
 
     expect(onChange).toHaveBeenCalledWith({ association: "unassociated" });
   });

@@ -157,6 +157,14 @@ export default function CustomFilesTabPanel({
     refetchProjects(); // score is linked: this may have changed the file's project's score too
   }
 
+  // Notes aren't an aggregated/linked field (no project-level "aggregate notes" concept), so
+  // unlike the handlers above this only refetches this panel's own list — mirrors App.tsx's
+  // own handleFileNotesSave exactly.
+  async function handleFileNotesSave(id: string, notes: string) {
+    await api.updateFileNotes(id, notes);
+    refetch();
+  }
+
   async function handleBatchFileScore(score: number | null) {
     await api.batchUpdateFileScore([...selectedFileIds], score);
     refetch();
@@ -267,6 +275,7 @@ export default function CustomFilesTabPanel({
         onSaveStatus={handleFileStatusSave}
         onSaveTags={handleFileTagsSave}
         onSaveScore={handleFileScoreSave}
+        onSaveNotes={handleFileNotesSave}
         onReveal={handleReveal}
         onFileOperation={handleFileOperation}
       />

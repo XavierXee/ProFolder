@@ -152,6 +152,13 @@ export default function CustomProjectsTabPanel({
     refreshStats(); // the cascade can turn previously-unscored files into scored ones
   }
 
+  // Notes aren't linked/cascaded to files (no aggregate concept), so this only refetches this
+  // panel's own project list — mirrors App.tsx's own handleProjectNotesSave exactly.
+  async function handleProjectNotesSave(id: string, notes: string) {
+    await api.updateProjectNotes(id, notes);
+    refetch();
+  }
+
   async function handleBatchProjectScore(score: number | null) {
     await api.batchUpdateProjectScore([...selectedProjectIds], score);
     refetch();
@@ -249,6 +256,7 @@ export default function CustomProjectsTabPanel({
         onSaveStatus={handleProjectStatusSave}
         onSaveTags={handleProjectTagsSave}
         onSaveScore={handleProjectScoreSave}
+        onSaveNotes={handleProjectNotesSave}
         onProjectOperation={handleProjectOperation}
       />
 

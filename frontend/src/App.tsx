@@ -248,6 +248,13 @@ export default function App() {
     refetchProjects(); // score is linked: this may have changed the file's project's score too
   }
 
+  // Notes aren't an aggregated/linked field the way score/tags are (no project-level
+  // "aggregate notes" concept), so unlike the handlers above this only refetches its own list.
+  async function handleFileNotesSave(id: string, notes: string) {
+    await api.updateFileNotes(id, notes);
+    refetch();
+  }
+
   async function handleProjectStatusSave(id: string, status: TrackStatus) {
     await api.updateProjectStatus(id, status);
     refetchProjects();
@@ -265,6 +272,12 @@ export default function App() {
     refetchProjects();
     refetch(); // score is linked: this was just cascaded onto the project's files
     refreshStats(); // the cascade can turn previously-unscored files into scored ones
+  }
+
+  // Notes aren't linked/cascaded to files (no aggregate concept), so this only refetches projects.
+  async function handleProjectNotesSave(id: string, notes: string) {
+    await api.updateProjectNotes(id, notes);
+    refetchProjects();
   }
 
   function toggleFileSelect(id: string) {
@@ -772,6 +785,7 @@ export default function App() {
           onSaveStatus={handleFileStatusSave}
           onSaveTags={handleFileTagsSave}
           onSaveScore={handleFileScoreSave}
+          onSaveNotes={handleFileNotesSave}
           onReveal={handleReveal}
           onFileOperation={handleFileOperation}
         />
@@ -784,6 +798,7 @@ export default function App() {
           onSaveStatus={handleProjectStatusSave}
           onSaveTags={handleProjectTagsSave}
           onSaveScore={handleProjectScoreSave}
+          onSaveNotes={handleProjectNotesSave}
           onProjectOperation={handleProjectOperation}
         />
 

@@ -13,6 +13,7 @@
     "dev:electron": "npm run build:electron && concurrently -n api,web,electron -c blue,green,magenta --kill-others-on-fail \"npm:dev:api\" \"npm:dev:frontend\" \"electron .\"",
     "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
     "dist:mac": "npm run build && npm run build:electron && electron-builder --mac",
+    "dist:mac:arm64": "npm run build && npm run build:electron && electron-builder --mac --arm64",
     "scan": "tsx src/cli/scan.ts",
     "build:backend": "tsc -p tsconfig.json && mkdir -p dist/src/database/migrations && cp src/database/migrations/*.sql dist/src/database/migrations/",
     "build:frontend": "vite build",

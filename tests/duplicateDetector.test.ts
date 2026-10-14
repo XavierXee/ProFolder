@@ -25,6 +25,7 @@ function makeProject(id: string, projectPath: string, dawType: DawType | undefin
     status: "unknown",
     tags: [],
     score: null,
+    notes: "",
     firstSeenAt: "2026-01-01",
     lastSeenAt: "2026-01-01",
     isRemoved: false,

@@ -5,7 +5,7 @@ import { loadActiveDawProjectIds } from "./projectRepository.js";
 import { syncProjectFromFiles } from "./linkSync.js";
 import { findAll as findAllStatuses } from "./statusRepository.js";
 
-export type AudioFileUpsertInput = Omit<AudioFile, "tags" | "status" | "score"> & {
+export type AudioFileUpsertInput = Omit<AudioFile, "tags" | "status" | "score" | "notes"> & {
   status?: TrackStatus;
 };
 
@@ -22,6 +22,7 @@ type AudioFileRow = {
   project_id: string | null;
   status: TrackStatus;
   score: number | null;
+  notes: string;
   first_seen_at: string;
   last_seen_at: string;
   is_removed: number;
@@ -115,6 +116,7 @@ function rowToAudioFile(row: AudioFileRow, tags: string[]): AudioFile {
     status: row.status,
     tags,
     score: row.score,
+    notes: row.notes,
     firstSeenAt: row.first_seen_at,
     lastSeenAt: row.last_seen_at,
     isRemoved: row.is_removed === 1,
@@ -351,6 +353,10 @@ export function findById(db: Database.Database, id: string): AudioFile | undefin
 
 export function setScore(db: Database.Database, id: string, score: number | null): void {
   db.prepare(`UPDATE audio_files SET score = ? WHERE id = ?`).run(score, id);
+}
+
+export function setNotes(db: Database.Database, id: string, notes: string): void {
+  db.prepare(`UPDATE audio_files SET notes = ? WHERE id = ?`).run(notes, id);
 }
 
 /** Batch version of setScore — overwrites the score for every listed file (used by

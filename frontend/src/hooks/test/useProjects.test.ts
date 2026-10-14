@@ -25,6 +25,7 @@ function makeProject(overrides: Partial<Project> = {}): Project & { audioFileCou
     status: "unknown",
     tags: [],
     score: null,
+    notes: "",
     firstSeenAt: "2026-01-01T00:00:00.000Z",
     lastSeenAt: "2026-01-01T00:00:00.000Z",
     isRemoved: false,

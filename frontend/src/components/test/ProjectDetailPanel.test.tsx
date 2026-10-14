@@ -59,6 +59,7 @@ function makeProject(overrides: Partial<ProjectRow> = {}): ProjectRow {
     status: "draft",
     tags: ["rock"],
     score: 3,
+    notes: "",
     firstSeenAt: "2026-01-01T00:00:00.000Z",
     lastSeenAt: "2026-01-01T00:00:00.000Z",
     isRemoved: false,
@@ -80,6 +81,7 @@ function makeDetail(overrides: Partial<ProjectDetail> = {}): ProjectDetail {
     status: "draft",
     tags: ["rock"],
     score: 3,
+    notes: "",
     firstSeenAt: "2026-01-01T00:00:00.000Z",
     lastSeenAt: "2026-01-01T00:00:00.000Z",
     isRemoved: false,
@@ -119,6 +121,7 @@ function renderPanel(overrides: Partial<Parameters<typeof ProjectDetailPanel>[0]
     onSaveStatus: vi.fn().mockResolvedValue(undefined),
     onSaveTags: vi.fn().mockResolvedValue(undefined),
     onSaveScore: vi.fn().mockResolvedValue(undefined),
+    onSaveNotes: vi.fn().mockResolvedValue(undefined),
     onProjectOperation: vi.fn(),
     ...overrides,
   };
@@ -379,6 +382,7 @@ describe("ProjectDetailPanel - duplicates banner", () => {
           onSaveStatus={vi.fn().mockResolvedValue(undefined)}
           onSaveTags={vi.fn().mockResolvedValue(undefined)}
           onSaveScore={vi.fn().mockResolvedValue(undefined)}
+          onSaveNotes={vi.fn().mockResolvedValue(undefined)}
           onProjectOperation={vi.fn()}
         />
       )
@@ -641,6 +645,7 @@ describe("ProjectDetailPanel - re-sync on project id change", () => {
           onSaveStatus={onSaveStatus}
           onSaveTags={vi.fn().mockResolvedValue(undefined)}
           onSaveScore={vi.fn().mockResolvedValue(undefined)}
+          onSaveNotes={vi.fn().mockResolvedValue(undefined)}
           onProjectOperation={vi.fn()}
         />
       )
@@ -814,6 +819,103 @@ describe("ProjectDetailPanel - saving indicator", () => {
     await user.type(screen.getByRole("combobox"), "jazz{Enter}");
 
     expect(await screen.findByText("Saving…")).toBeInTheDocument();
+  });
+
+  it("shows 'Saving…' while a notes save is in flight", () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockReturnValue(new Promise(() => {}));
+    renderPanel({ onSaveNotes });
+
+    expect(screen.queryByText("Saving…")).not.toBeInTheDocument();
+    act(() => {
+      fireEvent.change(screen.getByRole("textbox", { name: "Notes" }), { target: { value: "New note" } });
+    });
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+});
+
+// Mirrors FilterToolbar.test.tsx's "debounced search" idiom (see that file's doc comment for
+// why fireEvent.change + vi.advanceTimersByTime is used instead of userEvent for the typing
+// itself under fake timers).
+describe("ProjectDetailPanel - notes", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function getNotesField() {
+    return screen.getByRole("textbox", { name: "Notes" });
+  }
+
+  it("renders the project's existing notes", () => {
+    renderPanel({ project: makeProject({ notes: "Needs a final mix pass." }) });
+    expect(getNotesField()).toHaveValue("Needs a final mix pass.");
+  });
+
+  it("does not call onSaveNotes while the debounce timer has not elapsed", () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockResolvedValue(undefined);
+    renderPanel({ onSaveNotes });
+
+    act(() => {
+      fireEvent.change(getNotesField(), { target: { value: "New note" } });
+    });
+
+    expect(onSaveNotes).not.toHaveBeenCalled();
+  });
+
+  it("calls onSaveNotes with the typed value once the 250ms debounce elapses", () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockResolvedValue(undefined);
+    renderPanel({ onSaveNotes });
+
+    act(() => {
+      fireEvent.change(getNotesField(), { target: { value: "New note" } });
+    });
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(onSaveNotes).toHaveBeenCalledWith("p1", "New note");
+  });
+
+  it("flushes an immediate save on blur without waiting for the debounce", () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockResolvedValue(undefined);
+    renderPanel({ onSaveNotes });
+
+    const textarea = getNotesField();
+    act(() => {
+      fireEvent.change(textarea, { target: { value: "New note" } });
+    });
+    act(() => {
+      fireEvent.blur(textarea);
+    });
+
+    expect(onSaveNotes).toHaveBeenCalledWith("p1", "New note");
+  });
+
+  it("rolls back to the previous notes when the save rejects", async () => {
+    vi.useFakeTimers();
+    const onSaveNotes = vi.fn().mockRejectedValue(new Error("save failed"));
+    renderPanel({ project: makeProject({ notes: "Original" }), onSaveNotes });
+
+    const textarea = getNotesField();
+    act(() => {
+      fireEvent.change(textarea, { target: { value: "Edited" } });
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+    // waitFor's own internal retry polling relies on real timers — see
+    // FileDetailPanel.test.tsx's identical note on its own equivalent test.
+    vi.useRealTimers();
+
+    await waitFor(() => expect(textarea).toHaveValue("Original"));
   });
 });
 

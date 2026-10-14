@@ -8,6 +8,7 @@ import {
   updateStatus,
   setTags,
   setScore,
+  setNotes,
   setScoreForFiles,
   addTagsToFiles,
   findById,
@@ -425,6 +426,46 @@ describe("setScore", () => {
   it("leaves other files' scores untouched", () => {
     setScore(db, "file-00.wav", 3);
     expect(findById(db, "file-01.wav")!.score).toBeNull();
+  });
+});
+
+describe("setNotes", () => {
+  it("defaults a newly-inserted file's notes to an empty string, not null/undefined", () => {
+    expect(findById(db, "file-00.wav")!.notes).toBe("");
+  });
+
+  it("sets and clears a file's notes", () => {
+    setNotes(db, "file-00.wav", "Needs a new intro.");
+    expect(findById(db, "file-00.wav")!.notes).toBe("Needs a new intro.");
+
+    setNotes(db, "file-00.wav", "");
+    expect(findById(db, "file-00.wav")!.notes).toBe("");
+  });
+
+  it("leaves other files' notes untouched", () => {
+    setNotes(db, "file-00.wav", "Only this file.");
+    expect(findById(db, "file-01.wav")!.notes).toBe("");
+  });
+
+  it("preserves notes across a metadata update (e.g. a rescan), like status/tags/score", () => {
+    setNotes(db, "file-00.wav", "Keep me around.");
+    const existing = findById(db, "file-00.wav")!;
+
+    updateAudioFileMetadata(db, {
+      id: "file-00.wav",
+      path: existing.path,
+      relativePath: existing.relativePath,
+      filename: existing.filename,
+      extension: existing.extension,
+      size: existing.size + 10,
+      modifiedAt: new Date(Date.now() + 1000).toISOString(),
+      containingFolder: existing.containingFolder,
+      firstSeenAt: existing.firstSeenAt,
+      lastSeenAt: new Date(Date.now() + 1000).toISOString(),
+      isRemoved: false,
+    });
+
+    expect(findById(db, "file-00.wav")!.notes).toBe("Keep me around.");
   });
 });
 

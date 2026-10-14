@@ -6,6 +6,7 @@ import {
   updateStatus,
   setTags,
   setScore,
+  setNotes,
   setScoreForFiles,
   addTagsToFiles,
   filterExistingFileIds,
@@ -388,6 +389,24 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
       const file = findById(db, id)!;
       if (file.projectId) syncProjectFromFiles(db, file.projectId);
       res.json(withProjectPath(db, file));
+    })
+  );
+
+  router.patch(
+    "/:id/notes",
+    asyncHandler(async (req, res) => {
+      const id = req.params.id!;
+      const { notes } = req.body as { notes?: unknown };
+      if (typeof notes !== "string") {
+        res.status(400).json({ error: "notes must be a string" });
+        return;
+      }
+      if (!findById(db, id)) {
+        res.status(404).json({ error: "File not found" });
+        return;
+      }
+      setNotes(db, id, notes);
+      res.json(withProjectPath(db, findById(db, id)!));
     })
   );
 

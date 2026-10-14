@@ -58,13 +58,14 @@ type Props = {
   onSaveStatus: (id: string, status: TrackStatus) => Promise<void>;
   onSaveTags: (id: string, tags: string[]) => Promise<void>;
   onSaveScore: (id: string, score: number | null) => Promise<void>;
+  onSaveNotes: (id: string, notes: string) => Promise<void>;
   /** Opens the CopyMoveDeleteDialog (owned by the parent, not this panel) for this single
    * project with the given operation. The parent constructs the dialog's `target`/`itemType`
    * (and, for a move, `excludedPath`) from the project this callback is invoked with. */
   onProjectOperation: (operation: CopyMoveDeleteOperation, project: Project & { audioFileCount: number }) => void;
 };
 
-export default function ProjectDetailPanel({ project, allTags = [], onClose, onReveal, onSaveStatus, onSaveTags, onSaveScore, onProjectOperation }: Props) {
+export default function ProjectDetailPanel({ project, allTags = [], onClose, onReveal, onSaveStatus, onSaveTags, onSaveScore, onSaveNotes, onProjectOperation }: Props) {
   const { statuses: catalogStatuses } = useStatusCatalog();
   const [detail, setDetail] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,6 +77,9 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
   const [tagsSaving, setTagsSaving] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [scoreSaving, setScoreSaving] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [savedNotes, setSavedNotes] = useState("");
+  const [notesSaving, setNotesSaving] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -87,6 +91,8 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
     setStatus(project.status);
     setTags(project.tags);
     setScore(project.score);
+    setNotes(project.notes);
+    setSavedNotes(project.notes);
     api
       .getProjectDetail(project.id)
       .then(setDetail)
@@ -138,6 +144,37 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
     }
   }
 
+  /** Notes save on a short debounce while typing (matching FilterToolbar's search-debounce
+   * idiom) plus an immediate flush on blur — see FileDetailPanel.tsx's identical handler for
+   * the full rationale (a free-text field can't use the other fields' "only call on a real
+   * discrete action" click guard, and debouncing bounds how much typed-but-unsaved text the
+   * window-level Escape-to-close handler could otherwise strand). */
+  async function commitNotes(value: string, previous: string) {
+    if (!project || value === previous || notesSaving) return;
+    setNotesSaving(true);
+    try {
+      await onSaveNotes(project.id, value);
+      setSavedNotes(value);
+    } catch {
+      setNotes(previous);
+      setSavedNotes(previous);
+    } finally {
+      setNotesSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      commitNotes(notes, savedNotes);
+    }, 250);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes]);
+
+  function handleNotesBlur() {
+    commitNotes(notes, savedNotes);
+  }
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape" && project) onClose();
@@ -153,6 +190,7 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
     "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover";
   const dangerBtn =
     "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 border-danger-border text-danger hover:bg-danger-surface";
+  const inputBg = "bg-canvas border-border text-ink placeholder-ink-muted";
   const typeLabel = project?.dawType ? DAW_LABELS[project.dawType] : "Folder";
 
   return (
@@ -332,6 +370,22 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
                   {tagsSaving && <span className="normal-case tracking-normal">Saving…</span>}
                 </p>
                 <TagEditor tags={tags} onChange={handleTagsChange} allTags={allTags} />
+              </div>
+
+              <div>
+                <p className={`text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 ${meta}`}>
+                  Notes
+                  {notesSaving && <span className="normal-case tracking-normal">Saving…</span>}
+                </p>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  onBlur={handleNotesBlur}
+                  placeholder="Add notes…"
+                  rows={4}
+                  aria-label="Notes"
+                  className={`w-full border rounded-[var(--rt-radius)] text-sm px-2.5 py-1.5 resize-y focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500/50 transition-colors ${inputBg}`}
+                />
               </div>
 
               <div className={`border-t ${divider}`} />
