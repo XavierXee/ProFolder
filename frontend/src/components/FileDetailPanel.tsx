@@ -196,6 +196,12 @@ export default function FileDetailPanel({
         role="dialog"
         aria-modal="true"
         aria-label={file ? `File detail: ${file.filename}` : "File detail"}
+        // This panel stays mounted (CSS-slid off-screen, see translate-x-full below) even while
+        // "closed", so its own transition can animate in/out — without `inert`, every button/
+        // input inside it was still a real, keyboard-reachable Tab stop despite being invisible
+        // and unreachable by mouse, forcing a user tabbing from the header to cycle through a
+        // whole "ghost" copy of every closed panel's controls before ever reaching a visible one.
+        inert={file ? undefined : ""}
         className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col transition-transform duration-250 ease-out ${panel} ${file ? "translate-x-0 shadow-2xl" : "translate-x-full"}`}
       >
         {file && (

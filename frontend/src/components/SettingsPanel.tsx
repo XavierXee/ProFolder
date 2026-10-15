@@ -271,6 +271,10 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
         role="dialog"
         aria-modal="true"
         aria-label="Settings"
+        // Stays mounted (CSS-slid off-screen) while "closed" so its slide transition can animate
+        // — without `inert`, its controls were still real, keyboard-reachable "ghost" Tab stops
+        // despite being invisible and unclickable. See FileDetailPanel.tsx's identical comment.
+        inert={open ? undefined : ""}
         className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col transition-transform duration-250 ease-out ${panel} ${open ? "translate-x-0 shadow-2xl" : "translate-x-full"}`}
       >
         <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>

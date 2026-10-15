@@ -204,6 +204,10 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
         role="dialog"
         aria-modal="true"
         aria-label={project ? `Folder detail: ${project.name}` : "Folder detail"}
+        // Stays mounted (CSS-slid off-screen) while "closed" so its slide transition can animate
+        // — without `inert`, its controls were still real, keyboard-reachable "ghost" Tab stops
+        // despite being invisible and unclickable. See FileDetailPanel.tsx's identical comment.
+        inert={project ? undefined : ""}
         className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col transition-transform duration-250 ease-out ${panel} ${project ? "translate-x-0 shadow-2xl" : "translate-x-full"}`}
       >
         {project && (
