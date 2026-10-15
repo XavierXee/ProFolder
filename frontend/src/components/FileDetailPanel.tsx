@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { AudioFile, TrackStatus } from "../types.js";
 import { UNKNOWN_STATUS_KEY } from "../types.js";
 import type { CopyMoveDeleteOperation } from "./CopyMoveDeleteDialog.js";
+import StatusBadge from "./StatusBadge.js";
+import ScoreBadge from "./ScoreBadge.js";
 import { ScoreEditor } from "./ScoreEditor.js";
 import { TagEditor } from "./TagEditor.js";
 import { buildStatusOptions, STATUS_PILL, STATUS_PILL_UNSELECTED } from "../statusStyles.js";
@@ -223,7 +225,7 @@ export default function FileDetailPanel({
                   </button>
                   <h2 className="text-base font-mono font-medium text-blue-400 truncate">{file.filename}</h2>
                 </div>
-                <p className={`text-xs mt-1 ${meta}`}>Updated {formatFull(file.modifiedAt)} | Size {formatBytes(file.size)}</p>
+                <p className={`text-xs mt-1 ${meta}`}>Updated {formatFull(file.modifiedAt)}</p>
               </div>
               <button
                 ref={closeRef}
@@ -241,49 +243,61 @@ export default function FileDetailPanel({
               <div>
                 <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Project</p>
                 <p className="text-lg font-semibold truncate">{file.projectId ?? "Unassociated"}</p>
+                <div className="flex items-center gap-3 mt-2 flex-wrap">
+                  <StatusBadge status={status} />
+                  <ScoreBadge score={score} />
+                  <span className={`text-xs font-mono ${meta}`}>{file.extension}</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-[var(--rt-radius-lg)] border bg-surface-hover border-border">
+                <p className={`text-xs font-mono uppercase tracking-wider mb-1 ${meta}`}>Size</p>
+                <p className="text-xl font-mono font-semibold tabular-nums">{formatBytes(file.size)}</p>
               </div>
 
               <div>
                 <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Location</p>
                 <p className="text-sm leading-relaxed break-all text-ink">{file.relativePath}</p>
-
-                <div className="flex gap-2 mt-3 w-full">
+                <p className={`text-xs font-mono mt-2 break-all ${meta}`}>{file.path}</p>
+                <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => onReveal(file.path)}
-                    className={`flex-1 ${outlineBtn}`}
+                    className={outlineBtn}
                   >
-                    Reveal in Finder
+                    Reveal file in Finder
                   </button>
                   {file.projectPath && (
                     <button
                       onClick={() => onReveal(file.projectPath!)}
-                      className={`flex-1 ${outlineBtn}`}
+                      className={outlineBtn}
                     >
                       Reveal project
                     </button>
                   )}
                 </div>
-                <div className="flex gap-2 mt-2 w-full">
+                <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => onFileOperation("copy", file)}
-                    className={`flex-1 ${outlineBtn}`}
+                    className={outlineBtn}
                   >
                     Copy
                   </button>
                   <button
                     onClick={() => onFileOperation("move", file)}
-                    className={`flex-1 ${outlineBtn}`}
+                    className={outlineBtn}
                   >
                     Move
                   </button>
                   <button
                     onClick={() => onFileOperation("delete", file)}
-                    className={`flex-1 ${outlineBtn}`}
+                    className={dangerBtn}
                   >
                     Delete
                   </button>
                 </div>
               </div>
+
+              <div className={`border-t ${divider}`} />
 
               <div>
                 <p className={`text-xs font-mono uppercase tracking-wider mb-3 flex items-center gap-2 ${meta}`}>
