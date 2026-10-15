@@ -326,7 +326,7 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
                   value={paginationInputValue}
                   disabled={paginationSaveState === "saving"}
                   onChange={(e) => setPaginationInputValue(e.target.value)}
-                  className="px-2 py-1 text-sm rounded-[var(--rt-radius)] border border-border bg-surface text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="w-[62px] px-2 py-1 text-sm rounded-[var(--rt-radius)] border border-border bg-surface text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 />
                 <button
                   type="button"
@@ -362,7 +362,7 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
                   value={duplicateThresholdInputValue}
                   disabled={duplicateThresholdSaveState === "saving"}
                   onChange={(e) => setDuplicateThresholdInputValue(e.target.value)}
-                  className="px-2 py-1 text-sm rounded-[var(--rt-radius)] border border-border bg-surface text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="w-[62px] px-2 py-1 text-sm rounded-[var(--rt-radius)] border border-border bg-surface text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 />
                 <button
                   type="button"
@@ -378,6 +378,69 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
             </div>
           ) : null}
         </div>
+        {true ? (
+        // {runtimeMode === "desktop" ? (
+          <div className={`flex-0.5 overflow-y-auto px-6 pt-2 pb-4 border-b ${divider}`}>
+            <div className="flex items-center justify-between mb-1 mt-2">
+              <p className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Data Location</p>
+              <div className="h-4">
+                {dbApplyState === "applying" && <span className={`text-xs font-mono ${meta}`}>Saving…</span>}
+                {dbApplyState === "error" && <span className="text-xs font-mono text-red-400">Failed to save</span>}
+              </div>
+            </div>
+
+            {dbLoading ? (
+              <p className={`text-sm mt-3 ${meta}`}>Loading…</p>
+            ) : dbLoadError ? (
+              <p className="text-sm mt-3 text-red-400">{dbLoadError}</p>
+            ) : dbApplyState === "restarting" ? (
+              <p className="text-sm mt-3 text-emerald-400">Restarting… the app will relaunch shortly to use the new database location.</p>
+            ) : pendingDbPath ? (
+              <div>
+                <p className={`text-xs mt-1 mb-2 ${meta}`}>New database location:</p>
+                <span className="block text-xs font-mono truncate max-w-[280px] text-slate-500" title={pendingDbPath}>
+                  {pendingDbPath}
+                </span>
+                <div className="flex justify-between items-center gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={handleApplyDbLocation}
+                    disabled={dbApplyState === "applying"}
+                    className="w-[126px] px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
+                  >
+                    {dbApplyState === "applying" ? "Applying…" : "Apply & Restart"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelDbLocation}
+                    disabled={dbApplyState === "applying"}
+                    className="w-[126px] px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {dbError ? <p className="text-sm mt-2 text-red-400">{dbError}</p> : null}
+              </div>
+            ) : (
+              <div>
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-xs font-mono truncate max-w-[220px] text-slate-500" title={dbPath}>
+                    {dbPath ?? "…"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleChooseDbLocation}
+                    disabled={dbChoosing}
+                    className="w-[126px] px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {dbChoosing ? "Waiting…" : "Choose…"}
+                  </button>
+                </div>
+                {dbError ? <p className="text-sm mt-2 text-red-400">{dbError}</p> : null}
+              </div>
+            )}
+          </div>
+        ) : null}
         <div className={`flex-0.5 overflow-y-auto px-6 py-2 border-b ${divider}`}>
           <div className="flex items-center justify-between mb-1 mt-2">
             <p className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Scan Settings</p>
@@ -473,68 +536,6 @@ export default function SettingsPanel({ theme, setTheme, open, onClose }: Props)
             </div>
           ) : null}
         </div>
-        {runtimeMode === "desktop" ? (
-          <div className="flex-1 overflow-y-auto px-6 py-2">
-            <div className="flex items-center justify-between mb-1 mt-2">
-              <p className={`text-xs font-mono uppercase tracking-wider ${meta}`}>Data Location</p>
-              <div className="h-4">
-                {dbApplyState === "applying" && <span className={`text-xs font-mono ${meta}`}>Saving…</span>}
-                {dbApplyState === "error" && <span className="text-xs font-mono text-red-400">Failed to save</span>}
-              </div>
-            </div>
-
-            {dbLoading ? (
-              <p className={`text-sm mt-3 ${meta}`}>Loading…</p>
-            ) : dbLoadError ? (
-              <p className="text-sm mt-3 text-red-400">{dbLoadError}</p>
-            ) : dbApplyState === "restarting" ? (
-              <p className="text-sm mt-3 text-emerald-400">Restarting… the app will relaunch shortly to use the new database location.</p>
-            ) : pendingDbPath ? (
-              <div>
-                <p className={`text-xs mt-1 mb-2 ${meta}`}>New database location:</p>
-                <span className="block text-xs font-mono truncate max-w-[280px] text-slate-500" title={pendingDbPath}>
-                  {pendingDbPath}
-                </span>
-                <div className="flex items-center gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={handleApplyDbLocation}
-                    disabled={dbApplyState === "applying"}
-                    className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
-                  >
-                    {dbApplyState === "applying" ? "Applying…" : "Apply & Restart"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancelDbLocation}
-                    disabled={dbApplyState === "applying"}
-                    className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Cancel
-                  </button>
-                </div>
-                {dbError ? <p className="text-sm mt-2 text-red-400">{dbError}</p> : null}
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono truncate max-w-[220px] text-slate-500" title={dbPath}>
-                    {dbPath ?? "…"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleChooseDbLocation}
-                    disabled={dbChoosing}
-                    className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {dbChoosing ? "Waiting…" : "Choose…"}
-                  </button>
-                </div>
-                {dbError ? <p className="text-sm mt-2 text-red-400">{dbError}</p> : null}
-              </div>
-            )}
-          </div>
-        ) : null}
       </div>
     </>
   );
