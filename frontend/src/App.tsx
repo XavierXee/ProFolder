@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useAudioFiles } from "./hooks/useAudioFiles.js";
 import { useProjects } from "./hooks/useProjects.js";
-import { useArrowRowNavigation } from "./hooks/useArrowRowNavigation.js";
+import { useRowKeyboardNav } from "./hooks/useRowKeyboardNav.js";
 import FilterBar from "./components/FilterBar.js";
 import { FileTable } from "./components/FileTable.js";
 import { Pagination } from "./components/Pagination.js";
@@ -119,6 +119,15 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(loadStoredTheme);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  // Whether the detail panel is actually SHOWN for the currently-highlighted row — decoupled
+  // from selectedId/selectedProjectId, which now also serves as a plain keyboard-navigable
+  // "cursor" independent of the panel (see useRowKeyboardNav below). Every other existing
+  // `setSelectedId(null)`/`setSelectedProjectId(null)` call site elsewhere in this file still
+  // correctly closes the panel too as a side effect (selectedFile/selectedProject become null,
+  // and `file={filesDetailOpen ? selectedFile : null}` is null either way once selectedFile is),
+  // so only the handlers that need "open/close without losing the highlight" reference these.
+  const [filesDetailOpen, setFilesDetailOpen] = useState(false);
+  const [projectsDetailOpen, setProjectsDetailOpen] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [stats, setStats] = useState<LibraryStats | undefined>();
   const [allTags, setAllTags] = useState<string[]>([]);
@@ -143,8 +152,40 @@ export default function App() {
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
   const activeCustomTab = typeof activeTab === "number" ? customTabs.find((t) => t.id === activeTab) ?? null : null;
 
-  useArrowRowNavigation({ active: activeTab === "projects", items: projects, selectedId: selectedProjectId, onSelect: setSelectedProjectId });
-  useArrowRowNavigation({ active: activeTab === "files", items: files, selectedId, onSelect: setSelectedId });
+  useRowKeyboardNav({
+    active: activeTab === "projects",
+    items: projects,
+    selectedId: selectedProjectId,
+    onSelect: setSelectedProjectId,
+    onEnter: () => setProjectsDetailOpen(true),
+    // No onSpace: projects have no playback concept, so Space falls back to the hook's
+    // "defaults to onEnter when onSpace is omitted" behavior — it just opens the panel too.
+  });
+  useRowKeyboardNav({
+    active: activeTab === "files",
+    items: files,
+    selectedId,
+    onSelect: setSelectedId,
+    onEnter: () => setFilesDetailOpen(true),
+    onSpace: (id) => {
+      const file = files.find((f) => f.id === id);
+      if (file) handlePlayClick(file);
+    },
+  });
+
+  // Enforces "the detail panel can only be open while something is highlighted" — many existing
+  // call sites elsewhere in this file clear selectedId/selectedProjectId to null (deleting the
+  // selected row, opening an unrelated panel like Settings/Scan, switching tabs, etc.) without
+  // themselves knowing about filesDetailOpen/projectsDetailOpen. Without this, one of those could
+  // leave a stale `true` behind, and a LATER arrow-key press (which can re-populate selectedId
+  // from nothing, see useRowKeyboardNav) would make the panel pop open unannounced, despite only
+  // Enter/Space/click ever being allowed to actually open it.
+  useEffect(() => {
+    if (!selectedId) setFilesDetailOpen(false);
+  }, [selectedId]);
+  useEffect(() => {
+    if (!selectedProjectId) setProjectsDetailOpen(false);
+  }, [selectedProjectId]);
 
   function refreshStats() {
     api.getStats().then(setStats).catch(() => {});
@@ -446,16 +487,31 @@ export default function App() {
     setIsPlaying(false);
   }
 
+  // Clicking the already-highlighted (and open) row toggles the panel closed, keeping the
+  // highlight so keyboard navigation can continue from there; clicking any other row selects
+  // it and opens the panel — matches handleProjectRowClick below exactly, just for files.
   function handleRowClick(id: string) {
     setSelectedProjectId(null);
+    setProjectsDetailOpen(false);
     setShowFilesBatchPanel(false);
-    setSelectedId((prev) => (prev === id ? null : id));
+    if (selectedId === id) {
+      setFilesDetailOpen((open) => !open);
+    } else {
+      setSelectedId(id);
+      setFilesDetailOpen(true);
+    }
   }
 
   function handleProjectRowClick(id: string) {
     setSelectedId(null);
+    setFilesDetailOpen(false);
     setShowProjectsBatchPanel(false);
-    setSelectedProjectId((prev) => (prev === id ? null : id));
+    if (selectedProjectId === id) {
+      setProjectsDetailOpen((open) => !open);
+    } else {
+      setSelectedProjectId(id);
+      setProjectsDetailOpen(true);
+    }
   }
 
   function handleTabChange(tab: Tab) {
@@ -783,21 +839,24 @@ export default function App() {
         />
 
         <FileDetailPanel
-          file={selectedFile}
+          file={filesDetailOpen ? selectedFile : null}
           allTags={allTags}
-          onClose={() => setSelectedId(null)}
+          onClose={() => setFilesDetailOpen(false)}
           onSaveStatus={handleFileStatusSave}
           onSaveTags={handleFileTagsSave}
           onSaveScore={handleFileScoreSave}
           onSaveNotes={handleFileNotesSave}
           onReveal={handleReveal}
           onFileOperation={handleFileOperation}
+          playingFileId={playingFile?.id ?? null}
+          isPlaying={isPlaying}
+          onPlayClick={handlePlayClick}
         />
 
         <ProjectDetailPanel
-          project={selectedProject}
+          project={projectsDetailOpen ? selectedProject : null}
           allTags={allTags}
-          onClose={() => setSelectedProjectId(null)}
+          onClose={() => setProjectsDetailOpen(false)}
           onReveal={handleReveal}
           onSaveStatus={handleProjectStatusSave}
           onSaveTags={handleProjectTagsSave}

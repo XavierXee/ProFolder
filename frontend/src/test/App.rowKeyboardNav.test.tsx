@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App.js";
 import type { AudioFile, Project } from "../types.js";
@@ -21,6 +21,7 @@ vi.mock("../api/client.js", () => ({
   getTagCounts: vi.fn(),
   getProjectDetail: vi.fn(),
   getProjectDuplicates: vi.fn(),
+  getFileAudioUrl: vi.fn(),
 }));
 
 import * as api from "../api/client.js";
@@ -212,5 +213,151 @@ describe("App - arrow-key row navigation (Projects tab)", () => {
     fireEvent.keyDown(document.body, { key: "ArrowDown" });
 
     expect(screen.getByRole("dialog", { name: "Folder detail: Beta Sessions" })).toBeInTheDocument();
+  });
+});
+
+// The headline new behavior: rows are keyboard-navigable WITHOUT the detail panel ever being
+// open — the panel only opens via click/Enter now, decoupled from which row is highlighted.
+describe("App - keyboard browsing with the detail panel closed (Files tab)", () => {
+  it("ArrowDown with nothing clicked yet highlights the first row, with no panel opening", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+
+    expect(screen.getByText("Kick One.wav").closest("tr")).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("dialog", { name: /^File detail:/ })).not.toBeInTheDocument();
+  });
+
+  it("further ArrowDown presses keep moving the highlight with the panel still closed", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+
+    expect(screen.getByText("Snare Two.wav").closest("tr")).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("dialog", { name: /^File detail:/ })).not.toBeInTheDocument();
+  });
+
+  it("Enter opens the detail panel for the highlighted row", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(document.body, { key: "Enter" });
+
+    expect(await screen.findByRole("dialog", { name: "File detail: Kick One.wav" })).toBeInTheDocument();
+  });
+
+  it("clicking the already-highlighted row's second time closes the panel but keeps it highlighted, so arrow keys keep working from there", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+
+    // "Kick One.wav" appears twice once the panel is open (the row AND the panel's own <h2>
+    // title) — the row is always the first match, since FileTable renders well before
+    // FileDetailPanel in App.tsx's own JSX tree.
+    const row = () => screen.getAllByText("Kick One.wav")[0]!;
+    await user.click(row());
+    await screen.findByRole("dialog", { name: "File detail: Kick One.wav" });
+    await user.click(row());
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /^File detail:/ })).not.toBeInTheDocument());
+    expect(row().closest("tr")).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    expect(screen.getByText("Snare Two.wav").closest("tr")).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("dialog", { name: /^File detail:/ })).not.toBeInTheDocument();
+  });
+
+  it("closing via the panel's own close button also keeps the row highlighted for continued keyboard browsing", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+
+    await user.click(screen.getAllByText("Kick One.wav")[0]!);
+    const dialog = await screen.findByRole("dialog", { name: "File detail: Kick One.wav" });
+    // Several other always-mounted panels (BatchEditPanel, Settings, etc.) share the exact
+    // same "Close panel" aria-label — scope to this dialog specifically, not a bare query.
+    await user.click(within(dialog).getByRole("button", { name: "Close panel" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /^File detail:/ })).not.toBeInTheDocument());
+    expect(screen.getByText("Kick One.wav").closest("tr")).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("Space toggles playback for the highlighted file WITHOUT opening the detail panel", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(document.body, { key: " " });
+
+    expect(await screen.findByRole("button", { name: "Pause" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /^File detail:/ })).not.toBeInTheDocument();
+  });
+
+  // Regression test for a real reported bug: switching to this tab means clicking the "Audio
+  // Files" tab button, which leaves DOM focus sitting there (clicking a button doesn't blur it)
+  // — unlike the other tests here, which dispatch keydowns directly on document.body regardless
+  // of actual focus, this uses userEvent.keyboard() so the event's real target is whatever
+  // currently has focus, faithfully reproducing what a real keypress does. Space silently did
+  // nothing in this exact situation (the very first highlighted row, right after switching
+  // tabs) until the detail panel had been opened and closed at least once — see
+  // useRowKeyboardNav.ts's `isProtectedButton` doc comment for the root cause and fix.
+  it("Space still works for the first highlighted row even though the tab-switcher button still has focus from switching tabs", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Audio Files" }));
+    await waitFor(() => expect(screen.getByText("Kick One.wav")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Audio Files" })).toHaveFocus();
+
+    await user.keyboard("{ArrowDown}");
+    await user.keyboard(" ");
+
+    expect(await screen.findByRole("button", { name: "Pause" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /^File detail:/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("App - keyboard browsing with the detail panel closed (Projects tab)", () => {
+  it("ArrowDown with nothing clicked yet highlights the first row", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Project Folders" }));
+    await waitFor(() => expect(screen.getByText("Alpha Sessions")).toBeInTheDocument());
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+
+    expect(screen.getByText("Alpha Sessions").closest("tr")).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("dialog", { name: /^Folder detail:/ })).not.toBeInTheDocument();
+  });
+
+  it("Enter opens the detail panel for the highlighted project", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Project Folders" }));
+    await waitFor(() => expect(screen.getByText("Alpha Sessions")).toBeInTheDocument());
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(document.body, { key: "Enter" });
+
+    expect(await screen.findByRole("dialog", { name: "Folder detail: Alpha Sessions" })).toBeInTheDocument();
+  });
+
+  it("Space ALSO opens the detail panel for the highlighted project (no playback concept, so it falls back to Enter's behavior)", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Project Folders" }));
+    await waitFor(() => expect(screen.getByText("Alpha Sessions")).toBeInTheDocument());
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(document.body, { key: " " });
+
+    expect(await screen.findByRole("dialog", { name: "Folder detail: Alpha Sessions" })).toBeInTheDocument();
   });
 });

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
 import type { ProjectFilters } from "../api/client.js";
 import { useProjects } from "../hooks/useProjects.js";
-import { useArrowRowNavigation } from "../hooks/useArrowRowNavigation.js";
+import { useRowKeyboardNav } from "../hooks/useRowKeyboardNav.js";
 import type { CustomTab, Project, TrackStatus } from "../types.js";
 import FilterToolbar from "./FilterToolbar.js";
 import { ProjectsTable } from "./ProjectsTable.js";
@@ -63,6 +63,11 @@ export default function CustomProjectsTabPanel({
   });
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  // Whether the detail panel is actually SHOWN for the currently-highlighted project — decoupled
+  // from selectedProjectId, which also serves as a plain keyboard-navigable "cursor" independent
+  // of the panel (see useRowKeyboardNav below and App.tsx's identical projectsDetailOpen for the
+  // full rationale, including the invariant effect further down this file).
+  const [detailOpen, setDetailOpen] = useState(false);
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [showBatchPanel, setShowBatchPanel] = useState(false);
   const [projectOpDialog, setProjectOpDialog] = useState<{ operation: CopyMoveDeleteOperation; target: CopyMoveDeleteTarget; excludedPath?: string } | null>(
@@ -71,7 +76,18 @@ export default function CustomProjectsTabPanel({
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
 
-  useArrowRowNavigation({ active: true, items: projects, selectedId: selectedProjectId, onSelect: setSelectedProjectId });
+  useRowKeyboardNav({
+    active: true,
+    items: projects,
+    selectedId: selectedProjectId,
+    onSelect: setSelectedProjectId,
+    onEnter: () => setDetailOpen(true),
+    // No onSpace: projects have no playback concept, so Space falls back to onEnter.
+  });
+
+  useEffect(() => {
+    if (!selectedProjectId) setDetailOpen(false);
+  }, [selectedProjectId]);
 
   // Skip the initial mount so this doesn't double-fetch on first render (the hook already
   // fetches once on mount); only refetch when a scan actually completes afterward.
@@ -119,7 +135,12 @@ export default function CustomProjectsTabPanel({
 
   function handleProjectRowClick(id: string) {
     setShowBatchPanel(false);
-    setSelectedProjectId((prev) => (prev === id ? null : id));
+    if (selectedProjectId === id) {
+      setDetailOpen((open) => !open);
+    } else {
+      setSelectedProjectId(id);
+      setDetailOpen(true);
+    }
   }
 
   async function handleReveal(path: string) {
@@ -252,9 +273,9 @@ export default function CustomProjectsTabPanel({
       />
 
       <ProjectDetailPanel
-        project={selectedProject}
+        project={detailOpen ? selectedProject : null}
         allTags={allTags}
-        onClose={() => setSelectedProjectId(null)}
+        onClose={() => setDetailOpen(false)}
         onReveal={handleReveal}
         onSaveStatus={handleProjectStatusSave}
         onSaveTags={handleProjectTagsSave}

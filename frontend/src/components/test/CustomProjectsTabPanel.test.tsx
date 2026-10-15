@@ -711,5 +711,44 @@ describe("CustomProjectsTabPanel - arrow-key row navigation", () => {
 
     expect(screen.getByRole("dialog", { name: "Folder detail: Beta Sessions" })).toBeInTheDocument();
   });
+
+  it("ArrowDown with nothing clicked yet highlights the first row, with no panel opening", async () => {
+    const projects = [
+      makeProject({ id: "p1", name: "Alpha Sessions" }),
+      makeProject({ id: "p2", name: "Beta Sessions" }),
+    ];
+    mockGetProjects.mockResolvedValue(makePaged({ projects, total: 2 }));
+    renderPanel();
+    await screen.findByText("Alpha Sessions");
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+
+    expect(screen.getByText("Alpha Sessions").closest("tr")).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("dialog", { name: /^Folder detail:/ })).not.toBeInTheDocument();
+  });
+
+  it("Enter opens the detail panel for the highlighted project", async () => {
+    const projects = [makeProject({ id: "p1", name: "Alpha Sessions" })];
+    mockGetProjects.mockResolvedValue(makePaged({ projects, total: 1 }));
+    renderPanel();
+    await screen.findByText("Alpha Sessions");
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(document.body, { key: "Enter" });
+
+    expect(await screen.findByRole("dialog", { name: "Folder detail: Alpha Sessions" })).toBeInTheDocument();
+  });
+
+  it("Space ALSO opens the detail panel (no playback concept for projects, falls back to Enter's behavior)", async () => {
+    const projects = [makeProject({ id: "p1", name: "Alpha Sessions" })];
+    mockGetProjects.mockResolvedValue(makePaged({ projects, total: 1 }));
+    renderPanel();
+    await screen.findByText("Alpha Sessions");
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(document.body, { key: " " });
+
+    expect(await screen.findByRole("dialog", { name: "Folder detail: Alpha Sessions" })).toBeInTheDocument();
+  });
 });
 

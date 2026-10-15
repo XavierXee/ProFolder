@@ -638,6 +638,21 @@ describe("CustomFilesTabPanel - playback pass-through (App-level/global, not loc
     expect(onPlayClick).toHaveBeenCalledWith(file);
     expect(screen.queryByRole("dialog", { name: "File detail: kick.wav" })).not.toBeInTheDocument();
   });
+
+  it("the detail panel's own play/pause button also calls onPlayClick with the open file", async () => {
+    const file = makeFile({ id: "f1", filename: "kick.wav" });
+    mockGetFiles.mockResolvedValue(makePaged({ files: [file], total: 1 }));
+    const onPlayClick = vi.fn();
+    const user = userEvent.setup();
+    renderPanel({ onPlayClick });
+
+    await user.click(await screen.findByText("kick.wav"));
+    const dialog = await screen.findByRole("dialog", { name: "File detail: kick.wav" });
+
+    await user.click(within(dialog).getByRole("button", { name: "Play kick.wav" }));
+
+    expect(onPlayClick).toHaveBeenCalledWith(file);
+  });
 });
 
 describe("CustomFilesTabPanel - arrow-key row navigation", () => {
@@ -656,5 +671,46 @@ describe("CustomFilesTabPanel - arrow-key row navigation", () => {
     fireEvent.keyDown(document.body, { key: "ArrowDown" });
 
     expect(screen.getByRole("dialog", { name: "File detail: snare.wav" })).toBeInTheDocument();
+  });
+
+  it("ArrowDown with nothing clicked yet highlights the first row, with no panel opening", async () => {
+    const files = [
+      makeFile({ id: "f1", filename: "kick.wav" }),
+      makeFile({ id: "f2", filename: "snare.wav" }),
+    ];
+    mockGetFiles.mockResolvedValue(makePaged({ files, total: 2 }));
+    renderPanel();
+    await screen.findByText("kick.wav");
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+
+    expect(screen.getByText("kick.wav").closest("tr")).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("dialog", { name: /^File detail:/ })).not.toBeInTheDocument();
+  });
+
+  it("Enter opens the detail panel for the highlighted row", async () => {
+    const files = [makeFile({ id: "f1", filename: "kick.wav" })];
+    mockGetFiles.mockResolvedValue(makePaged({ files, total: 1 }));
+    renderPanel();
+    await screen.findByText("kick.wav");
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(document.body, { key: "Enter" });
+
+    expect(await screen.findByRole("dialog", { name: "File detail: kick.wav" })).toBeInTheDocument();
+  });
+
+  it("Space toggles playback for the highlighted file WITHOUT opening the detail panel", async () => {
+    const file = makeFile({ id: "f1", filename: "kick.wav" });
+    mockGetFiles.mockResolvedValue(makePaged({ files: [file], total: 1 }));
+    const onPlayClick = vi.fn();
+    renderPanel({ onPlayClick });
+    await screen.findByText("kick.wav");
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(document.body, { key: " " });
+
+    expect(onPlayClick).toHaveBeenCalledWith(file);
+    expect(screen.queryByRole("dialog", { name: /^File detail:/ })).not.toBeInTheDocument();
   });
 });

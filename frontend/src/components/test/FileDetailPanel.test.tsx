@@ -79,6 +79,9 @@ function renderPanel(overrides: Partial<Parameters<typeof FileDetailPanel>[0]> =
     onSaveNotes: vi.fn().mockResolvedValue(undefined),
     onReveal: () => {},
     onFileOperation: vi.fn(),
+    playingFileId: null as string | null,
+    isPlaying: false,
+    onPlayClick: vi.fn(),
     ...overrides,
   };
   return { ...render(withCatalog(<FileDetailPanel {...props} />)), props };
@@ -338,6 +341,38 @@ describe("FileDetailPanel - score optimistic update", () => {
   });
 });
 
+describe("FileDetailPanel - play/pause button", () => {
+  it("shows a Play button and calls onPlayClick with the file when not currently playing", async () => {
+    const onPlayClick = vi.fn();
+    const user = userEvent.setup();
+    const file = makeFile({ id: "f1", filename: "beat.wav" });
+    renderPanel({ file, onPlayClick, playingFileId: null, isPlaying: false });
+
+    const btn = screen.getByRole("button", { name: "Play beat.wav" });
+    await user.click(btn);
+
+    expect(onPlayClick).toHaveBeenCalledWith(file);
+  });
+
+  it("shows a Pause button when this file is the one currently playing", () => {
+    const file = makeFile({ id: "f1", filename: "beat.wav" });
+    renderPanel({ file, playingFileId: "f1", isPlaying: true });
+
+    expect(screen.getByRole("button", { name: "Pause beat.wav" })).toBeInTheDocument();
+  });
+
+  it("shows a Play button (not Pause) when a DIFFERENT file is the one currently playing", () => {
+    const file = makeFile({ id: "f1", filename: "beat.wav" });
+    renderPanel({ file, playingFileId: "some-other-file", isPlaying: true });
+
+    expect(screen.getByRole("button", { name: "Play beat.wav" })).toBeInTheDocument();
+  });
+});
+
+// The spacebar play/pause shortcut itself is tested in useRowKeyboardNav.test.tsx now (it fires
+// regardless of whether this panel is open, so it no longer lives here — see that hook's doc
+// comment, and FileDetailPanel.tsx's own comment where the old local handler used to be).
+
 describe("FileDetailPanel - backdrop click to dismiss", () => {
   it("calls onClose when the backdrop is clicked", async () => {
     const onClose = vi.fn();
@@ -556,6 +591,9 @@ describe("FileDetailPanel - re-sync on file id change", () => {
           onSaveNotes={vi.fn().mockResolvedValue(undefined)}
           onReveal={() => {}}
           onFileOperation={vi.fn()}
+          playingFileId={null}
+          isPlaying={false}
+          onPlayClick={vi.fn()}
         />
       )
     );

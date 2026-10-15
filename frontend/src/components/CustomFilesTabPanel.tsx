@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
 import type { FileFilters } from "../api/client.js";
 import { useAudioFiles } from "../hooks/useAudioFiles.js";
-import { useArrowRowNavigation } from "../hooks/useArrowRowNavigation.js";
+import { useRowKeyboardNav } from "../hooks/useRowKeyboardNav.js";
 import type { AudioFile, CustomTab, TrackStatus } from "../types.js";
 import FilterToolbar from "./FilterToolbar.js";
 import { FileTable } from "./FileTable.js";
@@ -64,6 +64,11 @@ export default function CustomFilesTabPanel({
     useAudioFiles({ statuses: tab.statuses, scores: tab.scores, tags: tab.tags, association: tab.association });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Whether the detail panel is actually SHOWN for the currently-highlighted file — decoupled
+  // from selectedId, which also serves as a plain keyboard-navigable "cursor" independent of the
+  // panel (see useRowKeyboardNav below and App.tsx's identical filesDetailOpen for the full
+  // rationale, including the invariant effect further down this file).
+  const [detailOpen, setDetailOpen] = useState(false);
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
   const [showBatchPanel, setShowBatchPanel] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -71,7 +76,21 @@ export default function CustomFilesTabPanel({
 
   const selectedFile = files.find((f) => f.id === selectedId) ?? null;
 
-  useArrowRowNavigation({ active: true, items: files, selectedId, onSelect: setSelectedId });
+  useRowKeyboardNav({
+    active: true,
+    items: files,
+    selectedId,
+    onSelect: setSelectedId,
+    onEnter: () => setDetailOpen(true),
+    onSpace: (id) => {
+      const file = files.find((f) => f.id === id);
+      if (file) onPlayClick(file);
+    },
+  });
+
+  useEffect(() => {
+    if (!selectedId) setDetailOpen(false);
+  }, [selectedId]);
 
   // Skip the initial mount so this doesn't double-fetch on first render (the hook already
   // fetches once on mount); only refetch when a scan actually completes afterward.
@@ -117,7 +136,12 @@ export default function CustomFilesTabPanel({
 
   function handleRowClick(id: string) {
     setShowBatchPanel(false);
-    setSelectedId((prev) => (prev === id ? null : id));
+    if (selectedId === id) {
+      setDetailOpen((open) => !open);
+    } else {
+      setSelectedId(id);
+      setDetailOpen(true);
+    }
   }
 
   async function handleReveal(path: string) {
@@ -272,15 +296,18 @@ export default function CustomFilesTabPanel({
       </footer>
 
       <FileDetailPanel
-        file={selectedFile}
+        file={detailOpen ? selectedFile : null}
         allTags={allTags}
-        onClose={() => setSelectedId(null)}
+        onClose={() => setDetailOpen(false)}
         onSaveStatus={handleFileStatusSave}
         onSaveTags={handleFileTagsSave}
         onSaveScore={handleFileScoreSave}
         onSaveNotes={handleFileNotesSave}
         onReveal={handleReveal}
         onFileOperation={handleFileOperation}
+        playingFileId={playingFileId}
+        isPlaying={isPlaying}
+        onPlayClick={onPlayClick}
       />
 
       <BatchEditPanel

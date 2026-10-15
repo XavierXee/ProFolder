@@ -38,9 +38,28 @@ type Props = {
    * file with the given operation. The parent constructs the dialog's `target`/`itemType`
    * from the file this callback is invoked with. */
   onFileOperation: (operation: CopyMoveDeleteOperation, file: AudioFile) => void;
+  /** Playback is App-level/global (a single `<AudioPlayerBar>`, not per-panel) — these are the
+   * same three props FileTable/FileRow already receive, passed straight through so this panel's
+   * own play/pause button and spacebar shortcut toggle that same global player for `file`. */
+  playingFileId: string | null;
+  isPlaying: boolean;
+  onPlayClick: (file: AudioFile) => void;
 };
 
-export default function FileDetailPanel({ file, allTags = [], onClose, onSaveStatus, onSaveTags, onSaveScore, onSaveNotes, onReveal, onFileOperation }: Props) {
+export default function FileDetailPanel({
+  file,
+  allTags = [],
+  onClose,
+  onSaveStatus,
+  onSaveTags,
+  onSaveScore,
+  onSaveNotes,
+  onReveal,
+  onFileOperation,
+  playingFileId,
+  isPlaying,
+  onPlayClick,
+}: Props) {
   const { statuses: catalogStatuses } = useStatusCatalog();
   const [status, setStatus] = useState<TrackStatus>("unknown");
   const [tags, setTags] = useState<string[]>([]);
@@ -71,6 +90,12 @@ export default function FileDetailPanel({ file, allTags = [], onClose, onSaveSta
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // The spacebar play/pause shortcut lives in useRowKeyboardNav (App.tsx/CustomFilesTabPanel.tsx)
+  // now, not here — it fires regardless of whether this panel is open, including the specific
+  // "focus already landed on this panel's own auto-focused close button" case (see that hook's
+  // doc comment), so a second handler here would double-fire for that exact scenario instead of
+  // genuinely extending it.
 
   async function handleStatusChange(next: TrackStatus) {
     if (!file || next === status || statusSaving) return;
@@ -176,7 +201,28 @@ export default function FileDetailPanel({ file, allTags = [], onClose, onSaveSta
             <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
               <div className="min-w-0">
                 <p className={`text-xs font-mono mb-1 ${meta}`}>File</p>
-                <h2 className="text-base font-mono font-medium text-blue-400 truncate">{file.filename}</h2>
+                <div className="flex items-center gap-2 min-w-0">
+                  <button
+                    onClick={() => onPlayClick(file)}
+                    aria-label={file.id === playingFileId && isPlaying ? `Pause ${file.filename}` : `Play ${file.filename}`}
+                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      file.id === playingFileId && isPlaying
+                        ? "text-accent-ink bg-accent"
+                        : "text-ink-muted hover:text-ink hover:bg-surface-hover"
+                    }`}
+                  >
+                    {file.id === playingFileId && isPlaying ? (
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3 h-3 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    )}
+                  </button>
+                  <h2 className="text-base font-mono font-medium text-blue-400 truncate">{file.filename}</h2>
+                </div>
                 <p className={`text-xs mt-1 ${meta}`}>Updated {formatFull(file.modifiedAt)} | Size {formatBytes(file.size)}</p>
               </div>
               <button
