@@ -4,6 +4,11 @@ productName: ProFolder
 directories:
   output: release
 
+# This app only ships an English UI, so the ~190 other Chromium locale packs electron-builder
+# bundles by default (~49MB) are pure dead weight.
+electronLanguages:
+  - en
+
 # Only the compiled Electron/backend output and the built frontend are needed at runtime
 # (electron/main.ts dynamically imports from dist-electron/src/..., and the embedded server
 # serves dist/frontend). Without this allowlist, electron-builder's default "**/*" packed the
@@ -15,6 +20,12 @@ files:
   - node_modules/**/*
   - package.json
   - "!**/*.map"
+  # better-sqlite3 ships prebuilt native binaries for every OS/arch it supports; a mac-only
+  # build only ever runs the two darwin ones, so the win32/linux prebuilds (~13MB) are dead
+  # weight too.
+  - "!node_modules/better-sqlite3/prebuilds/win32-*.node"
+  - "!node_modules/better-sqlite3/prebuilds/linux-*.node"
+  - "!node_modules/better-sqlite3/prebuilds/linuxmusl-*.node"
 
 mac:
   target: dmg
