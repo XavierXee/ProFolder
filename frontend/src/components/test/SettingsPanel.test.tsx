@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SettingsPanel from "../SettingsPanel.js";
 import type { ConfirmationSettings, PaginationSettings, ScanSettings } from "../../api/client.js";
@@ -40,6 +40,8 @@ function makeSettings(overrides: Partial<ScanSettings> = {}): ScanSettings {
   return {
     excludeSamplesFolders: false,
     excludeBackupFolders: false,
+    excludeFolderPatternEnabled: false,
+    excludeFolderPattern: "Stems|STEMS",
     duplicateMatchThresholdPercent: 58,
     ...overrides,
   };
@@ -235,6 +237,109 @@ describe("SettingsPanel - save state machine", () => {
   });
 });
 
+describe("SettingsPanel - bottom notification auto-dismiss", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("auto-dismisses a 'Saved' message after 2 seconds", async () => {
+    mockSetScanSettings.mockResolvedValue(makeSettings({ excludeSamplesFolders: true }));
+    renderPanel();
+    const checkbox = await screen.findByRole("checkbox", { name: /Exclude Samples folders/ });
+
+    // Fake timers must already be active when the click fires the request, so the component's
+    // own setTimeout(…, 2000) (scheduled once the mocked save resolves) is captured by the fake
+    // clock rather than a real one — see App.pagination.test.tsx's identical rationale for why
+    // fireEvent + vi.advanceTimersByTime is used here instead of userEvent.
+    vi.useFakeTimers();
+    fireEvent.click(checkbox);
+    await act(async () => {});
+
+    expect(screen.getByText("Saved")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(screen.queryByText("Saved")).not.toBeInTheDocument();
+  });
+
+  it("auto-dismisses a 'Failed to save' message after 2 seconds", async () => {
+    mockSetScanSettings.mockRejectedValue(new Error("save failed"));
+    renderPanel();
+    const checkbox = await screen.findByRole("checkbox", { name: /Exclude Samples folders/ });
+
+    vi.useFakeTimers();
+    fireEvent.click(checkbox);
+    await act(async () => {});
+
+    expect(screen.getByText("Failed to save")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(screen.queryByText("Failed to save")).not.toBeInTheDocument();
+  });
+
+  it("does not dismiss a 'Saving…' message after 2 seconds while the request is still in flight", async () => {
+    mockSetScanSettings.mockReturnValue(new Promise(() => {})); // never resolves
+    renderPanel();
+    const checkbox = await screen.findByRole("checkbox", { name: /Exclude Samples folders/ });
+
+    vi.useFakeTimers();
+    fireEvent.click(checkbox);
+    await act(async () => {});
+
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    // A slow save's only feedback must not vanish while still in flight — unlike "Saved"/
+    // "Failed to save", "saving" is never given an auto-dismiss timer in the first place.
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+  });
+
+  it("a new action's 'Saving…' survives past when an earlier message's now-superseded dismiss timer would have fired", async () => {
+    let resolveFirstSave!: (settings: ScanSettings) => void;
+    mockSetScanSettings.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFirstSave = resolve;
+      })
+    );
+    renderPanel();
+    const samplesCheckbox = await screen.findByRole("checkbox", { name: /Exclude Samples folders/ });
+    const backupCheckbox = screen.getByRole("checkbox", { name: /Exclude Backup folders/ });
+
+    vi.useFakeTimers();
+    fireEvent.click(samplesCheckbox);
+    resolveFirstSave(makeSettings({ excludeSamplesFolders: true }));
+    await act(async () => {});
+    expect(screen.getByText("Saved")).toBeInTheDocument();
+
+    // Let 1.5s of the first message's 2s dismiss timer elapse, then trigger a second, slower
+    // save before it fires.
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+    mockSetScanSettings.mockReturnValue(new Promise(() => {})); // never resolves
+    fireEvent.click(backupCheckbox);
+    await act(async () => {});
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+
+    // Advance another 1s — 2.5s total since the first message appeared, well past its own 2s
+    // mark, which would have cleared the notification if the first timer hadn't been canceled
+    // when the second save started.
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+  });
+});
+
 describe("SettingsPanel - Confirmation Settings section", () => {
   it("renders all 6 toggles with the correct initial checked state from getConfirmationSettings", async () => {
     mockGetConfirmationSettings.mockReset().mockResolvedValue(
@@ -391,7 +496,19 @@ describe("SettingsPanel - Pagination section", () => {
     await waitFor(() => expect(screen.getAllByText("Saved").length).toBeGreaterThan(0));
   });
 
-  it("disables Apply when the input is out of range (below the minimum of 10)", async () => {
+  it("disables Apply when the input is out of range (below the minimum of 5)", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Items per page");
+    await user.clear(input);
+    await user.type(input, "4");
+
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+  });
+
+  it("enables Apply when the input is exactly the minimum of 5", async () => {
+    mockGetPaginationSettings.mockReset().mockResolvedValue(makePaginationSettings({ itemsPerPage: 50 }));
     const user = userEvent.setup({ delay: null });
     renderPanel();
 
@@ -399,7 +516,7 @@ describe("SettingsPanel - Pagination section", () => {
     await user.clear(input);
     await user.type(input, "5");
 
-    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Apply" })).not.toBeDisabled();
   });
 
   it("disables Apply when the input is out of range (above the maximum of 500)", async () => {
@@ -433,7 +550,7 @@ describe("SettingsPanel - Pagination section", () => {
   });
 
   it("does not call setItemsPerPageGlobally and shows an error when the save rejects", async () => {
-    mockSetPaginationSettings.mockRejectedValue(new Error("itemsPerPage must be an integer between 10 and 500"));
+    mockSetPaginationSettings.mockRejectedValue(new Error("itemsPerPage must be an integer between 5 and 500"));
     const user = userEvent.setup({ delay: null });
     renderPanel();
 
@@ -443,7 +560,7 @@ describe("SettingsPanel - Pagination section", () => {
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
     await waitFor(() =>
-      expect(screen.getByText("itemsPerPage must be an integer between 10 and 500")).toBeInTheDocument()
+      expect(screen.getByText("itemsPerPage must be an integer between 5 and 500")).toBeInTheDocument()
     );
     expect(mockSetItemsPerPageGlobally).not.toHaveBeenCalled();
   });
@@ -554,6 +671,124 @@ describe("SettingsPanel - Duplicate match threshold section", () => {
 
     expect(screen.getByText("Folder exclusion changes apply the next time you run a scan.")).toBeInTheDocument();
     expect(screen.queryByText("Changes apply the next time you run a scan.")).not.toBeInTheDocument();
+  });
+});
+
+describe("SettingsPanel - Exclude folders by pattern section", () => {
+  it("renders the checkbox unchecked and the pattern input pre-filled with the fetched (default) value", async () => {
+    mockGetScanSettings
+      .mockReset()
+      .mockResolvedValue(makeSettings({ excludeFolderPatternEnabled: false, excludeFolderPattern: "Stems|STEMS" }));
+    renderPanel();
+
+    const checkbox = await screen.findByRole("checkbox", { name: /Exclude folders by pattern/ });
+    expect(checkbox).not.toBeChecked();
+    const input = screen.getByLabelText("Pattern (regular expression)");
+    expect(input).toHaveValue("Stems|STEMS");
+  });
+
+  it("disables the pattern input and its Apply button while the checkbox is unchecked", async () => {
+    mockGetScanSettings.mockReset().mockResolvedValue(makeSettings({ excludeFolderPatternEnabled: false }));
+    renderPanel();
+
+    await screen.findByRole("checkbox", { name: /Exclude folders by pattern/ });
+    expect(screen.getByLabelText("Pattern (regular expression)")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Apply exclude folder pattern" })).toBeDisabled();
+  });
+
+  it("enables the pattern input once the checkbox is checked", async () => {
+    mockGetScanSettings.mockReset().mockResolvedValue(makeSettings({ excludeFolderPatternEnabled: false }));
+    mockSetScanSettings.mockResolvedValue(makeSettings({ excludeFolderPatternEnabled: true }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    const checkbox = await screen.findByRole("checkbox", { name: /Exclude folders by pattern/ });
+    await user.click(checkbox);
+
+    await waitFor(() => expect(screen.getByLabelText("Pattern (regular expression)")).not.toBeDisabled());
+  });
+
+  it("disables Apply when the input is unchanged from the currently-applied value", async () => {
+    mockGetScanSettings.mockReset().mockResolvedValue(
+      makeSettings({ excludeFolderPatternEnabled: true, excludeFolderPattern: "Stems|STEMS" })
+    );
+    renderPanel();
+
+    await screen.findByLabelText("Pattern (regular expression)");
+    expect(screen.getByRole("button", { name: "Apply exclude folder pattern" })).toBeDisabled();
+  });
+
+  it("disables Apply when the input is empty", async () => {
+    mockGetScanSettings.mockReset().mockResolvedValue(makeSettings({ excludeFolderPatternEnabled: true }));
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Pattern (regular expression)");
+    await user.clear(input);
+
+    expect(screen.getByRole("button", { name: "Apply exclude folder pattern" })).toBeDisabled();
+  });
+
+  it("disables Apply when the input is not a syntactically valid regex", async () => {
+    mockGetScanSettings.mockReset().mockResolvedValue(makeSettings({ excludeFolderPatternEnabled: true }));
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Pattern (regular expression)");
+    await user.clear(input);
+    await user.type(input, "(unterminated");
+
+    expect(screen.getByRole("button", { name: "Apply exclude folder pattern" })).toBeDisabled();
+  });
+
+  it("calls setScanSettings with the typed pattern when Apply is clicked, then resyncs the input from the response", async () => {
+    mockGetScanSettings.mockReset().mockResolvedValue(makeSettings({ excludeFolderPatternEnabled: true }));
+    mockSetScanSettings.mockReset().mockResolvedValue(
+      makeSettings({ excludeFolderPatternEnabled: true, excludeFolderPattern: "^Render" })
+    );
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Pattern (regular expression)");
+    await user.clear(input);
+    await user.type(input, "^Render");
+
+    const applyButton = screen.getByRole("button", { name: "Apply exclude folder pattern" });
+    expect(applyButton).not.toBeDisabled();
+    await user.click(applyButton);
+
+    expect(mockSetScanSettings).toHaveBeenCalledWith({ excludeFolderPattern: "^Render" });
+    await waitFor(() => expect(input).toHaveValue("^Render"));
+  });
+
+  it("shows the real backend error message when setScanSettings rejects for a client-valid pattern", async () => {
+    mockGetScanSettings.mockReset().mockResolvedValue(makeSettings({ excludeFolderPatternEnabled: true }));
+    mockSetScanSettings.mockReset().mockRejectedValue(
+      new Error("excludeFolderPattern must be a valid regular expression")
+    );
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Pattern (regular expression)");
+    await user.clear(input);
+    await user.type(input, "^Render");
+    await user.click(screen.getByRole("button", { name: "Apply exclude folder pattern" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("excludeFolderPattern must be a valid regular expression")).toBeInTheDocument()
+    );
+  });
+
+  it("does not call setScanSettings while typing, only when Apply is clicked", async () => {
+    mockGetScanSettings.mockReset().mockResolvedValue(makeSettings({ excludeFolderPatternEnabled: true }));
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+
+    const input = await screen.findByLabelText("Pattern (regular expression)");
+    await user.clear(input);
+    await user.type(input, "^Render");
+
+    expect(mockSetScanSettings).not.toHaveBeenCalled();
   });
 });
 

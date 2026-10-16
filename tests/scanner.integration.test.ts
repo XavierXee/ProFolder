@@ -471,6 +471,38 @@ describe("runScan", () => {
     expect(files.find((f) => f.filename === "kick.wav" && f.relativePath.includes("Samples"))).toBeDefined();
   });
 
+  it("does not exclude a Stems folder by default, since excludeFolderPatternEnabled starts off", async () => {
+    await writeFile("Ableton Projects/Track A/Stems/vocal.wav", "stem-audio");
+
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.audioFilesFound).toBe(4);
+    const files = findAllActiveFiles(db);
+    expect(files.find((f) => f.filename === "vocal.wav" && f.relativePath.includes("Stems"))).toBeDefined();
+  });
+
+  it("excludes a Stems folder once excludeFolderPatternEnabled is turned on, using the default pattern", async () => {
+    await writeFile("Ableton Projects/Track A/Stems/vocal.wav", "stem-audio");
+    setScanSettings(db, { excludeFolderPatternEnabled: true });
+
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.audioFilesFound).toBe(3);
+    const files = findAllActiveFiles(db);
+    expect(files.find((f) => f.filename === "vocal.wav" && f.relativePath.includes("Stems"))).toBeUndefined();
+  });
+
+  it("excludes folders matching a custom excludeFolderPattern", async () => {
+    await writeFile("Ableton Projects/Track A/Render Bounces/mix.wav", "bounce-audio");
+    setScanSettings(db, { excludeFolderPatternEnabled: true, excludeFolderPattern: "^Render" });
+
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(stats.audioFilesFound).toBe(3);
+    const files = findAllActiveFiles(db);
+    expect(files.find((f) => f.filename === "mix.wav")).toBeUndefined();
+  });
+
   it("computes content_modified_at from the DAW marker file's mtime when it's newer than the folder's", async () => {
     await runScan({ rootPath: tmpRoot }, db);
     const trackAId = path.join("Ableton Projects", "Track A");

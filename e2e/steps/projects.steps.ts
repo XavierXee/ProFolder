@@ -222,6 +222,10 @@ const ALL_PROJECTS_E2E_FIXTURES = [
   "Scanning E2E Settings",
   "Scanning E2E Settings/Samples",
   "Scanning E2E Settings/Backup",
+  // "Scanning E2E Settings/Stems" — the "Exclude folders by pattern" scenario's own fixture
+  // (same .feature file). Unlike Samples/Backup, this toggle defaults OFF, so this one is
+  // present from the very first seed scan and only disappears while its own scenario runs.
+  "Scanning E2E Settings/Stems",
   // "File Ops E2E Picker Destination" — Task 12's Copy/Move/Delete destination-picker fixture
   // (see e2e/features/file-ops/destination-picker.feature / cancel.feature). Has no DAW marker,
   // but every visited folder gets its own project row regardless of DAW classification (same

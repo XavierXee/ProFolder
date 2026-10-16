@@ -106,6 +106,35 @@ Feature: Settings panel — name-based folder exclusion toggles
     Then I should see a scan complete banner
     And I should not see file "track.wav" in the table
 
+  # Unlike "Exclude Samples folders"/"Exclude Backup folders" above, this toggle defaults OFF —
+  # so the Stems fixture starts VISIBLE, and turning the toggle on is what hides it. Exercises
+  # the checkbox + its pre-filled default pattern ("Stems|STEMS") together through a real scan;
+  # the pattern field's own Apply-button validation/editing is already covered by
+  # SettingsPanel.test.tsx's unit tests, so it isn't repeated here.
+  Scenario: Toggling "Exclude folders by pattern" on excludes the Stems fixture after a rescan, using the pre-filled default pattern
+    Given I open the app
+    And I switch to the "Audio Files" tab
+    And I search files for "Scanning E2E Settings/Stems"
+    Then I should see file "track.wav" in the table
+    When I open the settings panel
+    And I toggle "Exclude folders by pattern" in the settings panel
+    Then the settings panel should show save state "Saved"
+    When I close the settings panel
+    And I open the production folder scan settings panel
+    And I start a scan from the scan settings panel
+    Then I should see a scan complete banner
+    And I should not see file "track.wav" in the table
+    # Cleanup: restore "Exclude folders by pattern" back to its default (off) state so this
+    # scenario doesn't leave global config mutated for whichever scenario/copy runs next.
+    When I open the settings panel
+    And I toggle "Exclude folders by pattern" in the settings panel
+    Then the settings panel should show save state "Saved"
+    When I close the settings panel
+    And I open the production folder scan settings panel
+    And I start a scan from the scan settings panel
+    Then I should see a scan complete banner
+    And I should see file "track.wav" in the table
+
   # Distinct from the two scenarios above: proves toggling BOTH settings off together (a single
   # save round-trip per checkbox, but one shared rescan) reveals both fixtures at once, not just
   # each in isolation — then restores both toggles back to their default, confirming the setting

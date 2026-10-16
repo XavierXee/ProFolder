@@ -52,6 +52,8 @@ describe("GET/PUT /api/config/scan-settings", () => {
     expect(res.body).toEqual({
       excludeSamplesFolders: true,
       excludeBackupFolders: true,
+      excludeFolderPatternEnabled: false,
+      excludeFolderPattern: "Stems|STEMS",
       duplicateMatchThresholdPercent: 58,
     });
   });
@@ -111,7 +113,47 @@ describe("GET/PUT /api/config/scan-settings", () => {
     expect(res.body).toEqual({
       excludeSamplesFolders: true,
       excludeBackupFolders: false,
+      excludeFolderPatternEnabled: false,
+      excludeFolderPattern: "Stems|STEMS",
       duplicateMatchThresholdPercent: 58,
     });
+  });
+
+  it("PUT with a valid excludeFolderPattern persists it, reflected by a subsequent GET", async () => {
+    const putRes = await request(app)
+      .put("/api/config/scan-settings")
+      .send({ excludeFolderPatternEnabled: true, excludeFolderPattern: "^Render" });
+
+    expect(putRes.status).toBe(200);
+    expect(putRes.body.excludeFolderPatternEnabled).toBe(true);
+    expect(putRes.body.excludeFolderPattern).toBe("^Render");
+
+    const getRes = await request(app).get("/api/config/scan-settings");
+    expect(getRes.body.excludeFolderPatternEnabled).toBe(true);
+    expect(getRes.body.excludeFolderPattern).toBe("^Render");
+  });
+
+  it("PUT with a non-boolean excludeFolderPatternEnabled returns 400 and does not persist", async () => {
+    const res = await request(app).put("/api/config/scan-settings").send({ excludeFolderPatternEnabled: "yes" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("excludeFolderPatternEnabled must be a boolean");
+    expect(getScanSettings(db).excludeFolderPatternEnabled).toBe(false);
+  });
+
+  it("PUT with a non-string excludeFolderPattern returns 400 and does not persist", async () => {
+    const res = await request(app).put("/api/config/scan-settings").send({ excludeFolderPattern: 123 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("excludeFolderPattern must be a string");
+    expect(getScanSettings(db).excludeFolderPattern).toBe("Stems|STEMS");
+  });
+
+  it("PUT with a syntactically invalid excludeFolderPattern regex returns 400 with the setter's own message, and does not persist", async () => {
+    const res = await request(app).put("/api/config/scan-settings").send({ excludeFolderPattern: "(unterminated" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("excludeFolderPattern must be a valid regular expression");
+    expect(getScanSettings(db).excludeFolderPattern).toBe("Stems|STEMS");
   });
 });

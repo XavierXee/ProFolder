@@ -4,7 +4,7 @@ import { MAX_PAGE_SIZE } from "../api/pagination.js";
 
 const ITEMS_PER_PAGE_KEY = "itemsPerPage";
 const DEFAULT_ITEMS_PER_PAGE = 50;
-const MIN_ITEMS_PER_PAGE = 10;
+const MIN_ITEMS_PER_PAGE = 5;
 
 export type PaginationSettings = {
   itemsPerPage: number;

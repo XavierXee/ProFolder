@@ -121,3 +121,7 @@ Key architecture calls: (a) service selection (AppleScript vs. Electron-native) 
 - If things that should not be commited are there, git rm --cache the files and clean the commit history
 so the public repository is safe to be shared online
  
+## Small UI fixes
+
+- fix tags dropdown that spil over width in custom panel creation
+- in panel settings make all 'save' and other notification appear at the bottom of the panel and dissapear after 2sec

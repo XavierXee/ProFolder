@@ -318,6 +318,10 @@ const ALL_FILES_E2E_FIXTURES = [
   // leaking into an unrelated scenario's filtered view.
   "Scanning E2E Settings / Samples",
   "Scanning E2E Settings / Backup",
+  // "Scanning E2E Settings/Stems/track.wav" — the "Exclude folders by pattern" scenario's own
+  // fixture in the same .feature file above. Unlike Samples/Backup, this toggle defaults OFF,
+  // so this fixture starts VISIBLE and is only hidden while its own scenario runs.
+  "Scanning E2E Settings / Stems",
   // "File Ops E2E ..." — Task 12's Copy/Move/Delete e2e fixtures (see
   // e2e/features/file-ops/*.feature). "Delete Single"/"Batch Delete Alpha"/"Batch Delete Bravo"/
   // "Custom Tab Delete" are each physically deleted by their own scenario (one-shot, never

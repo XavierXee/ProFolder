@@ -384,6 +384,8 @@ export function setDbLocation(dbPath: string): Promise<{ dbPath: string }> {
 export type ScanSettings = {
   excludeSamplesFolders: boolean;
   excludeBackupFolders: boolean;
+  excludeFolderPatternEnabled: boolean;
+  excludeFolderPattern: string;
   duplicateMatchThresholdPercent: number;
 };
 

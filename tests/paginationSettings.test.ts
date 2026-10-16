@@ -25,10 +25,10 @@ describe("paginationSettings", () => {
     expect(getPaginationSettings(db)).toEqual({ itemsPerPage: 100 });
   });
 
-  it("accepts the minimum boundary value of 10", () => {
-    setPaginationSettings(db, { itemsPerPage: 10 });
+  it("accepts the minimum boundary value of 5", () => {
+    setPaginationSettings(db, { itemsPerPage: 5 });
 
-    expect(getPaginationSettings(db)).toEqual({ itemsPerPage: 10 });
+    expect(getPaginationSettings(db)).toEqual({ itemsPerPage: 5 });
   });
 
   it("accepts the maximum boundary value of 500", () => {
@@ -38,7 +38,7 @@ describe("paginationSettings", () => {
   });
 
   it("throws and leaves the stored value untouched when itemsPerPage is below the minimum", () => {
-    expect(() => setPaginationSettings(db, { itemsPerPage: 9 })).toThrow();
+    expect(() => setPaginationSettings(db, { itemsPerPage: 4 })).toThrow();
     expect(getPaginationSettings(db)).toEqual({ itemsPerPage: 50 });
   });
 

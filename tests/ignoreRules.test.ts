@@ -46,6 +46,41 @@ describe("shouldIgnoreDir", () => {
     expect(shouldIgnoreDir("Sample Packs")).toBe(false);
     expect(shouldIgnoreDir("Samples Old")).toBe(false);
   });
+
+  it("does not match the pattern when excludeFolderPatternEnabled is not set, even with a pattern given", () => {
+    expect(shouldIgnoreDir("Stems", { excludeFolderPattern: "Stems|STEMS" })).toBe(false);
+  });
+
+  it("matches the pattern case-sensitively when enabled, requiring each casing to be spelled out", () => {
+    expect(shouldIgnoreDir("Stems", { excludeFolderPatternEnabled: true, excludeFolderPattern: "Stems|STEMS" })).toBe(
+      true
+    );
+    expect(shouldIgnoreDir("STEMS", { excludeFolderPatternEnabled: true, excludeFolderPattern: "Stems|STEMS" })).toBe(
+      true
+    );
+    expect(shouldIgnoreDir("stems", { excludeFolderPatternEnabled: true, excludeFolderPattern: "Stems|STEMS" })).toBe(
+      false
+    );
+  });
+
+  it("does not ignore a non-matching folder when the pattern is enabled", () => {
+    expect(
+      shouldIgnoreDir("Track A", { excludeFolderPatternEnabled: true, excludeFolderPattern: "Stems|STEMS" })
+    ).toBe(false);
+  });
+
+  it("treats an invalid regex pattern as a non-match rather than throwing", () => {
+    expect(() =>
+      shouldIgnoreDir("Stems", { excludeFolderPatternEnabled: true, excludeFolderPattern: "(unterminated" })
+    ).not.toThrow();
+    expect(shouldIgnoreDir("Stems", { excludeFolderPatternEnabled: true, excludeFolderPattern: "(unterminated" })).toBe(
+      false
+    );
+  });
+
+  it("treats an enabled but empty pattern as a non-match", () => {
+    expect(shouldIgnoreDir("Stems", { excludeFolderPatternEnabled: true, excludeFolderPattern: "" })).toBe(false);
+  });
 });
 
 describe("shouldIgnoreFile", () => {

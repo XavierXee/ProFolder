@@ -85,9 +85,17 @@ export function createConfigRouter(
   router.put(
     "/scan-settings",
     asyncHandler(async (req, res) => {
-      const { excludeSamplesFolders, excludeBackupFolders, duplicateMatchThresholdPercent } = req.body as {
+      const {
+        excludeSamplesFolders,
+        excludeBackupFolders,
+        excludeFolderPatternEnabled,
+        excludeFolderPattern,
+        duplicateMatchThresholdPercent,
+      } = req.body as {
         excludeSamplesFolders?: unknown;
         excludeBackupFolders?: unknown;
+        excludeFolderPatternEnabled?: unknown;
+        excludeFolderPattern?: unknown;
         duplicateMatchThresholdPercent?: unknown;
       };
       if (excludeSamplesFolders !== undefined && typeof excludeSamplesFolders !== "boolean") {
@@ -98,16 +106,30 @@ export function createConfigRouter(
         res.status(400).json({ error: "excludeBackupFolders must be a boolean" });
         return;
       }
+      if (excludeFolderPatternEnabled !== undefined && typeof excludeFolderPatternEnabled !== "boolean") {
+        res.status(400).json({ error: "excludeFolderPatternEnabled must be a boolean" });
+        return;
+      }
+      if (excludeFolderPattern !== undefined && typeof excludeFolderPattern !== "string") {
+        res.status(400).json({ error: "excludeFolderPattern must be a string" });
+        return;
+      }
       if (duplicateMatchThresholdPercent !== undefined && typeof duplicateMatchThresholdPercent !== "number") {
         res.status(400).json({ error: "duplicateMatchThresholdPercent must be a number" });
         return;
       }
       try {
         res.json(
-          setScanSettings(db, { excludeSamplesFolders, excludeBackupFolders, duplicateMatchThresholdPercent })
+          setScanSettings(db, {
+            excludeSamplesFolders,
+            excludeBackupFolders,
+            excludeFolderPatternEnabled,
+            excludeFolderPattern,
+            duplicateMatchThresholdPercent,
+          })
         );
       } catch (err) {
-        res.status(400).json({ error: err instanceof Error ? err.message : "Invalid duplicateMatchThresholdPercent" });
+        res.status(400).json({ error: err instanceof Error ? err.message : "Invalid scan settings" });
       }
     })
   );

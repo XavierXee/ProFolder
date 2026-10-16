@@ -231,7 +231,7 @@ export default function FileDetailPanel({
                   </button>
                   <h2 className="text-base font-mono font-medium text-blue-400 truncate">{file.filename}</h2>
                 </div>
-                <p className={`text-xs mt-1 ${meta}`}>Updated {formatFull(file.modifiedAt)}</p>
+                <p className={`text-xs mt-1 ${meta}`}>Updated {formatFull(file.modifiedAt)} | Size {formatBytes(file.size)}</p>
               </div>
               <button
                 ref={closeRef}
@@ -254,11 +254,6 @@ export default function FileDetailPanel({
                   <ScoreBadge score={score} />
                   <span className={`text-xs font-mono ${meta}`}>{file.extension}</span>
                 </div>
-              </div>
-
-              <div className="p-4 rounded-[var(--rt-radius-lg)] border bg-surface-hover border-border">
-                <p className={`text-xs font-mono uppercase tracking-wider mb-1 ${meta}`}>Size</p>
-                <p className="text-xl font-mono font-semibold tabular-nums">{formatBytes(file.size)}</p>
               </div>
 
               <div>

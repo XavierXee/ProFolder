@@ -19,6 +19,8 @@ describe("scanSettings", () => {
     expect(getScanSettings(db)).toEqual({
       excludeSamplesFolders: true,
       excludeBackupFolders: true,
+      excludeFolderPatternEnabled: false,
+      excludeFolderPattern: "Stems|STEMS",
       duplicateMatchThresholdPercent: 58,
     });
   });
@@ -29,6 +31,8 @@ describe("scanSettings", () => {
     expect(getScanSettings(db)).toEqual({
       excludeSamplesFolders: false,
       excludeBackupFolders: true,
+      excludeFolderPatternEnabled: false,
+      excludeFolderPattern: "Stems|STEMS",
       duplicateMatchThresholdPercent: 58,
     });
   });
@@ -39,6 +43,8 @@ describe("scanSettings", () => {
     expect(getScanSettings(db)).toEqual({
       excludeSamplesFolders: false,
       excludeBackupFolders: false,
+      excludeFolderPatternEnabled: false,
+      excludeFolderPattern: "Stems|STEMS",
       duplicateMatchThresholdPercent: 58,
     });
   });
@@ -56,6 +62,8 @@ describe("scanSettings", () => {
     expect(getScanSettings(db)).toEqual({
       excludeSamplesFolders: true,
       excludeBackupFolders: true,
+      excludeFolderPatternEnabled: false,
+      excludeFolderPattern: "Stems|STEMS",
       duplicateMatchThresholdPercent: 45,
     });
   });
@@ -95,6 +103,8 @@ describe("scanSettings", () => {
     expect(getScanSettings(db)).toEqual({
       excludeSamplesFolders: false,
       excludeBackupFolders: true,
+      excludeFolderPatternEnabled: false,
+      excludeFolderPattern: "Stems|STEMS",
       duplicateMatchThresholdPercent: 58,
     });
   });
@@ -112,6 +122,67 @@ describe("scanSettings", () => {
     expect(getScanSettings(db)).toEqual({
       excludeSamplesFolders: true,
       excludeBackupFolders: true,
+      excludeFolderPatternEnabled: false,
+      excludeFolderPattern: "Stems|STEMS",
+      duplicateMatchThresholdPercent: 58,
+    });
+  });
+
+  it("defaults excludeFolderPatternEnabled to false and excludeFolderPattern to the Stems preset", () => {
+    const settings = getScanSettings(db);
+    expect(settings.excludeFolderPatternEnabled).toBe(false);
+    expect(settings.excludeFolderPattern).toBe("Stems|STEMS");
+  });
+
+  it("persists excludeFolderPatternEnabled independently of excludeFolderPattern", () => {
+    setScanSettings(db, { excludeFolderPatternEnabled: true });
+
+    expect(getScanSettings(db)).toEqual({
+      excludeSamplesFolders: true,
+      excludeBackupFolders: true,
+      excludeFolderPatternEnabled: true,
+      excludeFolderPattern: "Stems|STEMS",
+      duplicateMatchThresholdPercent: 58,
+    });
+  });
+
+  it("persists a custom excludeFolderPattern and survives being re-read", () => {
+    setScanSettings(db, { excludeFolderPattern: "^Render" });
+
+    expect(getScanSettings(db).excludeFolderPattern).toBe("^Render");
+  });
+
+  it("rejects a non-boolean excludeFolderPatternEnabled", () => {
+    expect(() => setScanSettings(db, { excludeFolderPatternEnabled: "yes" as unknown as boolean })).toThrow(
+      /excludeFolderPatternEnabled must be a boolean/
+    );
+  });
+
+  it("rejects an empty excludeFolderPattern", () => {
+    expect(() => setScanSettings(db, { excludeFolderPattern: "" })).toThrow(
+      /excludeFolderPattern must be a non-empty string/
+    );
+    expect(() => setScanSettings(db, { excludeFolderPattern: "   " })).toThrow(
+      /excludeFolderPattern must be a non-empty string/
+    );
+  });
+
+  it("rejects a syntactically invalid excludeFolderPattern regex", () => {
+    expect(() => setScanSettings(db, { excludeFolderPattern: "(unterminated" })).toThrow(
+      /excludeFolderPattern must be a valid regular expression/
+    );
+  });
+
+  it("atomically rejects an invalid excludeFolderPattern alongside a valid field, leaving neither persisted", () => {
+    expect(() =>
+      setScanSettings(db, { excludeFolderPatternEnabled: true, excludeFolderPattern: "(unterminated" })
+    ).toThrow();
+
+    expect(getScanSettings(db)).toEqual({
+      excludeSamplesFolders: true,
+      excludeBackupFolders: true,
+      excludeFolderPatternEnabled: false,
+      excludeFolderPattern: "Stems|STEMS",
       duplicateMatchThresholdPercent: 58,
     });
   });

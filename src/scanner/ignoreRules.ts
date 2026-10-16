@@ -21,10 +21,17 @@ export const SAMPLES_DIR_NAMES_CASE_INSENSITIVE = new Set(["samples"]);
 export type IgnoreDirOptions = {
   excludeBackupFolders?: boolean;
   excludeSamplesFolders?: boolean;
+  excludeFolderPatternEnabled?: boolean;
+  excludeFolderPattern?: string;
 };
 
 export function shouldIgnoreDir(dirName: string, options: IgnoreDirOptions = {}): boolean {
-  const { excludeBackupFolders = true, excludeSamplesFolders = true } = options;
+  const {
+    excludeBackupFolders = true,
+    excludeSamplesFolders = true,
+    excludeFolderPatternEnabled = false,
+    excludeFolderPattern,
+  } = options;
 
   if (dirName.startsWith(".")) return true;
   if (IGNORED_DIR_NAMES.has(dirName)) return true;
@@ -32,6 +39,19 @@ export function shouldIgnoreDir(dirName: string, options: IgnoreDirOptions = {})
   const lowerName = dirName.toLowerCase();
   if (excludeBackupFolders && BACKUP_DIR_NAMES_CASE_INSENSITIVE.has(lowerName)) return true;
   if (excludeSamplesFolders && SAMPLES_DIR_NAMES_CASE_INSENSITIVE.has(lowerName)) return true;
+
+  // Case-sensitive (no "i" flag) — the default pattern spells out both "Stems" and "STEMS" as
+  // explicit alternatives specifically because matching is case-sensitive; an "i" flag would
+  // make that redundant. Invalid patterns are swallowed rather than thrown: setScanSettings
+  // already rejects an invalid pattern before it can be saved, but a scan must not crash on
+  // every directory just because some already-stored pattern turned out to be unusable.
+  if (excludeFolderPatternEnabled && excludeFolderPattern) {
+    try {
+      if (new RegExp(excludeFolderPattern).test(dirName)) return true;
+    } catch {
+      // invalid regex — treat as no match
+    }
+  }
 
   return false;
 }
