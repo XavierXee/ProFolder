@@ -742,12 +742,11 @@ export default function App() {
 
         <div className="bg-chrome-light flex flex-col flex-1 min-h-39">
           <div className={tabRowClassName(sectionBorder)}>
-          {/*<div className={`flex items-center gap-1 ${theme === 'profolder' ? "px-6" : ""} py-1.5 border-b ${sectionBorder}`}>*/}
             <button
               onClick={() => setShowCreateTabModal(true)}
               aria-label="Create custom tab"
               title="Create custom tab"
-              className="flex items-center justify-center w-6 h-6 mr-1 flex-shrink-0 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover profolder:bg-surface"
+              className="w-[26px] h-[26px] flex items-center justify-center mr-1 flex-shrink-0 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover profolder:bg-surface"
             >
               +
             </button>

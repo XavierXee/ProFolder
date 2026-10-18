@@ -57,7 +57,7 @@ export default function TabListPanel({ open, tabs, activeTabId, onSelect, onClos
         <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
           <div className="min-w-0">
             <h2 className="text-base font-mono font-medium text-blue-400">All Tabs</h2>
-            <p className={`text-xs mt-1 ${meta}`}>Jump to any tab, including ones scrolled out of view</p>
+            <p className={`text-xs mt-1 ${meta}`}>Jump to any tab</p>
           </div>
           <button
             ref={closeRef}
