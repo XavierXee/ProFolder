@@ -18,6 +18,24 @@ Open `http://localhost:5173` while `npm run dev` is running to use the UI: scan,
 
 The API server binds to loopback (`127.0.0.1`) only by default, since there is no authentication anywhere in this app. See `.env.example` for the opt-in `HOST` env var if you deliberately want LAN access.
 
+### Running in Docker
+
+A single image (`Dockerfile`) runs the production build: the API and the built frontend on one port. `docker-compose.yml` starts and stops it, and the `Makefile` wraps the common commands (`make help` lists them):
+
+```bash
+make up MUSIC_DIR=$HOME/Music # build if needed, start in the background → http://localhost:5175
+make logs                     # follow logs
+make down                     # stop (the database volume is kept)
+make rebuild                  # rebuild the image after code changes and restart
+```
+
+Without make: `MUSIC_DIR=$HOME/Music docker compose up -d` / `docker compose down`.
+
+- `MUSIC_DIR` (default `~/Music`) is mounted read-write at the same absolute path inside the container, so paths in the UI match the host. Only folders under that mount exist for the container — changing the music root in the UI to anything outside it won't work.
+- `APP_PORT` (default `5175`) is published on the host's loopback only (`127.0.0.1`), for the same no-authentication reason as above.
+- The container keeps its own SQLite database in the `profolder-data` named volume, separate from the native `data/library.db`.
+- macOS-only actions don't work inside the Linux container and return an error instead: delete (moves files to the Finder Trash), "Reveal in Finder", and the native folder picker.
+
 ## Project Goal
 
 Build a local macOS app that scans a music-production folder and gives the user a clear overview of their Ableton projects, exported audio files, drafts, and sample-library content.
