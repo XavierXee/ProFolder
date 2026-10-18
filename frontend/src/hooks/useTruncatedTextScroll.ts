@@ -79,6 +79,10 @@ export function useTruncatedTextScroll(): void {
     };
 
     const onMouseOver = (e: MouseEvent) => {
+      // Scrolling moves content under a still cursor, so mouseover re-fires on whatever is now
+      // under it — including the element itself, whose ellipsis is swapped for "clip" mid-scroll
+      // and so no longer matches findTruncatedElement. Anywhere inside it is still the same hover.
+      if (active && e.target instanceof Node && active.contains(e.target)) return;
       const el = findTruncatedElement(e.target);
       if (el === active) return;
       stop();

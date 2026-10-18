@@ -101,6 +101,20 @@ describe("useTruncatedTextScroll", () => {
     expect(el.style.textOverflow).toBe("ellipsis");
   });
 
+  it("keeps scrolling when the text slides out from under a still cursor onto the element itself", () => {
+    renderHook(() => useTruncatedTextScroll());
+    const { el, child } = makeTruncated();
+    fireEvent.mouseOver(child, { clientX: 10, clientY: 10 });
+    vi.advanceTimersByTime(HOVER_DELAY_MS + 1000);
+    const scrolled = el.scrollLeft;
+    expect(scrolled).toBeGreaterThan(0);
+    // The browser re-targets mouseover as content moves under the cursor. By now the element's
+    // own ellipsis has been swapped for "clip", so it must not stop being recognized.
+    fireEvent.mouseOver(el, { clientX: 10, clientY: 10 });
+    vi.advanceTimersByTime(500);
+    expect(el.scrollLeft).toBeGreaterThan(scrolled);
+  });
+
   it("resets when the cursor leaves the window", () => {
     renderHook(() => useTruncatedTextScroll());
     const { el, child } = makeTruncated();

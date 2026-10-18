@@ -120,6 +120,28 @@ describe("StatusBadge", () => {
       expect(badge.className).toContain("truncate");
     });
 
+    it("truncate swaps the inline-flex layout for a width-capped, ellipsizing inline-block", () => {
+      render(<StatusBadge status="unknown" truncate />);
+
+      const badge = screen.getByLabelText("Status: Unknown");
+      expect(badge).toHaveClass("inline-block", "max-w-full", "truncate");
+      expect(badge).not.toHaveClass("inline-flex");
+    });
+
+    it("truncate applies to a status found in the catalog too", async () => {
+      mockGetStatuses.mockResolvedValue([makeStatus({ key: "draft", name: "Draft" })]);
+
+      render(
+        <StatusCatalogProvider>
+          <StatusBadge status="draft" truncate />
+        </StatusCatalogProvider>
+      );
+
+      const badge = await waitFor(() => screen.getByLabelText("Status: Draft"));
+      expect(badge).toHaveClass("inline-block", "truncate");
+      expect(badge).not.toHaveClass("inline-flex");
+    });
+
     it("renders with no trailing-space artifacts when className is omitted", () => {
       render(<StatusBadge status="unknown" />);
 

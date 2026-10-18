@@ -1,5 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-  <rect x="0" y="0" width="16" height="16" fill="#1C1C1A" />
-  <polygon points="4.4,4.48 13,4.48 11.6,7.48 3,7.48" fill="#FADF82" />
-  <polygon points="4.4,8.96 13,8.96 11.6,11.96 3,11.96" fill="#FADF82" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <!-- Same geometry as components/Logo.tsx: slabs at left 18.75% / width 62.5% / height 12.5%,
+       tops 25% / 43.75% / 62.5%, sheared by clip-path polygon(14% 0, 100% 0, 86% 100%, 0 100%). -->
+  <defs>
+    <linearGradient id="mid" gradientUnits="userSpaceOnUse" x1="30" y1="0" x2="130" y2="0">
+      <stop offset="0" stop-color="#FADF82" />
+      <stop offset="1" stop-color="#D5F7FE" />
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" fill="#1C1C1A" />
+  <polygon points="44,40 130,40 116,60 30,60" fill="#FADF82" />
+  <polygon points="44,70 130,70 116,90 30,90" fill="url(#mid)" />
+  <polygon points="44,100 130,100 116,120 30,120" fill="#D5F7FE" />
 </svg>

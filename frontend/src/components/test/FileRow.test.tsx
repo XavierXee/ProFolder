@@ -212,6 +212,18 @@ describe("FileRow", () => {
     expect(chip.className).not.toMatch(/(^|\s)rounded(\s|$)/);
   });
 
+  it("keeps tags and status to one truncating line, so long values ellipsize instead of wrapping", () => {
+    renderRow({ file: makeFile({ tags: ["rock", "ambient"], status: "unknown" }) });
+
+    // One non-wrapping row; each chip truncates on its own so its border stays intact.
+    const chips = screen.getByTestId("tag-chips");
+    expect(chips).toHaveClass("flex");
+    expect(chips).not.toHaveClass("flex-wrap");
+    expect(screen.getByText("rock")).toHaveClass("truncate", "min-w-0");
+    expect(screen.getByText("ambient")).toHaveClass("truncate", "min-w-0");
+    expect(screen.getByLabelText("Status: Unknown")).toHaveClass("truncate", "max-w-full");
+  });
+
   it("leaves the play button's rounded-full class untouched (shape primitive, not a corner-radius token)", () => {
     renderRow({ file: makeFile({ filename: "beat.wav" }), isPlayingThis: false });
 

@@ -173,17 +173,17 @@ export function ProjectsTable({
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-center w-32">
-                      <StatusBadge status={project.status} />
+                      <StatusBadge status={project.status} truncate />
                     </td>
                     <td className="px-4 py-3.5 max-w-40">
                       {project.tags.length === 0 ? (
                         <span className="text-xs font-mono text-ink-faint">—</span>
                       ) : (
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex gap-1 min-w-0" data-testid="tag-chips">
                           {project.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="inline-flex items-center px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono bg-surface border border-border text-ink-muted"
+                              className="min-w-0 truncate px-1.5 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono bg-surface border border-border text-ink-muted"
                             >
                               {tag}
                             </span>

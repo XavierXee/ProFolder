@@ -408,7 +408,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
               </div>
             ) : (
               <div key={status.key} className="py-1 px-1 flex items-center justify-between gap-1.5">
-                <StatusBadge status={status.key} className="truncate" />
+                <StatusBadge status={status.key} truncate />
                 <div className="flex items-center gap-0.5 flex-shrink-0">
                   <button
                     type="button"

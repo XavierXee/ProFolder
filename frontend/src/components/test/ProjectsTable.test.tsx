@@ -459,6 +459,18 @@ describe("ProjectsTable - token-driven row styling (no isProFolder prop)", () =>
     expect(name).not.toHaveClass("profolder:font-semibold");
   });
 
+  it("keeps tags and status to one truncating line, so long values ellipsize instead of wrapping", () => {
+    renderTable({ projects: [makeProject({ id: "p1", tags: ["rock", "ambient"], status: "unknown" })] });
+
+    // One non-wrapping row; each chip truncates on its own so its border stays intact.
+    const chips = screen.getByTestId("tag-chips");
+    expect(chips).toHaveClass("flex");
+    expect(chips).not.toHaveClass("flex-wrap");
+    expect(screen.getByText("rock")).toHaveClass("truncate", "min-w-0");
+    expect(screen.getByText("ambient")).toHaveClass("truncate", "min-w-0");
+    expect(screen.getByLabelText("Status: Unknown")).toHaveClass("truncate", "max-w-full");
+  });
+
   it("renders tag chips with the display-chip treatment (bg-surface/border-border/text-ink-muted)", () => {
     renderTable({ projects: [makeProject({ id: "p1", tags: ["rock"] })] });
 
