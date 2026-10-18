@@ -221,6 +221,122 @@ When("I switch to my custom tab {string}", async ({ page }, baseName: string) =>
   await customTabButton(page, fullName).click();
 });
 
+// --- "All Tabs" burger-button panel (App.tsx's TabListPanel) -----------------------------------
+
+function allTabsPanel(page: Page) {
+  return page.getByRole("dialog", { name: "All tabs" });
+}
+
+// TabListPanel.tsx's own row buttons carry an "Go to tab {label}" accessible name, distinct from
+// the tab bar's own plain-labeled button for the same tab — see that component's doc comment for
+// why (it stays mounted alongside the tab bar, same as every other panel in this app).
+When("I select my custom tab {string} from the All Tabs panel", async ({ page }, baseName: string) => {
+  const fullName = resolveTabName(page, baseName);
+  await allTabsPanel(page)
+    .getByRole("button", { name: `Go to tab ${fullName}`, exact: true })
+    .click();
+});
+
+When("I select the {string} tab from the All Tabs panel", async ({ page }, tabLabel: string) => {
+  await allTabsPanel(page)
+    .getByRole("button", { name: `Go to tab ${tabLabel}`, exact: true })
+    .click();
+});
+
+// Stays mounted (CSS-slid off-screen) rather than unmounting on close — see customTabs.steps.ts's
+// own createCustomTab doc comment for why "closed" is asserted via the off-screen transform
+// class, not DOM absence/Playwright visibility (a translate-x-full-positioned element still
+// counts as "visible" to Playwright, since CSS transforms don't affect the visibility/display
+// computation).
+Then("the All Tabs panel should be closed", async ({ page }) => {
+  await expect(allTabsPanel(page)).toHaveClass(/translate-x-full/);
+});
+
+// --- Drag-and-drop reordering (App.tsx's handleCustomTabDrop) ----------------------------------
+
+// The draggable element is the row wrapping BOTH the tab's own name button and its "×" delete
+// button (see App.tsx's customTabs.map) — not the name button itself.
+function customTabRow(page: Page, fullName: string) {
+  return customTabButton(page, fullName).locator("..");
+}
+
+When(
+  "I drag my custom tab {string} onto my custom tab {string}",
+  async ({ page }, draggedBase: string, targetBase: string) => {
+    const draggedName = resolveTabName(page, draggedBase);
+    const targetName = resolveTabName(page, targetBase);
+    await Promise.all([
+      page.waitForResponse(
+        (res) => res.request().method() === "PUT" && new URL(res.url()).pathname === "/api/custom-tabs/reorder"
+      ),
+      customTabRow(page, draggedName).dragTo(customTabRow(page, targetName)),
+    ]);
+  }
+);
+
+// Scoped to just these two tabs' OWN relative order (never the tab bar's total count or position
+// among every tab currently open — see this file's top doc comment) by matching a locator against
+// only their two resolved names and reading the matched elements' text back in DOM order, which
+// Playwright's locator always returns in.
+Then(
+  "my custom tab {string} should appear before my custom tab {string} in the tab bar",
+  async ({ page }, firstBase: string, secondBase: string) => {
+    const firstName = resolveTabName(page, firstBase);
+    const secondName = resolveTabName(page, secondBase);
+    // allTextContents() doesn't auto-wait for matches to appear (unlike expect(locator)
+    // assertions) — explicitly wait for both tabs to actually be rendered first, so this is
+    // robust right after a page reload's own fresh getCustomTabs() fetch is still in flight.
+    await expect(customTabButton(page, firstName)).toBeVisible();
+    await expect(customTabButton(page, secondName)).toBeVisible();
+    const names = await page
+      .getByRole("button", { name: new RegExp(`^(${escapeRegExp(firstName)}|${escapeRegExp(secondName)})$`) })
+      .allTextContents();
+    expect(names).toEqual([firstName, secondName]);
+  }
+);
+
+// --- Horizontal scroll (App.tsx's tab-row inner overflow-x-auto container) ---------------------
+
+When(
+  "I create {int} custom tabs of type {string} named {string} with no filter",
+  async ({ page }, count: number, typeLabel: string, baseName: string) => {
+    for (let i = 0; i < count; i++) {
+      await createCustomTab(page, {
+        baseName: `${baseName} ${i + 1}`,
+        typeLabel: typeLabel as "Project Folders" | "Audio Files",
+      });
+    }
+  }
+);
+
+Then("the tab bar should overflow horizontally instead of wrapping to a new line", async ({ page }) => {
+  // "Project Folders"'s own immediate parent is the scrolling inner container (see App.tsx) —
+  // the same locator-of-a-known-tab's-parent approach as customTabRow above. `exact: true` is
+  // required: the default substring match would otherwise also match the All Tabs panel's own
+  // "Go to tab Project Folders" button (it stays mounted alongside the tab bar — see
+  // TabListPanel.tsx's doc comment), resolving to two elements instead of one.
+  const scrollContainer = page.getByRole("button", { name: "Project Folders", exact: true }).locator("..");
+  // Cast through `unknown` to an ad-hoc minimal shape rather than the real HTMLElement type —
+  // tsconfig.e2e.json extends the backend tsconfig, which has no "DOM" lib (see
+  // accessibility.steps.ts's identical workaround for the same root cause).
+  const { scrollWidth, clientWidth } = await scrollContainer.evaluate((el) => {
+    const sized = el as unknown as { scrollWidth: number; clientWidth: number };
+    return { scrollWidth: sized.scrollWidth, clientWidth: sized.clientWidth };
+  });
+  expect(scrollWidth, "tab row's content must be wider than its own box for there to be anything to scroll").toBeGreaterThan(
+    clientWidth
+  );
+
+  // Confirms a single-row (horizontal-scroll) layout, not a wrapped multi-row one: every one of
+  // this scenario's own tab buttons shares the same top Y position.
+  const tabButtons = scrollContainer.getByRole("button", { name: /Custom Tabs E2E Scroll/ });
+  const count = await tabButtons.count();
+  const tops = await Promise.all(
+    Array.from({ length: count }, async (_, i) => (await tabButtons.nth(i).boundingBox())?.y)
+  );
+  expect(new Set(tops).size, "every tab button should share one Y position (single row), not wrap").toBe(1);
+});
+
 // --- Delete flow (the "×" button + DeleteTabConfirmDialog.tsx) ---------------------------------
 
 function deleteConfirmDialog(page: Page) {

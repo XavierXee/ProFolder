@@ -547,3 +547,13 @@ export function createCustomTab(input: {
 export async function deleteCustomTab(id: number): Promise<void> {
   await request(`/custom-tabs/${id}`, { method: "DELETE" });
 }
+
+/** Persists a full drag-and-drop reordering of the custom tabs — `orderedIds` must contain
+ * exactly the id of every existing custom tab, in its new order. */
+export async function reorderCustomTabs(orderedIds: number[]): Promise<CustomTab[]> {
+  const result = await request<{ tabs: CustomTab[] }>(`/custom-tabs/reorder`, {
+    method: "PUT",
+    body: JSON.stringify({ orderedIds }),
+  });
+  return result.tabs;
+}

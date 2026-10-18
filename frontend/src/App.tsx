@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState, type DragEvent } from "react";
 import { useAudioFiles } from "./hooks/useAudioFiles.js";
 import { useProjects } from "./hooks/useProjects.js";
 import { useRowKeyboardNav } from "./hooks/useRowKeyboardNav.js";
@@ -17,6 +17,7 @@ import BatchEditPanel from "./components/BatchEditPanel.js";
 import AudioPlayerBar from "./components/AudioPlayerBar.js";
 import RootPathControl from "./components/RootPathControl.js";
 import CreateCustomTabModal from "./components/CreateCustomTabModal.js";
+import TabListPanel, { type TabListItem } from "./components/TabListPanel.js";
 import DeleteTabConfirmDialog from "./components/DeleteTabConfirmDialog.js";
 import CustomFilesTabPanel from "./components/CustomFilesTabPanel.js";
 import CustomProjectsTabPanel from "./components/CustomProjectsTabPanel.js";
@@ -62,8 +63,12 @@ function tabRowClassName(sectionBorder: string): string {
 function tabButtonClassName(active: boolean, theme?: string): string {
   // const py = "py-1";
   const py = theme === "profolder" ? "py-1" : "py-2.5";
+  // flex-shrink-0: this renders inside the tab row's horizontally-scrolling inner container
+  // (see the JSX below) — without it, flexbox would squeeze every tab's label to fit the
+  // available width before the container's own overflow-x ever kicks in, instead of the
+  // container just scrolling.
   const base =
-    `px-3 ${py} text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)]`;
+    `flex-shrink-0 px-3 ${py} text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)]`;
   return active
     ? `${base} border-blue-500 text-blue-400 profolder:bg-accent profolder:text-accent-ink profolder:border-border`
     : `${base} border-transparent text-slate-500 hover:text-ink profolder:bg-surface profolder:text-ink-muted profolder:border-border`;
@@ -147,10 +152,25 @@ export default function App() {
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
   const [showCreateTabModal, setShowCreateTabModal] = useState(false);
   const [deletingTab, setDeletingTab] = useState<CustomTab | null>(null);
+  const [showTabListPanel, setShowTabListPanel] = useState(false);
+  // Custom-tab drag-and-drop reordering (native HTML5 drag events, not a library — the dragged
+  // tab's id lives in this state, not in a dataTransfer payload, since reordering is purely
+  // within this one list and never needs to leave the app). "Project Folders"/"Audio Files"
+  // are not reorderable — they're not part of the `customTabs` array at all.
+  const [draggedCustomTabId, setDraggedCustomTabId] = useState<number | null>(null);
+  const [dragOverCustomTabId, setDragOverCustomTabId] = useState<number | null>(null);
 
   const selectedFile = files.find((f) => f.id === selectedId) ?? null;
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
   const activeCustomTab = typeof activeTab === "number" ? customTabs.find((t) => t.id === activeTab) ?? null : null;
+  // Same tabs, same order, as the tab bar itself (fixed tabs then custom tabs) — for the "All
+  // Tabs" burger-button panel, which exists specifically so a tab scrolled out of the bar's own
+  // view can still be jumped to directly.
+  const allTabListItems: TabListItem[] = [
+    { id: "projects", label: "Project Folders" },
+    { id: "files", label: "Audio Files" },
+    ...customTabs.map((tab) => ({ id: tab.id, label: tab.name })),
+  ];
 
   useRowKeyboardNav({
     active: activeTab === "projects",
@@ -541,6 +561,54 @@ export default function App() {
     }
   }
 
+  function handleCustomTabDragStart(e: DragEvent<HTMLElement>, id: number) {
+    // Spec-compliance only — some browsers (Firefox) refuse to start a drag at all without
+    // at least one setData call, even though nothing here ever reads it back (the dragged
+    // tab's identity is tracked via component state instead, not the dataTransfer payload).
+    // Optional chaining because jsdom's synthesized DragEvent in unit tests doesn't always
+    // populate dataTransfer the way a real browser drag does.
+    e.dataTransfer?.setData("text/plain", String(id));
+    setDraggedCustomTabId(id);
+  }
+
+  function handleCustomTabDragOver(e: DragEvent<HTMLElement>, id: number) {
+    e.preventDefault(); // required for a subsequent onDrop to fire at all
+    if (draggedCustomTabId !== null && id !== draggedCustomTabId) setDragOverCustomTabId(id);
+  }
+
+  function handleCustomTabDragEnd() {
+    setDraggedCustomTabId(null);
+    setDragOverCustomTabId(null);
+  }
+
+  /** Reorders `customTabs` optimistically, then persists via reorderCustomTabs — rolled back
+   * to the pre-drop order if the request fails (same optimistic-update-with-rollback shape as
+   * e.g. handleFileStatusSave elsewhere in this file). A plain remove-then-reinsert-at-the-
+   * target's-index move (standard, unadjusted splice reordering): this always produces the
+   * intuitive swap for the simplest two-tab case regardless of which one is dragged onto the
+   * other, which is the first thing most people try. For longer lists it has the usual simple-
+   * reorder asymmetry — dragging forward lands the tab just after the target, dragging
+   * backward lands it just before — since removing the dragged tab first shifts every later
+   * index down by one before the insert happens. */
+  function handleCustomTabDrop(targetId: number) {
+    const draggedId = draggedCustomTabId;
+    setDraggedCustomTabId(null);
+    setDragOverCustomTabId(null);
+    if (draggedId === null || draggedId === targetId) return;
+
+    const previousOrder = customTabs;
+    const draggedIndex = previousOrder.findIndex((t) => t.id === draggedId);
+    const targetIndex = previousOrder.findIndex((t) => t.id === targetId);
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const reordered = [...previousOrder];
+    const [draggedTab] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, draggedTab!);
+    setCustomTabs(reordered);
+
+    api.reorderCustomTabs(reordered.map((t) => t.id)).catch(() => setCustomTabs(previousOrder));
+  }
+
   function handleSortChange(sortBy: NonNullable<FileFilters["sortBy"]>) {
     handleFilesFilterChange({
       sortBy,
@@ -679,45 +747,85 @@ export default function App() {
               onClick={() => setShowCreateTabModal(true)}
               aria-label="Create custom tab"
               title="Create custom tab"
-              className="flex items-center justify-center w-6 h-6 mr-1 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover profolder:bg-surface"
+              className="flex items-center justify-center w-6 h-6 mr-1 flex-shrink-0 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover profolder:bg-surface"
             >
               +
             </button>
 
-            {(
-              [
-                ["projects", "Project Folders"],
-                ["files", "Audio Files"],
-              ] as [Tab, string][]
-            ).map(([tab, label]) => (
-              <button
-                key={tab}
-                onClick={() => handleTabChange(tab)}
-                aria-current={activeTab === tab}
-                className={tabButtonClassName(activeTab === tab, theme)}
-              >
-                {label}
-              </button>
-            ))}
+            {/* Horizontal-scroll, not wrap: stays outside this on purpose so the "+" button
+                above is always reachable regardless of scroll position. min-w-0 is required
+                for a flex child to ever actually shrink below its content width — without it,
+                overflow-x-auto has no effect and the row just grows past the header instead.
+                scrollbar-hidden (index.css) hides the scrollbar chrome itself — still fully
+                scrollable by drag/wheel/trackpad, just without a visible track/thumb taking up
+                this already-compact row's vertical space. */}
+            <div className="flex-1 flex items-center gap-1 overflow-x-auto min-w-0 scrollbar-hidden">
+              {(
+                [
+                  ["projects", "Project Folders"],
+                  ["files", "Audio Files"],
+                ] as [Tab, string][]
+              ).map(([tab, label]) => (
+                <button
+                  key={tab}
+                  onClick={() => handleTabChange(tab)}
+                  aria-current={activeTab === tab}
+                  className={tabButtonClassName(activeTab === tab, theme)}
+                >
+                  {label}
+                </button>
+              ))}
 
-            {customTabs.map((tab) => (
-              <div key={tab.id} className={`flex items-center ${tabButtonClassName(activeTab === tab.id, theme)}`}>
-                <button
-                  onClick={() => handleTabChange(tab.id)}
-                  aria-current={activeTab === tab.id}
+              {customTabs.map((tab) => (
+                <div
+                  key={tab.id}
+                  draggable
+                  onDragStart={(e) => handleCustomTabDragStart(e, tab.id)}
+                  onDragOver={(e) => handleCustomTabDragOver(e, tab.id)}
+                  onDrop={(e) => {
+                    e.preventDefault(); // best-practice spec compliance, mirroring onDragOver
+                    handleCustomTabDrop(tab.id);
+                  }}
+                  onDragEnd={handleCustomTabDragEnd}
+                  className={`flex items-center ${tabButtonClassName(activeTab === tab.id, theme)} ${
+                    draggedCustomTabId === tab.id ? "opacity-40" : ""
+                  } ${dragOverCustomTabId === tab.id ? "ring-2 ring-blue-500" : ""}`}
                 >
-                  {tab.name}
-                </button>
-                <button
-                  onClick={() => setDeletingTab(tab)}
-                  aria-label={`Delete tab ${tab.name}`}
-                  title={`Delete tab ${tab.name}`}
-                  className="flex items-center justify-center w-4 h-4 ml-1 rounded-[var(--rt-radius)] text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+                  <button
+                    onClick={() => handleTabChange(tab.id)}
+                    aria-current={activeTab === tab.id}
+                  >
+                    {tab.name}
+                  </button>
+                  <button
+                    onClick={() => setDeletingTab(tab)}
+                    aria-label={`Delete tab ${tab.name}`}
+                    title={`Delete tab ${tab.name}`}
+                    className="flex items-center justify-center w-4 h-4 ml-1 rounded-[var(--rt-radius)] text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Full-row-height border-l (not just on the button itself) so the vertical
+                separator actually reads as dividing the scrollable tabs from this button,
+                rather than a short rule floating next to it. */}
+            <div className="flex items-center h-full pl-2 ml-1 flex-shrink-0 border-l border-border">
+              <button
+                onClick={() => setShowTabListPanel(true)}
+                aria-label="Show all tabs"
+                aria-expanded={showTabListPanel}
+                aria-haspopup="dialog"
+                title="Show all tabs"
+                className="flex items-center justify-center w-6 h-6 rounded-[var(--rt-radius)] text-ink-muted hover:text-ink hover:bg-surface-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {banner && (
@@ -901,6 +1009,14 @@ export default function App() {
           setTheme={setTheme}
           open={showSettings}
           onClose={() => setShowSettings(false)}
+        />
+
+        <TabListPanel
+          open={showTabListPanel}
+          tabs={allTabListItems}
+          activeTabId={activeTab}
+          onSelect={(id) => handleTabChange(id as Tab)}
+          onClose={() => setShowTabListPanel(false)}
         />
 
         <BatchEditPanel

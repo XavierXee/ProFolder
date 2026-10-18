@@ -25,8 +25,12 @@ Given("I open the app", async ({ page }) => {
   await page.goto("/");
 });
 
+// `exact: true` throughout this file's tab-name queries: the default substring match would
+// otherwise also match the All Tabs panel's own "Go to tab {label}" button for the same tab (it
+// stays mounted alongside the tab bar, just slid off-screen when closed — see
+// TabListPanel.tsx's doc comment), resolving to two elements instead of one.
 When("I switch to the {string} tab", async ({ page }, tabLabel: string) => {
-  await page.getByRole("button", { name: tabLabel }).click();
+  await page.getByRole("button", { name: tabLabel, exact: true }).click();
 });
 
 // Full browser reload (fresh mount, fresh fetch from the server) — used by detail-panel
@@ -37,11 +41,11 @@ When("I reload the page", async ({ page }) => {
 });
 
 Then("I should see the {string} tab", async ({ page }, tabLabel: string) => {
-  await expect(page.getByRole("button", { name: tabLabel })).toBeVisible();
+  await expect(page.getByRole("button", { name: tabLabel, exact: true })).toBeVisible();
 });
 
 Then("the {string} tab should be the active tab", async ({ page }, tabLabel: string) => {
-  await expect(page.getByRole("button", { name: tabLabel })).toHaveAttribute("aria-current", "true");
+  await expect(page.getByRole("button", { name: tabLabel, exact: true })).toHaveAttribute("aria-current", "true");
 });
 
 // Backend-liveness + seed-scan check: the visible "N of M files/projects" result count only

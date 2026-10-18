@@ -11,5 +11,8 @@ export interface CustomTab {
   tags: string[];
   /** Files-type tabs only (projects have no association concept); omitted/undefined means no filter. */
   association?: "associated" | "unassociated";
+  /** User-reorderable position in the tab bar, drag-and-drop persisted. `findAll` already
+   * returns tabs sorted by this, so consumers generally don't need to read it directly. */
+  sortOrder: number;
   createdAt: string;
 }

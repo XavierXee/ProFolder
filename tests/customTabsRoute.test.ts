@@ -211,6 +211,64 @@ describe("/api/custom-tabs", () => {
     });
   });
 
+  describe("PUT /api/custom-tabs/reorder", () => {
+    it("persists a full reversal of order, reflected by a subsequent GET", async () => {
+      const first = (await request(app).post("/api/custom-tabs").send({ name: "First", type: "files" })).body;
+      const second = (await request(app).post("/api/custom-tabs").send({ name: "Second", type: "files" })).body;
+      const third = (await request(app).post("/api/custom-tabs").send({ name: "Third", type: "files" })).body;
+
+      const putRes = await request(app)
+        .put("/api/custom-tabs/reorder")
+        .send({ orderedIds: [third.id, second.id, first.id] });
+
+      expect(putRes.status).toBe(200);
+      expect(putRes.body.tabs.map((t: { name: string }) => t.name)).toEqual(["Third", "Second", "First"]);
+
+      const getRes = await request(app).get("/api/custom-tabs");
+      expect(getRes.body.tabs.map((t: { name: string }) => t.name)).toEqual(["Third", "Second", "First"]);
+    });
+
+    it("returns 400 for a non-array orderedIds", async () => {
+      const res = await request(app).put("/api/custom-tabs/reorder").send({ orderedIds: "not-an-array" });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: "orderedIds must be an array of integers" });
+    });
+
+    it("returns 400 for an orderedIds array containing a non-integer", async () => {
+      const res = await request(app).put("/api/custom-tabs/reorder").send({ orderedIds: [1, "two"] });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: "orderedIds must be an array of integers" });
+    });
+
+    it("silently skips an id that doesn't exist, applying the rest of the order rather than rejecting the whole request", async () => {
+      const first = (await request(app).post("/api/custom-tabs").send({ name: "First", type: "files" })).body;
+      const second = (await request(app).post("/api/custom-tabs").send({ name: "Second", type: "files" })).body;
+
+      const res = await request(app)
+        .put("/api/custom-tabs/reorder")
+        .send({ orderedIds: [second.id, 999999, first.id] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.tabs.map((t: { name: string }) => t.name)).toEqual(["Second", "First"]);
+    });
+
+    it("leaves a tab not mentioned in orderedIds at its current position, rather than rejecting the whole request", async () => {
+      const first = (await request(app).post("/api/custom-tabs").send({ name: "First", type: "files" })).body;
+      const second = (await request(app).post("/api/custom-tabs").send({ name: "Second", type: "files" })).body;
+      await request(app).post("/api/custom-tabs").send({ name: "Third", type: "files" });
+
+      // Only reorders First/Second (swapping them); Third is never mentioned.
+      const res = await request(app)
+        .put("/api/custom-tabs/reorder")
+        .send({ orderedIds: [second.id, first.id] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.tabs.map((t: { name: string }) => t.name)).toEqual(["Second", "First", "Third"]);
+    });
+  });
+
   describe("DELETE /api/custom-tabs/:id", () => {
     it("deletes an existing tab and it no longer shows up in a follow-up GET", async () => {
       const createRes = await request(app)

@@ -23,6 +23,10 @@ When("I open the Create Custom Tab modal", async ({ page }) => {
   await page.getByRole("button", { name: "Create custom tab" }).click();
 });
 
+When("I open the All Tabs panel", async ({ page }) => {
+  await page.getByRole("button", { name: "Show all tabs" }).click();
+});
+
 Then("the focused element should be visible", async ({ page }) => {
   await expect(page.locator(":focus")).toBeVisible();
 });
@@ -61,4 +65,20 @@ Then("the Create Custom Tab modal's name field should be focusable", async ({ pa
   const nameField = createCustomTabNameField(page);
   await nameField.focus();
   await expect(nameField).toBeFocused();
+});
+
+function allTabsPanelCloseButton(page: import("@playwright/test").Page) {
+  return page.locator('[role="dialog"][aria-label="All tabs"] button[aria-label="Close panel"]');
+}
+
+Then("the All Tabs panel's close button should not be focusable", async ({ page }) => {
+  const closeButton = allTabsPanelCloseButton(page);
+  await closeButton.focus();
+  await expect(closeButton).not.toBeFocused();
+});
+
+Then("the All Tabs panel's close button should be focusable", async ({ page }) => {
+  const closeButton = allTabsPanelCloseButton(page);
+  await closeButton.focus();
+  await expect(closeButton).toBeFocused();
 });

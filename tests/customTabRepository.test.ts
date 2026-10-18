@@ -8,6 +8,7 @@ import {
   pruneStatusFromAllTabs,
   pruneTagFromAllTabs,
   renameTagInAllTabs,
+  reorder,
   type CreateCustomTabInput,
 } from "../src/database/repositories/customTabRepository.js";
 
@@ -38,7 +39,7 @@ describe("findAll", () => {
     expect(findAll(db)).toEqual([]);
   });
 
-  it("returns multiple created tabs in creation (id ASC) order", () => {
+  it("returns multiple created tabs in creation (sort_order ASC) order", () => {
     const first = create(db, makeInput({ name: "First" }));
     const second = create(db, makeInput({ name: "Second" }));
     const third = create(db, makeInput({ name: "Third" }));
@@ -67,6 +68,7 @@ describe("create / findAll round-trip", () => {
       statuses: ["draft", "needs_mixing"],
       scores: [3, "unscored"],
       tags: ["kick", "snare"],
+      sortOrder: created.sortOrder,
       createdAt: created.createdAt,
     });
   });
@@ -314,5 +316,67 @@ describe("renameTagInAllTabs", () => {
     create(db, makeInput({ tags: ["snare"] }));
     expect(() => renameTagInAllTabs(db, "kick", "bass drum")).not.toThrow();
     expect(findAll(db)[0]!.tags).toEqual(["snare"]);
+  });
+});
+
+describe("reorder", () => {
+  it("persists a full reversal of order, reflected by a subsequent findAll", () => {
+    const first = create(db, makeInput({ name: "First" }));
+    const second = create(db, makeInput({ name: "Second" }));
+    const third = create(db, makeInput({ name: "Third" }));
+
+    const result = reorder(db, [third.id, second.id, first.id]);
+
+    expect(result.map((t) => t.name)).toEqual(["Third", "Second", "First"]);
+    expect(findAll(db).map((t) => t.name)).toEqual(["Third", "Second", "First"]);
+  });
+
+  it("assigns sort_order values matching each id's new index in orderedIds", () => {
+    const first = create(db, makeInput({ name: "First" }));
+    const second = create(db, makeInput({ name: "Second" }));
+
+    const result = reorder(db, [second.id, first.id]);
+
+    expect(result.find((t) => t.id === second.id)?.sortOrder).toBe(0);
+    expect(result.find((t) => t.id === first.id)?.sortOrder).toBe(1);
+  });
+
+  it("leaves a tab not mentioned in orderedIds at its current sort_order, rather than erroring or dropping it", () => {
+    const first = create(db, makeInput({ name: "First" }));
+    const second = create(db, makeInput({ name: "Second" }));
+    const third = create(db, makeInput({ name: "Third" }));
+
+    // Only reorders first/second; third (created after, sort_order 2) is never mentioned.
+    const result = reorder(db, [second.id, first.id]);
+
+    expect(result.map((t) => t.name)).toEqual(["Second", "First", "Third"]);
+  });
+
+  it("silently skips an id in orderedIds that no longer exists, rather than erroring", () => {
+    const first = create(db, makeInput({ name: "First" }));
+    const second = create(db, makeInput({ name: "Second" }));
+
+    expect(() => reorder(db, [second.id, 999999, first.id])).not.toThrow();
+    expect(findAll(db).map((t) => t.name)).toEqual(["Second", "First"]);
+  });
+
+  it("applying a duplicate id just lets its later occurrence win, rather than erroring", () => {
+    const first = create(db, makeInput({ name: "First" }));
+    const second = create(db, makeInput({ name: "Second" }));
+
+    expect(() => reorder(db, [first.id, first.id, second.id])).not.toThrow();
+    // first.id's sort_order ends up 1 (its later occurrence), second.id's is 2.
+    expect(findAll(db).map((t) => t.name)).toEqual(["First", "Second"]);
+  });
+
+  it("succeeds as a no-op when there are no tabs and orderedIds is empty", () => {
+    expect(reorder(db, [])).toEqual([]);
+  });
+
+  it("succeeds as a no-op when orderedIds is empty but tabs exist, leaving their order untouched", () => {
+    const first = create(db, makeInput({ name: "First" }));
+    const second = create(db, makeInput({ name: "Second" }));
+
+    expect(reorder(db, []).map((t) => t.id)).toEqual([first.id, second.id]);
   });
 });

@@ -644,6 +644,20 @@
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb { background: #1e2433; border-radius: 2px; }
 
+/* Scoped opt-out of the global thin-scrollbar styling above, for containers that scroll as an
+ * interaction surface (e.g. the tab bar's drag-to-reorder row) rather than a document-like
+ * reading area, where a visible scrollbar track/thumb is more visual noise than useful affordance
+ * — the content itself (or a horizontal mouse-wheel/trackpad gesture) already makes it clear
+ * there's more to scroll to. Still fully scrollable; only the browser's own scrollbar chrome is
+ * hidden, in every engine App.tsx targets (Chromium/Electron via the -webkit- rule, and Firefox
+ * via scrollbar-width, kept for anyone running the plain web build in it). */
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   background-color: var(--rt-canvas);
   color: var(--rt-ink);

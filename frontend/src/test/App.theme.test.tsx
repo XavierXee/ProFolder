@@ -174,9 +174,9 @@ describe("App - header branding", () => {
 // not which ruleset visually wins.
 describe("App - tab switcher styling per theme", () => {
   const ACTIVE_CLASSNAME =
-    "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)] border-blue-500 text-blue-400 profolder:bg-accent profolder:text-accent-ink profolder:border-border";
+    "flex-shrink-0 px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)] border-blue-500 text-blue-400 profolder:bg-accent profolder:text-accent-ink profolder:border-border";
   const INACTIVE_CLASSNAME =
-    "px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)] border-transparent text-slate-500 hover:text-ink profolder:bg-surface profolder:text-ink-muted profolder:border-border";
+    "flex-shrink-0 px-3 py-2.5 text-xs font-mono font-medium uppercase tracking-wider border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 profolder:border profolder:mb-0 profolder:rounded-[var(--rt-radius)] border-transparent text-slate-500 hover:text-ink profolder:bg-surface profolder:text-ink-muted profolder:border-border";
   // profolder's own pair: identical to the above except `py-1` (compact tabs), matching
   // tabButtonClassName's `theme === "profolder" ? "py-1" : "py-2.5"` branch.
   const PROFOLDER_ACTIVE_CLASSNAME = ACTIVE_CLASSNAME.replace("py-2.5", "py-1");

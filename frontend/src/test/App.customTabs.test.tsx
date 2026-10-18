@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App.js";
 import type { AudioFile, CustomTab, Project } from "../types.js";
@@ -22,6 +22,7 @@ vi.mock("../api/client.js", () => ({
   getCustomTabs: vi.fn(),
   createCustomTab: vi.fn(),
   deleteCustomTab: vi.fn(),
+  reorderCustomTabs: vi.fn(),
   getConfirmationSettings: vi.fn(),
   getPaginationSettings: vi.fn(),
 }));
@@ -38,6 +39,7 @@ const mockGetStatuses = vi.mocked(api.getStatuses);
 const mockGetCustomTabs = vi.mocked(api.getCustomTabs);
 const mockCreateCustomTab = vi.mocked(api.createCustomTab);
 const mockDeleteCustomTab = vi.mocked(api.deleteCustomTab);
+const mockReorderCustomTabs = vi.mocked(api.reorderCustomTabs);
 const mockGetConfirmationSettings = vi.mocked(api.getConfirmationSettings);
 const mockGetPaginationSettings = vi.mocked(api.getPaginationSettings);
 
@@ -112,6 +114,7 @@ const NEW_TAB: CustomTab = {
   statuses: [],
   scores: [],
   tags: [],
+  sortOrder: 0,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
@@ -126,6 +129,7 @@ beforeEach(() => {
   mockGetCustomTabs.mockReset().mockResolvedValue([]);
   mockCreateCustomTab.mockReset().mockResolvedValue(NEW_TAB);
   mockDeleteCustomTab.mockReset().mockResolvedValue(undefined);
+  mockReorderCustomTabs.mockReset();
   // Confirmation off by default — this file's test predates the double-text-confirmation
   // feature and doesn't exercise its typed-confirmation gating (see
   // DeleteTabConfirmDialog.test.tsx for that coverage).
@@ -211,4 +215,109 @@ describe("App - custom tabs wiring", () => {
     await waitFor(() => expect(screen.getByRole("checkbox", { name: "Select Alpha Sessions" })).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Project Folders" })).toHaveAttribute("aria-current", "true");
   }, 15000);
+});
+
+describe("App - tab bar horizontal scroll and drag-and-drop reorder", () => {
+  function makeCustomTab(overrides: Partial<CustomTab> = {}): CustomTab {
+    return {
+      id: 1,
+      name: "Tab A",
+      type: "files",
+      statuses: [],
+      scores: [],
+      tags: [],
+      sortOrder: 0,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      ...overrides,
+    };
+  }
+
+  it("wraps the tabs in a horizontally-scrolling container (overflow-x-auto), not a wrapping one", async () => {
+    render(<App />);
+
+    const projectsTabButton = await screen.findByRole("button", { name: "Project Folders" });
+    const scrollContainer = projectsTabButton.parentElement;
+
+    expect(scrollContainer?.className).toContain("overflow-x-auto");
+    expect(scrollContainer?.className).not.toContain("flex-wrap");
+  });
+
+  it("keeps the '+' create-tab button outside the scrolling container, so it never scrolls away", async () => {
+    render(<App />);
+
+    const plusButton = await screen.findByRole("button", { name: "Create custom tab" });
+    const projectsTabButton = screen.getByRole("button", { name: "Project Folders" });
+
+    expect(plusButton.parentElement).not.toBe(projectsTabButton.parentElement);
+  });
+
+  it("drag-and-drop reorders two custom tabs and persists the new order via reorderCustomTabs", async () => {
+    const tabA = makeCustomTab({ id: 1, name: "Tab A", sortOrder: 0 });
+    const tabB = makeCustomTab({ id: 2, name: "Tab B", sortOrder: 1 });
+    mockGetCustomTabs.mockReset().mockResolvedValue([tabA, tabB]);
+    mockReorderCustomTabs.mockResolvedValue([tabB, tabA]);
+    render(<App />);
+
+    const tabAButton = await screen.findByRole("button", { name: "Tab A" });
+    const tabBButton = await screen.findByRole("button", { name: "Tab B" });
+    const tabARow = tabAButton.parentElement!;
+    const tabBRow = tabBButton.parentElement!;
+
+    fireEvent.dragStart(tabARow);
+    fireEvent.dragOver(tabBRow);
+    fireEvent.drop(tabBRow);
+    fireEvent.dragEnd(tabARow);
+
+    expect(mockReorderCustomTabs).toHaveBeenCalledWith([2, 1]);
+
+    // Optimistic reorder: dropping A onto B swaps them (the simplest, most-expected case for
+    // a two-tab drag regardless of which one is dragged onto the other — see
+    // handleCustomTabDrop's doc comment in App.tsx).
+    await waitFor(() => {
+      const buttons = screen.getAllByRole("button", { name: /^Tab [AB]$/ });
+      expect(buttons.map((b) => b.textContent)).toEqual(["Tab B", "Tab A"]);
+    });
+  });
+
+  it("rolls back the optimistic reorder when reorderCustomTabs rejects", async () => {
+    const tabA = makeCustomTab({ id: 1, name: "Tab A", sortOrder: 0 });
+    const tabB = makeCustomTab({ id: 2, name: "Tab B", sortOrder: 1 });
+    mockGetCustomTabs.mockReset().mockResolvedValue([tabA, tabB]);
+    mockReorderCustomTabs.mockRejectedValue(new Error("save failed"));
+    render(<App />);
+
+    const tabAButton = await screen.findByRole("button", { name: "Tab A" });
+    const tabBButton = await screen.findByRole("button", { name: "Tab B" });
+    const tabARow = tabAButton.parentElement!;
+    const tabBRow = tabBButton.parentElement!;
+
+    fireEvent.dragStart(tabARow);
+    fireEvent.dragOver(tabBRow);
+    fireEvent.drop(tabBRow);
+    fireEvent.dragEnd(tabARow);
+
+    await waitFor(() => expect(mockReorderCustomTabs).toHaveBeenCalled());
+
+    await waitFor(() => {
+      const buttons = screen.getAllByRole("button", { name: /^Tab [AB]$/ });
+      expect(buttons.map((b) => b.textContent)).toEqual(["Tab A", "Tab B"]);
+    });
+  });
+
+  it("does not reorder or call reorderCustomTabs when a tab is dropped onto itself", async () => {
+    const tabA = makeCustomTab({ id: 1, name: "Tab A", sortOrder: 0 });
+    const tabB = makeCustomTab({ id: 2, name: "Tab B", sortOrder: 1 });
+    mockGetCustomTabs.mockReset().mockResolvedValue([tabA, tabB]);
+    render(<App />);
+
+    const tabAButton = await screen.findByRole("button", { name: "Tab A" });
+    const tabARow = tabAButton.parentElement!;
+
+    fireEvent.dragStart(tabARow);
+    fireEvent.dragOver(tabARow);
+    fireEvent.drop(tabARow);
+    fireEvent.dragEnd(tabARow);
+
+    expect(mockReorderCustomTabs).not.toHaveBeenCalled();
+  });
 });

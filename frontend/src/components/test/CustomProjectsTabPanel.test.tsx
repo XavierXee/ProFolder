@@ -111,6 +111,7 @@ function makeTab(overrides: Partial<CustomTab> = {}): CustomTab {
     statuses: ["draft", "done"],
     scores: [3, "unscored"],
     tags: ["kick", "mix"],
+    sortOrder: 0,
     createdAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };

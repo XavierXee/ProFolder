@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type Database from "better-sqlite3";
-import { findAll, create, deleteById } from "../../database/repositories/customTabRepository.js";
+import { findAll, create, deleteById, reorder } from "../../database/repositories/customTabRepository.js";
 import { isKnownStatusKey } from "../../database/repositories/statusRepository.js";
 import { type TrackStatus } from "../../models/AudioFile.js";
 import { isValidScore } from "../../models/Score.js";
@@ -76,6 +76,20 @@ export function createCustomTabsRouter(db: Database.Database): Router {
         association: validAssociation,
       });
       res.status(201).json(tab);
+    })
+  );
+
+  // Registered before `/:id` only for readability (create → reorder → delete) — there's no
+  // actual route-matching collision risk since this is PUT and `/:id` below is DELETE.
+  router.put(
+    "/reorder",
+    asyncHandler(async (req, res) => {
+      const { orderedIds } = req.body as { orderedIds?: unknown };
+      if (!Array.isArray(orderedIds) || !orderedIds.every((id) => typeof id === "number" && Number.isInteger(id))) {
+        res.status(400).json({ error: "orderedIds must be an array of integers" });
+        return;
+      }
+      res.json({ tabs: reorder(db, orderedIds) });
     })
   );
 
