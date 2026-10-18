@@ -142,6 +142,15 @@ describe("MultiSelectDropdown - token-driven styling", () => {
     expect(menu.className).toContain("border-border");
   });
 
+  it("caps the menu panel width at 300px so long option labels truncate instead of overflowing off-screen", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "Status" }));
+
+    const menu = screen.getByRole("listbox");
+    expect(menu.className).toContain("max-w-[300px]");
+  });
+
   it("gives unselected option rows the surface/border/ink treatment and selected rows the surface-selected/border-ink treatment", async () => {
     const user = userEvent.setup();
     render(<Harness initialSelected={["rock"]} />);

@@ -186,18 +186,18 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
                   reserveLabel={statusReserveLabel}
                 />
                 <MultiSelectDropdown
-                  label="Score"
-                  options={SCORE_OPTIONS}
-                  selected={scores}
-                  onChange={setScores}
-                  reserveLabel={SCORE_RESERVE_LABEL}
-                />
-                <MultiSelectDropdown
                   label="Tags"
                   options={tagOptions}
                   selected={tags}
                   onChange={setTags}
                   reserveLabel={TAGS_RESERVE_LABEL}
+                />
+                <MultiSelectDropdown
+                  label="Score"
+                  options={SCORE_OPTIONS}
+                  selected={scores}
+                  onChange={setScores}
+                  reserveLabel={SCORE_RESERVE_LABEL}
                 />
               </div>
             </div>
