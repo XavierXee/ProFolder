@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState, type DragEvent } from "react";
 import { useAudioFiles } from "./hooks/useAudioFiles.js";
 import { useProjects } from "./hooks/useProjects.js";
 import { useRowKeyboardNav } from "./hooks/useRowKeyboardNav.js";
+import { useTruncatedTextScroll } from "./hooks/useTruncatedTextScroll.js";
 import FilterBar from "./components/FilterBar.js";
 import { FileTable } from "./components/FileTable.js";
 import { Pagination } from "./components/Pagination.js";
@@ -172,6 +173,7 @@ export default function App() {
     ...customTabs.map((tab) => ({ id: tab.id, label: tab.name })),
   ];
 
+  useTruncatedTextScroll();
   useRowKeyboardNav({
     active: activeTab === "projects",
     items: projects,
