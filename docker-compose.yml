@@ -1,0 +1,24 @@
+services:
+  profolder:
+    build: .
+    image: profolder:latest
+    container_name: profolder
+    init: true # forwards SIGTERM to node so `docker compose down` stops it promptly
+    restart: unless-stopped
+    ports:
+      # Published on the host's loopback only: the app has no authentication, so it must not
+      # be reachable from the LAN. Change to "${APP_PORT:-5175}:5175" only if you mean it.
+      - "127.0.0.1:${APP_PORT:-5175}:5175"
+    environment:
+      # The host music folder is mounted at the same absolute path inside the container, so
+      # paths stored in the DB and shown in the UI match the host's.
+      MUSIC_ROOT: ${MUSIC_DIR:?Set MUSIC_DIR to the absolute host path of your music folder}
+    volumes:
+      # Read-write: the app copies, moves and deletes files inside the music root.
+      - ${MUSIC_DIR}:${MUSIC_DIR}
+      # The container's own SQLite DB — deliberately separate from the native app's
+      # data/library.db (SQLite locking across the Docker VM boundary isn't reliable).
+      - profolder-data:/data
+
+volumes:
+  profolder-data:
