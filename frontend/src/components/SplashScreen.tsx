@@ -27,6 +27,7 @@ export default function SplashScreen() {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-canvas text-ink">
+      <p className="text-lg font-mono text-ink-muted">ProFolder</p>
       <Logo size={112} ariaLabel="ProFolder" />
       <p className="text-sm font-mono">Syncing...</p>
     </div>

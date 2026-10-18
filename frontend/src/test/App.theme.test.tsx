@@ -279,11 +279,11 @@ describe("App - converted chrome elements carry token classes, not the old hardc
 // prove the token class is present, not the resulting rendered color (see file-level NOTE on the
 // jsdom limitation).
 describe("App - Task 4 token-converted elements", () => {
-  it("gives the header title/subtitle the chrome-ink/chrome-ink-faint token classes", async () => {
+  it("gives the header title the same font-mono/ink-muted styling as the splash screen title, and the subtitle the chrome-ink-faint token class", async () => {
     render(<App />);
     await waitForMount();
 
-    expect(screen.getByRole("heading", { name: "ProFolder" })).toHaveClass("text-chrome-ink");
+    expect(screen.getByRole("heading", { name: "ProFolder" })).toHaveClass("font-mono", "text-ink-muted");
     expect(screen.getByRole("button", { name: "Change production folder" })).toHaveClass("text-chrome-ink-faint");
   });
 

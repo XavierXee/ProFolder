@@ -634,7 +634,7 @@ export default function App() {
           <div className="flex items-center gap-3">
             <Logo size={28} />
             <div>
-              <h1 className="text-sm font-semibold text-chrome-ink">ProFolder</h1>
+              <h1 className="text-sm font-mono text-ink-muted">ProFolder</h1>
             </div>
 
             <div className={`border-l pl-3 ${sectionBorder}`}>

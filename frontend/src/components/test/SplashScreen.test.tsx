@@ -45,6 +45,13 @@ describe("SplashScreen", () => {
     expect(overlay!.className).toContain("text-ink");
   });
 
+  it("shows the app title above the logo in the light-grey ink-muted token color", () => {
+    render(<SplashScreen />);
+    const title = screen.getByText("ProFolder");
+    expect(title.className).toContain("text-ink-muted");
+    expect(title.compareDocumentPosition(screen.getByTestId("logo")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("gives the logo a real accessible label (not aria-hidden), since no other visible text conveys the app identity here", () => {
     render(<SplashScreen />);
     const logo = screen.getByTestId("logo");
