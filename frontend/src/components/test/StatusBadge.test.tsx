@@ -95,4 +95,36 @@ describe("StatusBadge", () => {
       expect(badge.className).toContain(cls);
     }
   });
+
+  // Covers all three render branches (unknown sentinel, found-in-catalog, orphan fallback) since
+  // `className` is appended independently in each one.
+  describe("optional className prop", () => {
+    it("appends the given className alongside the default layout classes for the unknown sentinel", () => {
+      render(<StatusBadge status="unknown" className="truncate" />);
+
+      const badge = screen.getByLabelText("Status: Unknown");
+      expect(badge.className).toContain("truncate");
+      expect(badge.className).toContain("inline-flex");
+    });
+
+    it("appends the given className for a status found in the catalog", async () => {
+      mockGetStatuses.mockResolvedValue([makeStatus({ key: "draft", name: "Draft" })]);
+
+      render(
+        <StatusCatalogProvider>
+          <StatusBadge status="draft" className="truncate" />
+        </StatusCatalogProvider>
+      );
+
+      const badge = await waitFor(() => screen.getByLabelText("Status: Draft"));
+      expect(badge.className).toContain("truncate");
+    });
+
+    it("renders with no trailing-space artifacts when className is omitted", () => {
+      render(<StatusBadge status="unknown" />);
+
+      const badge = screen.getByLabelText("Status: Unknown");
+      expect(badge.className.endsWith(" ")).toBe(false);
+    });
+  });
 });

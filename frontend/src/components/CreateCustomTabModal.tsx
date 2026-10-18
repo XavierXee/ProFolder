@@ -112,10 +112,9 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
         inert={open ? undefined : ""}
         className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col transition-transform duration-250 ease-out ${panel} ${open ? "translate-x-0 shadow-2xl" : "translate-x-full"}`}
       >
-        <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
+        <div className={`flex items-start justify-between gap-4 px-6 py-4 border-b ${divider}`}>
           <div className="min-w-0">
             <h2 className="text-base font-mono font-medium text-blue-400">New Custom Tab</h2>
-            <p className={`text-xs mt-1 ${meta}`}>Name it, choose a type, and set an optional filter</p>
           </div>
           <button
             ref={closeRef}

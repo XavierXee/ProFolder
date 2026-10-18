@@ -122,6 +122,18 @@ describe("TagsStatusesPanel - statuses section (read-only rendering)", () => {
     expect(screen.getByRole("button", { name: "Edit status Need Mixing" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete status Need Mixing" })).toBeInTheDocument();
   });
+
+  // A long status name should overflow with an ellipsis rather than wrap onto a second line —
+  // matching the Tags section's own existing `truncate` treatment (see that section's own badge
+  // span, which is exactly the pattern this one now mirrors).
+  it("truncates a long status name instead of wrapping it", async () => {
+    renderPanel();
+
+    await waitFor(() => expect(screen.getByText("Draft")).toBeInTheDocument());
+
+    const badge = screen.getByLabelText("Status: Draft");
+    expect(badge.className.split(/\s+/)).toContain("truncate");
+  });
 });
 
 describe("TagsStatusesPanel - add status", () => {
@@ -134,6 +146,7 @@ describe("TagsStatusesPanel - add status", () => {
 
     await user.click(screen.getByRole("button", { name: "Add status" }));
     expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+    expect(screen.getByLabelText("New status name")).toHaveFocus();
 
     await user.type(screen.getByLabelText("New status name"), "Released");
     expect(screen.getByRole("button", { name: "Add" })).not.toBeDisabled();
@@ -167,6 +180,32 @@ describe("TagsStatusesPanel - add status", () => {
 
     expect(mockCreateStatus).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Add status" })).toBeInTheDocument();
+  });
+
+  it("pressing Enter in the name field submits, same as clicking Add", async () => {
+    // "#64748b" mirrors TagsStatusesPanel.tsx's own DEFAULT_NEW_STATUS_COLOR (not exported,
+    // so not imported here) — the color picker is left untouched in this test, so the submit
+    // should carry whatever that default still is.
+    mockCreateStatus.mockResolvedValue({ key: "released", name: "Released", color: "#64748b", sortOrder: 3, createdAt: "2024-01-01T00:00:00.000Z" });
+    const user = userEvent.setup();
+    renderPanel();
+    await waitFor(() => expect(screen.getByText("Draft")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: "Add status" }));
+    await user.type(screen.getByLabelText("New status name"), "Released{Enter}");
+
+    await waitFor(() => expect(mockCreateStatus).toHaveBeenCalledWith("Released", "#64748b"));
+  });
+
+  it("pressing Enter while the name is blank does not submit", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await waitFor(() => expect(screen.getByText("Draft")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: "Add status" }));
+    await user.type(screen.getByLabelText("New status name"), "{Enter}");
+
+    expect(mockCreateStatus).not.toHaveBeenCalled();
   });
 
   it("shows an inline error and keeps the form open when createStatus rejects", async () => {
@@ -326,6 +365,7 @@ describe("TagsStatusesPanel - add tag", () => {
 
     await user.click(screen.getByRole("button", { name: "Add tag" }));
     expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+    expect(screen.getByLabelText("New tag name")).toHaveFocus();
 
     await user.type(screen.getByLabelText("New tag name"), "reverb");
     expect(screen.getByRole("button", { name: "Add" })).not.toBeDisabled();
@@ -346,6 +386,27 @@ describe("TagsStatusesPanel - add tag", () => {
 
     expect(mockCreateTag).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Add tag" })).toBeInTheDocument();
+  });
+
+  it("pressing Enter in the name field submits, same as clicking Add", async () => {
+    mockCreateTag.mockResolvedValue({ id: 1, name: "reverb" });
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "Add tag" }));
+    await user.type(screen.getByLabelText("New tag name"), "reverb{Enter}");
+
+    await waitFor(() => expect(mockCreateTag).toHaveBeenCalledWith("reverb"));
+  });
+
+  it("pressing Enter while the name is blank does not submit", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "Add tag" }));
+    await user.type(screen.getByLabelText("New tag name"), "{Enter}");
+
+    expect(mockCreateTag).not.toHaveBeenCalled();
   });
 
   it("shows an inline error (e.g. duplicate) and keeps the form open when createTag rejects", async () => {

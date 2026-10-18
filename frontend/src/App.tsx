@@ -671,7 +671,7 @@ export default function App() {
                 aria-label="Statuses and tags"
                 aria-expanded={showTagsStatuses}
                 aria-haspopup="dialog"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
+                className="flex items-center gap-1.5 px-3 py-1.5 pr-[6px] pl-[6px] rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path
@@ -700,7 +700,7 @@ export default function App() {
                 aria-label="Metrics"
                 aria-expanded={showMetrics}
                 aria-haspopup="dialog"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
+                className="flex items-center gap-1.5 px-3 py-1.5 pr-[6px] pl-[6px] rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5h3v6H3v-6zM10.5 7.5h3v12h-3v-12zM18 10.5h3v9h-3v-9z" />
@@ -726,7 +726,7 @@ export default function App() {
                 setShowSettings(true);
               }}
               aria-label="Settings"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
+              className="flex items-center gap-1.5 px-3 pr-[6px] pl-[6px] py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-chrome-border text-chrome-ink-secondary hover:text-chrome-ink hover:border-chrome-border-hover"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path
@@ -746,7 +746,7 @@ export default function App() {
               onClick={() => setShowCreateTabModal(true)}
               aria-label="Create custom tab"
               title="Create custom tab"
-              className="w-[26px] h-[26px] flex items-center justify-center mr-1 flex-shrink-0 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover profolder:bg-surface"
+              className="w-[26px] h-[26px] flex items-center justify-center mr-1 flex-shrink-0 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 border-border text-ink-muted hover:text-ink hover:bg-surface-hover profolder:bg-surface-selected profolder:text-black profolder:border-1 profolder:border-black"
             >
               +
             </button>

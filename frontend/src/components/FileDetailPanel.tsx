@@ -206,7 +206,7 @@ export default function FileDetailPanel({
       >
         {file && (
           <>
-            <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
+            <div className={`flex items-start justify-between gap-4 px-6 py-5 pt-[18px] border-b ${divider}`}>
               <div className="min-w-0">
                 <p className={`text-xs font-mono mb-1 ${meta}`}>File</p>
                 <div className="flex items-center gap-2 min-w-0">

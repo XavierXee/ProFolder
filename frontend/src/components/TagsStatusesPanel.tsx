@@ -75,6 +75,8 @@ function XIcon() {
 
 export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onStatusDeleted, onTagDeleted, onTagRenamed }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const newStatusNameRef = useRef<HTMLInputElement>(null);
+  const newTagNameRef = useRef<HTMLInputElement>(null);
   const { statuses, refetch: refetchStatuses } = useStatusCatalog();
 
   const [addStatusOpen, setAddStatusOpen] = useState(false);
@@ -125,6 +127,19 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose, deletingStatus, deletingTag]);
+
+  // The name field only exists in the DOM once its form is open (conditionally rendered, not
+  // just CSS-hidden like this app's slide-in panels — see the `!addStatusOpen ? <button> :
+  // <form>` ternary below), so the ref is only ever non-null by the time this effect's own
+  // render has happened — no setTimeout/mount-delay hack needed here, unlike those panels' own
+  // close-button auto-focus.
+  useEffect(() => {
+    if (addStatusOpen) newStatusNameRef.current?.focus();
+  }, [addStatusOpen]);
+
+  useEffect(() => {
+    if (addTagOpen) newTagNameRef.current?.focus();
+  }, [addTagOpen]);
 
   function startAddStatus() {
     setAddStatusOpen(true);
@@ -321,11 +336,15 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
             <div className="flex flex-col gap-1.5">
               <div className="py-0.5 px-1 flex items-center gap-1.5">
                 <input
+                  ref={newStatusNameRef}
                   type="text"
                   aria-label="New status name"
                   placeholder="Status name"
                   value={newStatusName}
                   onChange={(e) => setNewStatusName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submitAddStatus();
+                  }}
                   className={textInputCls}
                 />
                 <input
@@ -389,7 +408,7 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
               </div>
             ) : (
               <div key={status.key} className="py-1 px-1 flex items-center justify-between gap-1.5">
-                <StatusBadge status={status.key} />
+                <StatusBadge status={status.key} className="truncate" />
                 <div className="flex items-center gap-0.5 flex-shrink-0">
                   <button
                     type="button"
@@ -428,11 +447,15 @@ export default function TagsStatusesPanel({ allTags, onClose, onTagsChanged, onS
             <div className="flex flex-col gap-1.5 mb-2">
               <div className="py-1 px-1 flex items-center gap-1.5">
                 <input
+                  ref={newTagNameRef}
                   type="text"
                   aria-label="New tag name"
                   placeholder="Tag name"
                   value={newTagName}
                   onChange={(e) => setNewTagName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submitAddTag();
+                  }}
                   className={textInputCls}
                 />
                 <button type="button" onClick={cancelAddTag} aria-label="Cancel" className={iconBtnCls}>

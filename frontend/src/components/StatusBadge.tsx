@@ -9,7 +9,13 @@ import { useStatusCatalog } from "../contexts/StatusCatalogContext.js";
  * the latter, so there's no unstyled flash while the catalog is loading. */
 const NEUTRAL_LAYOUT_CLS = "inline-flex items-center px-2 py-0.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium ring-1";
 
-export default function StatusBadge({ status }: { status: TrackStatus }) {
+/** Joins class-name fragments with single spaces, dropping any empty ones — avoids a stray
+ * trailing space when the optional `className` prop (below) isn't given. */
+function cx(...parts: string[]): string {
+  return parts.filter(Boolean).join(" ");
+}
+
+export default function StatusBadge({ status, className = "" }: { status: TrackStatus; className?: string }) {
   // While the catalog is still loading, `statuses` is empty, so lookups below naturally miss
   // and fall through to the same neutral fallback treatment used for orphan status values.
   const { statuses } = useStatusCatalog();
@@ -18,7 +24,7 @@ export default function StatusBadge({ status }: { status: TrackStatus }) {
     const label = STATUS_LABELS.unknown;
     const cls = STATUS_BADGE.unknown;
     return (
-      <span className={`${NEUTRAL_LAYOUT_CLS} ${cls}`} aria-label={`Status: ${label}`}>
+      <span className={cx(NEUTRAL_LAYOUT_CLS, cls, className)} aria-label={`Status: ${label}`}>
         {label}
       </span>
     );
@@ -28,7 +34,7 @@ export default function StatusBadge({ status }: { status: TrackStatus }) {
 
   if (found) {
     return (
-      <span className={NEUTRAL_LAYOUT_CLS} style={statusBadgeStyle(found.color)} aria-label={`Status: ${found.name}`}>
+      <span className={cx(NEUTRAL_LAYOUT_CLS, className)} style={statusBadgeStyle(found.color)} aria-label={`Status: ${found.name}`}>
         {found.name}
       </span>
     );
@@ -38,7 +44,7 @@ export default function StatusBadge({ status }: { status: TrackStatus }) {
   // key with the same gray treatment used for the "unknown" sentinel, so there's no unstyled
   // flash while loading.
   return (
-    <span className={`${NEUTRAL_LAYOUT_CLS} ${STATUS_BADGE.unknown}`} aria-label={`Status: ${status}`}>
+    <span className={cx(NEUTRAL_LAYOUT_CLS, STATUS_BADGE.unknown, className)} aria-label={`Status: ${status}`}>
       {status}
     </span>
   );

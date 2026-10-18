@@ -189,7 +189,7 @@ export default function ScanFolderPanel({ open, musicRoot, onClose, onScanComple
         inert={open ? undefined : ""}
         className={`fixed right-0 top-0 h-full w-full max-w-md z-40 border-l flex flex-col transition-transform duration-250 ease-out ${panel} ${open ? "translate-x-0 shadow-2xl" : "translate-x-full"}`}
       >
-        <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
+        <div className={`flex items-start justify-between gap-4 px-6 py-5 pt-[18px] border-b ${divider}`}>
           <div className="min-w-0">
             <p className={`text-xs font-mono mb-1 ${meta}`}>Library Directory</p>
             <h2 className="text-base font-mono font-medium text-blue-400 truncate">{musicRoot ?? "…"}</h2>
