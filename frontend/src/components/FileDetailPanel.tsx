@@ -231,7 +231,12 @@ export default function FileDetailPanel({
                   </button>
                   <h2 className="text-base font-mono font-medium text-blue-400 truncate">{file.filename}</h2>
                 </div>
-                <p className={`text-xs mt-1 ${meta}`}>Updated {formatFull(file.modifiedAt)} | Size {formatBytes(file.size)}</p>
+                <p
+                  className={`text-xs mt-1 truncate ${meta}`}
+                  title={`Updated ${formatFull(file.modifiedAt)} | Size ${formatBytes(file.size)}`}
+                >
+                  Updated {formatFull(file.modifiedAt)} | Size {formatBytes(file.size)}
+                </p>
               </div>
               <button
                 ref={closeRef}

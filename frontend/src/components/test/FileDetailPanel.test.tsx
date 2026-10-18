@@ -138,6 +138,18 @@ describe("FileDetailPanel - basic rendering", () => {
     expect(screen.getByText("/music/Song/beat.wav")).toBeInTheDocument();
   });
 
+  // The title (<h2>) already truncates on its own — this covers the header's "Updated .../Size
+  // ..." subtitle line, which previously had no overflow handling at all.
+  it("truncates the header subtitle to a single line, with the full text still available via a title attribute", () => {
+    const file = makeFile({ modifiedAt: "2026-01-15T10:30:00.000Z", size: 2048 });
+    renderPanel({ file });
+
+    const expectedText = `Updated ${formatFull(file.modifiedAt)} | Size ${formatBytes(file.size)}`;
+    const subtitle = screen.getByText(expectedText);
+    expect(subtitle.className.split(/\s+/)).toContain("truncate");
+    expect(subtitle).toHaveAttribute("title", expectedText);
+  });
+
   it("always shows the 'Reveal file in Finder' button and calls onReveal with the file path", async () => {
     const onReveal = vi.fn();
     const user = userEvent.setup();

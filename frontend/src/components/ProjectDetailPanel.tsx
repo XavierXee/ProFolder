@@ -212,11 +212,13 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
       >
         {project && (
           <>
-            <div className={`flex items-start justify-between gap-4 px-6 py-5 border-b ${divider}`}>
+            <div className={`flex items-start justify-between gap-4 px-6 py-5 pt-[18px] border-b ${divider}`}>
               <div className="min-w-0">
                 <p className={`text-xs font-mono mb-1 ${meta}`}>Folder</p>
                 <h2 className="text-base font-mono font-medium text-blue-400 truncate">{project.name}</h2>
-                <p className={`text-xs font-mono mt-1 break-all ${meta}`}>{project.path}</p>
+                <p className={`text-xs font-mono mt-1 truncate ${meta}`} title={project.path}>
+                  {project.path}
+                </p>
               </div>
               <button
                 ref={closeRef}

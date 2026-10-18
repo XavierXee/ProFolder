@@ -177,6 +177,21 @@ describe("ProjectDetailPanel - basic rendering", () => {
 
     expect(onReveal).toHaveBeenCalledWith("/music/My Song");
   });
+
+  // The title (<h2>) already truncates on its own — these cover the header's path subtitle,
+  // which used to wrap across multiple lines (`break-all`) instead of staying on one.
+  it("truncates a long folder name/path to a single line each, with the full value still available via a title attribute", () => {
+    const longPath = "/music/" + "Very Long Project Folder Name ".repeat(5).trim();
+    renderPanel({ project: makeProject({ name: "A".repeat(80), path: longPath }) });
+
+    const title = screen.getByRole("heading", { level: 2 });
+    expect(title.className.split(/\s+/)).toContain("truncate");
+
+    const subtitle = screen.getByText(longPath);
+    expect(subtitle.className.split(/\s+/)).toContain("truncate");
+    expect(subtitle.className.split(/\s+/)).not.toContain("break-all");
+    expect(subtitle).toHaveAttribute("title", longPath);
+  });
 });
 
 describe("ProjectDetailPanel - Copy/Move/Delete buttons", () => {
