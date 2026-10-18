@@ -164,40 +164,41 @@ describe("CreateCustomTabModal - submit payload", () => {
   });
 });
 
-describe("CreateCustomTabModal - Association filter (files-only)", () => {
-  it("does not render the Association picker for the default 'Project Folders' type", () => {
+describe("CreateCustomTabModal - Locations filter (files-only)", () => {
+  it("does not render the Locations radio group for the default 'Project Folders' type", () => {
     renderModal();
 
-    expect(screen.queryByRole("button", { name: "Folders" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "All locations" })).not.toBeInTheDocument();
   });
 
-  it("renders the Association picker once 'Audio Files' is selected", async () => {
+  it("renders the Locations radio group, defaulted to 'All locations', once 'Audio Files' is selected", async () => {
     const user = userEvent.setup({ delay: null });
     renderModal();
 
     await user.click(screen.getByRole("radio", { name: "Audio Files" }));
 
-    expect(screen.getByRole("button", { name: "Folders" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "All locations" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Only files within project folders" })).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: "Only files outside of project folders" })).not.toBeChecked();
   });
 
-  it("hides the Association picker again when switching back to 'Project Folders'", async () => {
+  it("hides the Locations radio group again when switching back to 'Project Folders'", async () => {
     const user = userEvent.setup({ delay: null });
     renderModal();
 
     await user.click(screen.getByRole("radio", { name: "Audio Files" }));
     await user.click(screen.getByRole("radio", { name: "Project Folders" }));
 
-    expect(screen.queryByRole("button", { name: "Folders" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "All locations" })).not.toBeInTheDocument();
   });
 
   it("includes the picked association in the submit payload for a files tab", async () => {
     const user = userEvent.setup({ delay: null });
     renderModal();
 
-    await user.type(screen.getByLabelText("Name"), "Unassociated Files");
+    await user.type(screen.getByLabelText("Name"), "Outside Files");
     await user.click(screen.getByRole("radio", { name: "Audio Files" }));
-    await user.click(screen.getByRole("button", { name: "Folders" }));
-    await user.click(screen.getByRole("checkbox", { name: "Only files unassociated to a project folder" }));
+    await user.click(screen.getByRole("radio", { name: "Only files outside of project folders" }));
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() =>
@@ -207,14 +208,26 @@ describe("CreateCustomTabModal - Association filter (files-only)", () => {
     );
   });
 
+  it("submits association: undefined for the default 'All locations' selection", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderModal();
+
+    await user.type(screen.getByLabelText("Name"), "All Locations Files");
+    await user.click(screen.getByRole("radio", { name: "Audio Files" }));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(mockCreateCustomTab).toHaveBeenCalledTimes(1));
+    const payload = mockCreateCustomTab.mock.calls[0][0];
+    expect(payload.association).toBeUndefined();
+  });
+
   it("clears a previously-picked association (not silently submitted) when switching back to 'Project Folders' before submitting", async () => {
     const user = userEvent.setup({ delay: null });
     renderModal();
 
     await user.type(screen.getByLabelText("Name"), "Switched Back");
     await user.click(screen.getByRole("radio", { name: "Audio Files" }));
-    await user.click(screen.getByRole("button", { name: "Folders" }));
-    await user.click(screen.getByRole("checkbox", { name: "Only files associated to a project folder" }));
+    await user.click(screen.getByRole("radio", { name: "Only files within project folders" }));
     await user.click(screen.getByRole("radio", { name: "Project Folders" }));
     await user.click(screen.getByRole("button", { name: "Create" }));
 

@@ -191,6 +191,16 @@ export default function CopyMoveDeleteDialog({ open, operation, itemType, target
   const expectedWord = confirmationWord(operation);
   const { value: confirmValue, setValue: setConfirmValue, satisfied, reset: resetConfirmation } = useTypedConfirmation(expectedWord, required);
 
+  // Computed unconditionally (not after the `if (!open) return null` below) specifically so the
+  // Escape/Enter keydown effect's closure — which, like this computation, doesn't itself skip
+  // registering while closed — can safely reference `canApply` every render, including ones
+  // where `open` is false (a `const` declared after an early return would never actually be
+  // assigned in that render's own execution, which the keydown effect's closure could still end
+  // up referencing).
+  const needsDestination = operation !== "delete";
+  const isEmptyBatch = target.kind === "batch" && target.count === 0;
+  const canApply = !busy && (!needsDestination || destinationPath !== null) && !isEmptyBatch && satisfied;
+
   // A parent may keep this component mounted across opens/closes (toggling `open` rather
   // than mounting/unmounting the element), matching BatchEditPanel/ScanFolderPanel's
   // convention — so state must be explicitly reset here rather than relying on a fresh
@@ -208,16 +218,21 @@ export default function CopyMoveDeleteDialog({ open, operation, itemType, target
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape" && open && !busy) onClose();
+      if (e.key === "Enter" && open) {
+        // Suppresses a focused button's own native "Enter activates click" default action
+        // (this dialog auto-focuses its own × close button on open, so without this, Enter
+        // would both close AND apply at once) — this handler is the single source of truth
+        // for what Enter does here, regardless of focus. See
+        // DeleteTabConfirmDialog.tsx's identical comment for the general rationale.
+        e.preventDefault();
+        if (canApply) handleApply();
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, busy, onClose]);
+  }, [open, busy, onClose, canApply]);
 
   if (!open) return null;
-
-  const needsDestination = operation !== "delete";
-  const isEmptyBatch = target.kind === "batch" && target.count === 0;
-  const canApply = !busy && (!needsDestination || destinationPath !== null) && !isEmptyBatch && satisfied;
 
   // A project can never be moved into itself or one of its own descendants (that would
   // nest it inside its own subtree), so the picker needs to disable that whole subtree —

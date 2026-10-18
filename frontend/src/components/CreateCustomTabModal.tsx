@@ -2,13 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../api/client.js";
 import type { CustomTab, CustomTabType, TrackStatus } from "../types.js";
 import { MultiSelectDropdown } from "./MultiSelectDropdown.js";
-import {
-  SCORE_OPTIONS,
-  SCORE_RESERVE_LABEL,
-  TAGS_RESERVE_LABEL,
-  ASSOCIATION_OPTIONS,
-  ASSOCIATION_RESERVE_LABEL,
-} from "./FilterToolbar.js";
+import { SCORE_OPTIONS, SCORE_RESERVE_LABEL, TAGS_RESERVE_LABEL } from "./FilterToolbar.js";
 import { buildStatusOptions } from "../statusStyles.js";
 import { useStatusCatalog } from "../contexts/StatusCatalogContext.js";
 
@@ -205,23 +199,51 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
                   onChange={setTags}
                   reserveLabel={TAGS_RESERVE_LABEL}
                 />
-                {type === "files" && (
-                  <MultiSelectDropdown
-                    exclusive
-                    label="Folders"
-                    options={ASSOCIATION_OPTIONS}
-                    selected={association ? [association] : []}
-                    onChange={(next) => setAssociation(next[0])}
-                    reserveLabel={ASSOCIATION_RESERVE_LABEL}
-                  />
-                )}
               </div>
             </div>
+
+            {type === "files" && (
+              <fieldset>
+                <legend className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Locations</legend>
+                <div className="flex flex-col gap-1.5">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer text-ink-secondary">
+                    <input
+                      type="radio"
+                      name="custom-tab-association"
+                      checked={association === undefined}
+                      onChange={() => setAssociation(undefined)}
+                      className="accent-blue-500"
+                    />
+                    All locations
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer text-ink-secondary">
+                    <input
+                      type="radio"
+                      name="custom-tab-association"
+                      checked={association === "associated"}
+                      onChange={() => setAssociation("associated")}
+                      className="accent-blue-500"
+                    />
+                    Only files within project folders
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer text-ink-secondary">
+                    <input
+                      type="radio"
+                      name="custom-tab-association"
+                      checked={association === "unassociated"}
+                      onChange={() => setAssociation("unassociated")}
+                      className="accent-blue-500"
+                    />
+                    Only files outside of project folders
+                  </label>
+                </div>
+              </fieldset>
+            )}
 
             {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
 
-          <div className={`px-6 py-4 border-t ${divider} flex items-center justify-end gap-2`}>
+          <div className={`px-6 py-2 border-t ${divider} flex items-center justify-end gap-2`}>
             <button
               onClick={onClose}
               type="button"

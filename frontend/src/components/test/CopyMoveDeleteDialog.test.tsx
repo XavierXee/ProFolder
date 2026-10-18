@@ -627,6 +627,42 @@ describe("CopyMoveDeleteDialog - dismissal", () => {
   });
 });
 
+describe("CopyMoveDeleteDialog - Enter submits Apply when enabled", () => {
+  it("runs the operation when Enter is pressed and Apply is already enabled (delete, no destination step)", async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    renderDialog({ operation: "delete", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" }, onSuccess });
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Move to Trash" })).not.toBeDisabled());
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(mockDeleteFile).toHaveBeenCalledWith("f1"));
+    expect(onSuccess).toHaveBeenCalledWith({ succeededCount: 1, failedCount: 0 });
+  });
+
+  it("does nothing when Enter is pressed while Apply is still disabled (copy, no destination selected yet)", async () => {
+    const user = userEvent.setup();
+    renderDialog({ operation: "copy" });
+
+    expect(screen.getByRole("button", { name: "Copy" })).toBeDisabled();
+    await user.keyboard("{Enter}");
+
+    expect(mockCopyFile).not.toHaveBeenCalled();
+  });
+
+  it("runs the operation when Enter is pressed once a destination is selected (copy)", async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    renderDialog({ operation: "copy", itemType: "files", target: { kind: "single", id: "f1", name: "a.wav" }, onSuccess });
+
+    await selectDestination(user);
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(mockCopyFile).toHaveBeenCalledWith("f1", "/music/Artist"));
+    expect(onSuccess).toHaveBeenCalledWith({ succeededCount: 1, failedCount: 0 });
+  });
+});
+
 describe("CopyMoveDeleteDialog - double confirmation gating", () => {
   it.each([
     ["copy", "confirmCopy", "COPY", "Copy"],

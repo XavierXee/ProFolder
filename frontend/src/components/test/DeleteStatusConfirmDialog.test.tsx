@@ -86,6 +86,16 @@ describe("DeleteStatusConfirmDialog - open=true", () => {
     expect(props.onConfirm).not.toHaveBeenCalled();
   });
 
+  it("calls onConfirm when Enter is pressed and Delete is enabled", async () => {
+    const { props } = renderDialog();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).not.toBeDisabled());
+    fireEvent.keyDown(window, { key: "Enter" });
+
+    expect(props.onConfirm).toHaveBeenCalledTimes(1);
+    expect(props.onCancel).not.toHaveBeenCalled();
+  });
+
   it("calls onCancel when the backdrop is clicked", () => {
     const { props } = renderDialog();
 
@@ -127,6 +137,26 @@ describe("DeleteStatusConfirmDialog - confirmStatusDeletion required (true)", ()
     await user.type(screen.getByLabelText('Type "Draft" to confirm'), "draft");
 
     expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+  });
+
+  it("does not call onConfirm when Enter is pressed while Delete is still disabled (confirmation text not yet satisfied)", async () => {
+    const { props } = renderDialog({ statusName: "Draft" });
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled());
+    fireEvent.keyDown(window, { key: "Enter" });
+
+    expect(props.onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("calls onConfirm when Enter is pressed once the confirmation text is satisfied", async () => {
+    const user = userEvent.setup();
+    const { props } = renderDialog({ statusName: "Draft" });
+
+    await waitFor(() => expect(screen.getByLabelText('Type "Draft" to confirm')).toBeInTheDocument());
+    await user.type(screen.getByLabelText('Type "Draft" to confirm'), "Draft");
+    fireEvent.keyDown(window, { key: "Enter" });
+
+    expect(props.onConfirm).toHaveBeenCalledTimes(1);
   });
 
   it("treats confirmation as required (renders the input, disables Delete) before settings have loaded yet, fail-safe", () => {

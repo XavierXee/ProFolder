@@ -132,8 +132,7 @@ describe("FileDetailPanel - basic rendering", () => {
 
     expect(screen.getByRole("dialog", { name: "File detail: beat.wav" })).toBeInTheDocument();
     expect(screen.getByText("beat.wav")).toBeInTheDocument();
-    expect(screen.getByText("Updated Jan 15, 2026, 10:30")).toBeInTheDocument();
-    expect(screen.getByText("2.0 KB")).toBeInTheDocument();
+    expect(screen.getByText("Updated Jan 15, 2026, 10:30 | Size 2.0 KB")).toBeInTheDocument();
     expect(screen.getByText("Song/beat.wav")).toBeInTheDocument();
     expect(screen.getByText("/music/Song/beat.wav")).toBeInTheDocument();
   });

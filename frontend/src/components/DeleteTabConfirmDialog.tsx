@@ -27,10 +27,20 @@ export default function DeleteTabConfirmDialog({ open, tabName, onConfirm, onCan
     if (!open) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onCancel();
+      if (e.key === "Enter") {
+        // Suppresses a focused button's own native "Enter activates click" default action
+        // (e.g. this dialog never auto-focuses anything when `required` is false, so
+        // whatever had focus before the dialog opened — like the tab bar's own delete "×"
+        // button — could otherwise still be the focused element and double-fire alongside
+        // this handler) — this handler is the single source of truth for what Enter does
+        // here, regardless of focus.
+        e.preventDefault();
+        if (!(required && !satisfied)) onConfirm();
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onCancel]);
+  }, [open, onCancel, onConfirm, required, satisfied]);
 
   if (!open) return null;
 

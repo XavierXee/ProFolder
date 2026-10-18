@@ -39,10 +39,17 @@ export default function DeleteStatusConfirmDialog({ open, statusName, onConfirm,
         e.stopImmediatePropagation();
         onCancel();
       }
+      if (e.key === "Enter") {
+        // Suppresses a focused button's own native "Enter activates click" default action —
+        // this handler is the single source of truth for what Enter does here, regardless of
+        // focus. See DeleteTabConfirmDialog.tsx's identical comment.
+        e.preventDefault();
+        if (!(required && !satisfied)) onConfirm();
+      }
     }
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [open, onCancel]);
+  }, [open, onCancel, onConfirm, required, satisfied]);
 
   if (!open) return null;
 
