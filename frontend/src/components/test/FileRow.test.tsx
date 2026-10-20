@@ -118,8 +118,8 @@ describe("FileRow", () => {
     const { container } = renderRow({ file: makeFile({ projectId: undefined, tags: [] }) });
 
     // Both the tags cell and the project cell render "—" in this case.
-    expect(container.querySelectorAll("td")[3].textContent).toBe("—");
-    expect(container.querySelectorAll("td")[4].textContent).toBe("—");
+    expect(container.querySelectorAll("td")[2].textContent).toBe("—");
+    expect(container.querySelectorAll("td")[5].textContent).toBe("—");
   });
 
   it("shows a 'Play <filename>' label and play icon when not currently playing this file", () => {
@@ -289,7 +289,7 @@ describe("FileRow - token-driven styling (no isDark/isProFolder props)", () => {
     const { container } = renderRow({ file: makeFile({ filename: "beat.wav", tags: [], projectId: "proj-1" }) });
 
     expect(screen.getByText("beat.wav")).toHaveClass("text-ink");
-    const tagsCell = container.querySelectorAll("td")[3];
+    const tagsCell = container.querySelectorAll("td")[5];
     expect(tagsCell.textContent).toBe("—");
     expect(tagsCell.querySelector("span")).toHaveClass("text-ink-faint");
   });

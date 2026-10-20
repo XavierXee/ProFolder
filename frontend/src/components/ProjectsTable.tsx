@@ -107,7 +107,7 @@ export function ProjectsTable({
               <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} label="Project Folder" className="text-left w-[24%]" />
               <SortTh sortKey="type" filters={filters} onSortChange={onSortChange} label="Type" className="text-center w-[9%]" />
               <SortTh sortKey="status" filters={filters} onSortChange={onSortChange} label="Status" className="text-center w-[11%]" />
-              <SortTh sortKey="tags" filters={filters} onSortChange={onSortChange} label="Tags" className="text-left w-[15%]" />
+              <SortTh sortKey="tags" filters={filters} onSortChange={onSortChange} label="Tags" className="text-center w-[15%]" />
               <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} className="text-center w-[9%]" label="Score" />
               {/* Labeled "Files", not "Audio Files": this SortTh button's accessible name
                   ("Sort by Audio Files") would otherwise substring-collide with the top-level
@@ -176,7 +176,7 @@ export function ProjectsTable({
                     <td className="px-4 py-3.5 text-center w-32">
                       <StatusBadge status={project.status} truncate />
                     </td>
-                    <td className="px-4 py-3.5 max-w-40">
+                    <td className="px-4 py-3.5 max-w-40 text-center">
                       <TagChips tags={project.tags} />
                     </td>
                     <td className="px-4 py-3.5 text-center">

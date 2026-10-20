@@ -94,11 +94,11 @@ export function FileTable({
             <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible files" />
           </th>
           <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} label="Track / File" className="text-left w-[24%]" />
-          <SortTh sortKey="status" filters={filters} onSortChange={onSortChange} label="Status" className="text-center w-[12%]" />
-          <SortTh sortKey="tags" filters={filters} onSortChange={onSortChange} label="Tags" className="text-left w-[16%]" />
           <SortTh sortKey="project" filters={filters} onSortChange={onSortChange} label="Project" className="text-left w-[10%]" />
-          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} label="Score" className="text-center w-[8%]" />
           <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} label="Location" className="text-left w-[16%]" />
+          <SortTh sortKey="status" filters={filters} onSortChange={onSortChange} label="Status" className="text-center w-[12%]" />
+          <SortTh sortKey="tags" filters={filters} onSortChange={onSortChange} label="Tags" className="text-center w-[16%]" />
+          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} label="Score" className="text-center w-[8%]" />
           <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} label="Modified" className="text-center w-[10%]" />
         </tr>
       </thead>

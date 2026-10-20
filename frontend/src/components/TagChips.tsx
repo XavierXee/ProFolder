@@ -11,7 +11,7 @@ export function TagChips({ tags }: { tags: string[] }) {
 
   const [first, ...rest] = tags;
   return (
-    <div className="flex gap-1 min-w-0" data-testid="tag-chips">
+    <div className="flex justify-center gap-1 min-w-0" data-testid="tag-chips">
       <span className={`min-w-0 truncate ${CHIP_CLASS}`}>{first}</span>
       {rest.length > 0 && (
         <span className={`shrink-0 cursor-default ${CHIP_CLASS}`} title={rest.join(", ")} data-testid="tag-chips-more">

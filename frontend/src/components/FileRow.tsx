@@ -85,22 +85,22 @@ export function FileRow({
           </div>
         </div>
       </td>
-      <td className="px-4 py-3.5 w-32 text-center">
-        <StatusBadge status={file.status} truncate />
-      </td>
-      <td className="px-4 py-3.5 max-w-40">
-        <TagChips tags={file.tags} />
-      </td>
       <td className="px-4 py-3.5">
         <span className="block truncate text-xs font-mono text-ink-muted">{file.projectId ?? "—"}</span>
-      </td>
-      <td className="px-4 py-3.5 min-w-28 text-center">
-        <ScoreBadge score={file.score} />
       </td>
       <td className="px-4 py-3.5 max-w-xs">
         <p className="text-xs leading-relaxed truncate text-ink-muted" title={file.path}>
           {location}
         </p>
+      </td>
+      <td className="px-4 py-3.5 w-32 text-center">
+        <StatusBadge status={file.status} truncate />
+      </td>
+      <td className="px-4 py-3.5 max-w-40 text-center">
+        <TagChips tags={file.tags} />
+      </td>
+      <td className="px-4 py-3.5 min-w-28 text-center">
+        <ScoreBadge score={file.score} />
       </td>
       <td className="px-4 py-3.5 whitespace-nowrap text-center">
         <span className="text-xs font-mono text-ink-muted">{formatTime(file.modifiedAt)}</span>

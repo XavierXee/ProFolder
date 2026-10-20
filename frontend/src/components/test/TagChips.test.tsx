@@ -15,6 +15,11 @@ describe("TagChips", () => {
     expect(screen.queryByTestId("tag-chips-more")).not.toBeInTheDocument();
   });
 
+  it("centers the chips within the cell", () => {
+    render(<TagChips tags={["rock"]} />);
+    expect(screen.getByTestId("tag-chips")).toHaveClass("justify-center");
+  });
+
   it("shows only the first tag plus a +N chip counting the remaining tags", () => {
     render(<TagChips tags={["rock", "ambient", "lofi"]} />);
 

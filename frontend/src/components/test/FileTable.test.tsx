@@ -182,6 +182,29 @@ describe("FileTable - fixed column widths", () => {
   });
 });
 
+describe("FileTable - column order", () => {
+  it("leads with Track / File, Project, Location, and keeps each row cell under its header", () => {
+    const { container } = renderTable({
+      files: [makeFile({ filename: "beat.wav", projectId: "proj-1", relativePath: "Artist/Album/beat.wav", tags: ["rock"] })],
+    });
+
+    const headers = Array.from(container.querySelectorAll("thead th")).map((th) => th.textContent?.trim());
+    expect(headers.slice(1, 4)).toEqual(["Track / File", "Project", "Location"]);
+    expect(headers.slice(4)).toEqual([
+      expect.stringContaining("Status"),
+      expect.stringContaining("Tags"),
+      expect.stringContaining("Score"),
+      expect.stringContaining("Modified"),
+    ]);
+
+    const cells = container.querySelectorAll("tbody tr td");
+    expect(cells[1]).toHaveTextContent("beat.wav");
+    expect(cells[2]).toHaveTextContent("proj-1");
+    expect(cells[3]).toHaveTextContent("Artist / Album");
+    expect(cells[5]).toHaveTextContent("rock");
+  });
+});
+
 describe("FileTable - loading/empty/populated states", () => {
   it("renders skeleton loading rows when loading is true", () => {
     const { container } = renderTable({ loading: true, files: [] });
