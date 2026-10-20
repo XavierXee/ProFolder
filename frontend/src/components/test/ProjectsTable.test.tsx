@@ -467,7 +467,8 @@ describe("ProjectsTable - token-driven row styling (no isProFolder prop)", () =>
     expect(chips).toHaveClass("flex");
     expect(chips).not.toHaveClass("flex-wrap");
     expect(screen.getByText("rock")).toHaveClass("truncate", "min-w-0");
-    expect(screen.getByText("ambient")).toHaveClass("truncate", "min-w-0");
+    // Only the first tag is a chip; the rest collapse into a non-shrinking "+N" chip.
+    expect(screen.getByText("+1").parentElement).toHaveClass("shrink-0");
     expect(screen.getByLabelText("Status: Unknown")).toHaveClass("truncate", "max-w-full");
   });
 

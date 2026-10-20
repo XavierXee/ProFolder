@@ -100,11 +100,12 @@ describe("FileRow", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 
-  it("renders each tag as a chip when tags are present", () => {
+  it("renders only the first tag as a chip, plus a +N chip for the remaining tags", () => {
     renderRow({ file: makeFile({ tags: ["rock", "jazz"] }) });
 
     expect(screen.getByText("rock")).toBeInTheDocument();
-    expect(screen.getByText("jazz")).toBeInTheDocument();
+    expect(screen.queryByText("jazz")).not.toBeInTheDocument();
+    expect(screen.getByText("+1")).toBeInTheDocument();
   });
 
   it("renders the projectId when set", () => {
@@ -220,7 +221,8 @@ describe("FileRow", () => {
     expect(chips).toHaveClass("flex");
     expect(chips).not.toHaveClass("flex-wrap");
     expect(screen.getByText("rock")).toHaveClass("truncate", "min-w-0");
-    expect(screen.getByText("ambient")).toHaveClass("truncate", "min-w-0");
+    // Only the first tag is a chip; the rest collapse into a non-shrinking "+N" chip.
+    expect(screen.getByText("+1").parentElement).toHaveClass("shrink-0");
     expect(screen.getByLabelText("Status: Unknown")).toHaveClass("truncate", "max-w-full");
   });
 
