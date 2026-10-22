@@ -14,4 +14,5 @@ test-results/
 blob-report/
 e2e/.features-gen/
 .idea/
-the project notes
+# Feature showcase recording output (npm run showcase)
+showcase-output/

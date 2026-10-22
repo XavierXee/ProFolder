@@ -3,8 +3,6 @@
 
 1 - Add Gitlab runner - build docker image - run unit tests - run e2e test - show coverage (GitHub Actions plan below)
 2 - Make installer that create the data base or make the app do it on first start
-3 - Make playwright "slow" test to show case each feature
-
 
 ---
 
