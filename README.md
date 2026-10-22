@@ -16,7 +16,7 @@ npm run build && npm start # production build + run
 
 Open `http://localhost:5173` while `npm run dev` is running to use the UI: scan, search/filter, edit status and tags, and reveal files/projects in Finder.
 
-The API server binds to loopback (`127.0.0.1`) only by default, since there is no authentication anywhere in this app. See `.env.example` for the opt-in `HOST` env var if you deliberately want LAN access.
+The API server binds to loopback (`127.0.0.1`) only by default, since there is no authentication anywhere in this app. It also only answers requests addressed to `localhost`/`127.0.0.1`/`[::1]`, which blocks DNS-rebinding attacks from web pages open in your browser. See `.env.example` for the opt-in `HOST` and `ALLOWED_HOSTS` env vars if you deliberately want LAN access.
 
 ### Running in Docker
 
@@ -898,3 +898,6 @@ The MVP is successful when the user can:
 
 Music.app integration is **not required for the MVP**.
 
+## License
+
+[MIT](LICENSE)

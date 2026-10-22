@@ -20,6 +20,7 @@ import { createConfigRouter } from "./routes/config.js";
 import { createTagsRouter } from "./routes/tags.js";
 import { createCustomTabsRouter } from "./routes/customTabs.js";
 import { createStatusesRouter } from "./routes/statuses.js";
+import { hostCheck, resolveAllowedHosts } from "./hostCheck.js";
 
 /** Platform-specific services `createServer` needs but does not itself construct — the
  * plain web-mode entrypoint at the bottom of this file passes the existing Mac* classes;
@@ -75,6 +76,9 @@ export function createServer(db: ReturnType<typeof openDb>, services: ServerServ
   } = services;
 
   const app = express();
+  // First, so no route (or the static frontend) ever answers a request addressed to an
+  // unrecognized host — see hostCheck.ts.
+  app.use(hostCheck(resolveAllowedHosts(config.host, process.env.ALLOWED_HOSTS)));
   app.use(express.json());
 
   app.use(
