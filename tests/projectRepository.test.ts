@@ -294,7 +294,7 @@ describe("projectRepository.markRemoved", () => {
     setTags(db, "Project 00", ["favorite", "mix-ready"]);
     const siblingBefore = findById(db, "Project 01")!;
 
-    // Forced 1s ahead of wall-clock `now` (the project notes' backend-testing-conventions idiom):
+    // Forced 1s ahead of wall-clock `now` (this repo's backend timestamp-testing idiom):
     // the in-memory-SQLite `beforeEach` fixture seed also stamps
     // `lastSeenAt` via `new Date().toISOString()`, and both calls are fast enough to land in the
     // same millisecond a meaningful fraction of the time — which would let a regression that

@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeSelector } from "../ThemeSelector.js";
 
-// NOTE (jsdom limitation, per the project notes): jsdom does not implement layout/rendering, so these
+// NOTE (jsdom limitation): jsdom does not implement layout/rendering, so these
 // tests prove DOM structure/ARIA/event-handling/class-name correctness only — they do NOT prove
 // the resulting colors actually render as intended for each theme.
 

@@ -57,7 +57,7 @@ function targetCount(target: CopyMoveDeleteTarget): number {
 
 /** Pure text-generation helper — exported because it's directly unit-tested (this app's
  * convention is to only export module-private helpers when they get a genuine, direct
- * test; see the project notes). Covers copy/move/delete × files/projects × singular/plural, and
+ * test). Covers copy/move/delete × files/projects × singular/plural, and
  * the copy/move "no destination chosen yet" fallback wording. */
 export function buildExplanationText(
   operation: CopyMoveDeleteOperation,
@@ -85,7 +85,7 @@ export function buildExplanationText(
  * absolute music root, since every copy/move backend route requires an absolute `destDir`
  * (`isWithinRoot` resolves it via `fs.realpathSync`, which would otherwise resolve a relative
  * string against the server process's cwd instead of the music root). Exported because it's
- * directly unit-tested (this app's convention — see the project notes). */
+ * directly unit-tested (this app's convention for module-private helpers). */
 export function resolveAbsoluteDestination(musicRoot: string, relativePath: string): string {
   if (relativePath === "") return musicRoot;
   return musicRoot.endsWith("/") ? `${musicRoot}${relativePath}` : `${musicRoot}/${relativePath}`;

@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* Self-hosted fonts (frontend/public/fonts/, served as static files — see the project notes).
+/* Self-hosted fonts (frontend/public/fonts/, served as static files).
  * Inter, Archivo, and JetBrains Mono are variable-weight files: Google serves the same
  * underlying woff2 for every static weight in range, so one @font-face per subset with a
  * font-weight range covers all weights actually used. IBM Plex Mono has distinct static

@@ -112,8 +112,8 @@ export function ProjectsTable({
               {/* Labeled "Files", not "Audio Files": this SortTh button's accessible name
                   ("Sort by Audio Files") would otherwise substring-collide with the top-level
                   "Audio Files" tab-switcher button under Playwright's default non-exact
-                  getByRole name matching (the same collision class the project notes already documents
-                  for other SortTh/picker labels). */}
+                  getByRole name matching (the same collision class as other SortTh/picker
+                  labels). */}
               <SortTh sortKey="audioFileCount" filters={filters} onSortChange={onSortChange} label="Files" className="text-center w-[9%]" />
               <th scope="col" className={`${staticTh} w-[8%]`}>
                 Media

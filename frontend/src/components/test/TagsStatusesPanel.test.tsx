@@ -567,7 +567,7 @@ describe("TagsStatusesPanel - dismiss behavior", () => {
     fireEvent.keyDown(window, { key: "Escape" });
 
     // The nested dialog's capture-phase listener must stop the panel's own bubble-phase Escape
-    // listener from also firing.
+    // listener from also firing (both listen on `window`).
     expect(screen.queryByRole("dialog", { name: "Delete status confirmation" })).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });

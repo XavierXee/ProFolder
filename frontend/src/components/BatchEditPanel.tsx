@@ -13,8 +13,8 @@ import type { CopyMoveDeleteItemType, CopyMoveDeleteOperation } from "./CopyMove
  * ancestor and flattening it into the destination instead of staying nested. Excluding the
  * descendant client-side avoids ever sending
  * that combination. Not applicable to Files batches — files have no nesting relationship to
- * each other. Exported because it's directly unit-tested (this app's convention, see
- * the project notes).
+ * each other. Exported because it's directly unit-tested (this app only exports module-private
+ * helpers that get a direct test of their own).
  */
 export function excludeNestedProjectIds(ids: string[], projectPaths: { id: string; path: string }[]): string[] {
   const pathById = new Map(projectPaths.map((p) => [p.id, p.path]));

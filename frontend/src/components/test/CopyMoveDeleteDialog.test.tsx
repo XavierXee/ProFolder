@@ -673,7 +673,8 @@ describe("CopyMoveDeleteDialog - double confirmation gating", () => {
     async (operation, settingField, keyword, buttonLabel) => {
       mockGetConfirmationSettings.mockReset().mockResolvedValue(makeConfirmationSettings({ [settingField]: true }));
       // delay: null — this dialog has its own real setTimeout(..., 50) mount-effect that
-      // auto-focuses its close button 50ms after open; real-timer inter-keystroke
+      // auto-focuses its close button 50ms after open (the same pattern as
+      // FileDetailPanel/ProjectDetailPanel); real-timer inter-keystroke
       // delays can straddle that window and drop characters typed here.
       const user = userEvent.setup({ delay: null });
       renderDialog({

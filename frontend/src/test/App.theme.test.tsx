@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App.js";
 
-// NOTE (jsdom limitation, per the project notes' documented environment limitation): jsdom does not
+// NOTE (jsdom limitation): jsdom does not
 // implement layout/rendering, so these tests prove the correct token/class/attribute is applied
 // per theme state (data-theme on <html>, localStorage persistence, which Tailwind token class
 // names are present on converted chrome elements) — they do NOT prove resulting colors/fonts

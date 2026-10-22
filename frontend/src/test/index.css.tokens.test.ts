@@ -5,8 +5,8 @@ import path from "node:path";
 
 // jsdom doesn't load/apply index.css at all in this test harness (no `css: true` in
 // vitest.frontend.config.ts, and nothing imports index.css from a test-reachable path), so this
-// can only assert the literal source-string values on disk, not a rendered/computed style — see
-// the project notes' documented jsdom rendering limitation. This guards the specific regression already
+// can only assert the literal source-string values on disk, not a rendered/computed style (jsdom
+// doesn't render). This guards the specific regression already
 // caught once during this task's review cycle: --rt-ink for the dark theme was accidentally set
 // to #f1f5f9 (Tailwind slate-100) instead of the actual pre-existing `body { color: #e2e8f0 }`
 // (slate-200) that dark rendered with before this task introduced the token system (confirmed

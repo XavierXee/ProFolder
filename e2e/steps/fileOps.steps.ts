@@ -1,7 +1,7 @@
 /**
  * Step definitions for e2e/features/file-ops/*.feature — Copy/Move/Delete e2e coverage.
  *
- * --- Hazard-class reasoning ---
+ * --- Hazard-class reasoning (see the `@scan-lock` doc comment in e2e/support/scanLock.ts) ---
  *
  * None of these scenarios trigger a real scan (`POST /api/scan`) or mutate global scan
  * configuration (`scan_exclusions`, `excludeSamplesFolders`/`excludeBackupFolders`) — the

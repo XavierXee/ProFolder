@@ -252,8 +252,8 @@ async function switchToFilesTab(user: ReturnType<typeof userEvent.setup>) {
 }
 
 // Scoped to the active tab's own filter toolbar: App.tsx also keeps CreateCustomTabModal.tsx
-// permanently mounted (CSS-transition-hidden, not conditionally rendered — see the project notes' item
-// 25/slide-animation note), which has its own same-labeled Status/Tags dropdown triggers in its
+// permanently mounted (CSS-transition-hidden, not conditionally rendered, for its slide
+// animation), which has its own same-labeled Status/Tags dropdown triggers in its
 // create-tab form, so an unscoped query is ambiguous.
 function filterToolbar() {
   return screen.getByRole("toolbar", { name: "Filters" });
@@ -274,8 +274,7 @@ async function selectTagFilter(user: ReturnType<typeof userEvent.setup>, tag: st
   await user.click(checkbox);
 }
 
-// These prove the actual bug fix (see catalogFilterEvents.ts's doc comment and the project notes' TODO
-// note): deleting/renaming a status or tag that's currently an active filter on a default
+// These prove the actual bug fix (see catalogFilterEvents.ts's doc comment): deleting/renaming a status or tag that's currently an active filter on a default
 // Files/Projects tab must prune/update that filter, not leave it pointing at a now-nonexistent
 // catalog entry.
 describe("App - catalog delete/rename prunes an active Files/Projects filter (bug fix)", () => {

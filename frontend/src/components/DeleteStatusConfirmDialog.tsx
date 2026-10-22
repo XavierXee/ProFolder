@@ -27,7 +27,7 @@ export default function DeleteStatusConfirmDialog({ open, statusName, onConfirm,
   // Unlike DeleteTabConfirmDialog (rendered where no ancestor also owns a window-level Escape
   // listener), this dialog is always nested inside
   // TagsStatusesPanel, which registers its own bubble-phase Escape listener to close the whole
-  // popover. Per the project notes' documented nested-Escape hazard, a plain bubble-phase listener here
+  // popover. Because both listen on `window`, a plain bubble-phase listener here
   // would fire alongside the panel's, closing the entire panel on top of cancelling this dialog.
   // Registering in the capture phase + stopImmediatePropagation() ensures this listener always
   // runs first and fully suppresses the panel's own bubble-phase listener, regardless of effect

@@ -8,7 +8,8 @@ Feature: Statuses & tags catalog — CRUD, filter/picker wiring, and cascade-on-
   # created below gets a random suffix, every assertion is scoped to a scenario's own created
   # row (never the panel's total counts), and every scenario self-cleans via the `After
   # ("@statuses-tags-catalog")` hook or its own UI delete flow. This is plain CRUD state, not
-  # scan/config-mutating state, so `@scan-lock` is deliberately NOT used.
+  # scan/config-mutating state, so `@scan-lock` is deliberately NOT used: unique names, scoped
+  # assertions and self-cleanup are enough for independently-keyed rows.
   #
   # The 4 "Statuses Tags E2E ..." fixtures used below (one per scenario that assigns a status/tag
   # to a real file) are each exclusive to their own single scenario — see statusesTagsCatalog

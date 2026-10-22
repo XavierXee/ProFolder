@@ -33,7 +33,7 @@ export default function DeleteCatalogTagConfirmDialog({ open, tagName, onConfirm
   // See DeleteStatusConfirmDialog.tsx's identical comment: this dialog is always nested inside
   // TagsStatusesPanel, which owns its own bubble-phase window Escape listener, so this listener
   // must run in the capture phase and call stopImmediatePropagation() to avoid also closing the
-  // whole panel (the project notes' documented nested-Escape-listener hazard).
+  // whole panel (window-level Escape listeners of nested overlays otherwise both fire).
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {

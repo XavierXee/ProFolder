@@ -1,8 +1,5 @@
-.git
-.github
-.idea
-.DS_Store
-.env
+# Hidden files and folders (VCS, editor and local tool config, .env)
+.*
 node_modules
 dist
 dist-electron

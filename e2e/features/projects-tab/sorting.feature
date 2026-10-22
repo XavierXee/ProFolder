@@ -27,7 +27,7 @@ Feature: Projects tab sorting
   # in this file so the Score scenarios' own per-scenario PATCHes never interleave with each
   # other under parallel execution — the fixed values below make an interleaving safe on its own
   # (idempotent, both scenarios target the same numbers), but per this project's established
-  # e2e convention, serializing rather than relying
+  # e2e convention for scenarios that mutate shared fixtures, serializing rather than relying
   # on that idempotence is the safer, empirically-checked default for scenarios that mutate shared
   # fixture rows at runtime.
   Background:
