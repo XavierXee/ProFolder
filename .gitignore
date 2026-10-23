@@ -16,3 +16,6 @@ e2e/.features-gen/
 .idea/
 # Feature showcase recording output (npm run showcase)
 showcase-output/
+
+# Unit test coverage report (npm run test:coverage)
+coverage/

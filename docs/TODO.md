@@ -8,7 +8,7 @@
 
 ## Item 1 — CI plan (GitHub Actions)
 
-Nothing implemented yet. The repo is on GitHub (`XavierXee/MusicProdFolderManager`), so this uses GitHub Actions rather than GitLab CI.
+Implemented in `.github/workflows/ci.yml` (unit tests + coverage summary, e2e on macOS, web build, Docker image built on every run and published to `ghcr.io/xavierxee/profolder` on `v*` tags, unsigned `.dmg` GitHub Release on `v*` tags), but not yet run on GitHub. The repo is on GitHub (`XavierXee/ProFolder`), so this uses GitHub Actions rather than GitLab CI. The plan below is kept for reference; the decisions still open are signing (3), Intel builds (2) and branch protection (5).
 
 ### What the repo means for CI
 

@@ -37,7 +37,11 @@ export default defineConfig({
   globalSetup: "./e2e/support/globalSetup.ts",
   globalTeardown: "./e2e/support/globalTeardown.ts",
   fullyParallel: true,
-  reporter: "html",
+  // On CI only: retry once to absorb load-dependent flakes on shared runners, and fail the run
+  // if a stray `.only` would silently skip the rest of the suite.
+  retries: process.env.CI ? 1 : 0,
+  forbidOnly: !!process.env.CI,
+  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "html",
   use: {
     baseURL: "http://localhost:5173",
     trace: "on-first-retry",
