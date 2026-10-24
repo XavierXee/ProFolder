@@ -1,14 +1,18 @@
 import path from "node:path";
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { SHOWCASE_OUTPUT_DIR } from "./showcaseLibrary.js";
+import { SHOWCASE_MUSIC_ROOT, SHOWCASE_OUTPUT_DIR } from "./showcaseLibrary.js";
 
 /**
  * A slow, sequential tour of the app's features, recorded to video for demo purposes. This is a
  * presentation script, not a test: it asserts only what it needs to wait on before moving to the
  * next step. Run it with `npm run showcase` (see playwright.showcase.config.ts).
+ *
+ * Along the way it also saves the README's screenshots to docs/screenshots/, so re-running the
+ * showcase refreshes them.
  */
 
 const VIDEO_PATH = path.join(SHOWCASE_OUTPUT_DIR, "showcase.webm");
+const SCREENSHOTS_DIR = path.resolve(import.meta.dirname, "..", "..", "docs", "screenshots");
 
 // Headless video has no mouse pointer, so draw one (plus a click pulse) and a caption bar.
 // Both are aria-hidden and ignore pointer events so they never affect the app or its locators.
@@ -47,6 +51,23 @@ const OVERLAY_SCRIPT = `
       caption.append(heading, body);
       caption.style.opacity = "1";
     };
+
+    // Screenshot helpers (see Showcase.snap): hide both overlays, and rewrite the demo
+    // library's absolute path wherever it's displayed.
+    const overlays = [cursor, caption];
+    window.__showcaseBeforeSnap = (root) => {
+      overlays.forEach((el) => { el.style.visibility = "hidden"; });
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (node.nodeValue.includes(root)) node.nodeValue = node.nodeValue.split(root).join("~/Music");
+      }
+      for (const input of document.querySelectorAll("input")) {
+        if (input.value.includes(root)) input.value = input.value.split(root).join("~/Music");
+      }
+    };
+    window.__showcaseAfterSnap = () => {
+      overlays.forEach((el) => { el.style.visibility = "visible"; });
+    };
   });
 `;
 
@@ -65,6 +86,7 @@ test("ProFolder feature showcase", async ({ page }) => {
     await show.hover(projects.locator("tbody tr", { hasText: name }));
   }
   await show.wait(1000);
+  await show.snap("project-folders");
 
   await show.chapter("Sorting", "Click any column header to sort, click again to reverse.");
   await show.click(projects.getByRole("button", { name: "Sort by Score", exact: true }));
@@ -96,6 +118,7 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.addTag(folderPanel.getByPlaceholder("Add tag, press Enter…"), "acoustic");
   await show.addTag(folderPanel.getByPlaceholder("Add tag, press Enter…"), "summer");
   await show.wait(1200);
+  await show.snap("project-detail");
   await show.click(folderPanel.getByRole("button", { name: "Close panel" }));
   await show.wait(800);
 
@@ -110,6 +133,7 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.wait(500);
   await show.addTag(projectBatch.getByPlaceholder("Add tag, press Enter…"), "wip");
   await show.wait(1000);
+  await show.snap("batch-edit");
   await show.click(projectBatch.getByRole("button", { name: "Close panel" }));
   await show.wait(1500);
 
@@ -119,12 +143,15 @@ test("ProFolder feature showcase", async ({ page }) => {
   const files = page.getByRole("table", { name: "Audio files" });
   await expect(files.locator("tbody tr", { hasText: "Club Remix.wav" })).toBeVisible();
   await show.wait(1500);
+  await show.snap("audio-files");
   await show.hover(files.locator("tbody tr", { hasText: "Summer Single - Radio Edit.wav" }).getByTestId("tag-chips"));
   await show.wait(1500);
 
   await show.chapter("Audio player", "Preview any file straight from the list.");
   await show.click(files.getByRole("button", { name: "Play Midnight Drive - Master.wav", exact: true }));
-  await show.wait(4000);
+  await show.wait(2000);
+  await show.snap("audio-player");
+  await show.wait(2000);
   await show.click(page.getByRole("button", { name: "Close player" }));
   await show.wait(800);
 
@@ -171,6 +198,7 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.wait(1000);
   await show.click(fileOp.getByRole("radio", { name: "Archive" }));
   await show.wait(600);
+  await show.snap("copy-move-delete");
   const confirmInput = fileOp.getByLabel('Type "COPY" to confirm');
   if ((await confirmInput.count()) > 0) await show.type(confirmInput, "COPY");
   await show.wait(600);
@@ -197,6 +225,7 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.click(createTab.getByRole("button", { name: "Create" }));
   await expect(page.getByRole("button", { name: "Ready to Release", exact: true })).toBeVisible();
   await show.wait(2500);
+  await show.snap("custom-tab");
 
   await show.click(page.getByRole("button", { name: "Show all tabs" }));
   const allTabs = page.getByRole("dialog", { name: "All tabs" });
@@ -216,13 +245,16 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.wait(500);
   await show.click(catalog.getByRole("button", { name: "Add", exact: true }));
   await show.wait(1800);
+  await show.snap("statuses-and-tags");
   await show.click(page.getByRole("button", { name: "Close statuses and tags panel" }));
   await show.wait(800);
 
   await show.chapter("Library metrics", "An at-a-glance overview of your library and the latest scan.");
   await show.click(page.getByRole("button", { name: "Metrics", exact: true }));
   await expect(page.getByRole("dialog", { name: "Library metrics" })).toBeVisible();
-  await show.wait(3000);
+  await show.wait(1500);
+  await show.snap("metrics");
+  await show.wait(1500);
   await show.click(page.getByRole("button", { name: "Close metrics panel" }));
   await show.wait(800);
 
@@ -231,6 +263,7 @@ test("ProFolder feature showcase", async ({ page }) => {
   const scanPanel = page.getByRole("dialog", { name: "Production folder scan settings" });
   await expect(scanPanel).toBeVisible();
   await show.wait(2000);
+  await show.snap("scan-settings");
   await show.click(scanPanel.getByRole("button", { name: "Scan", exact: true }));
   // The panel closes itself once the scan finishes, leaving the result banner on screen.
   await expect(page.getByText(/^Scan complete:/)).toBeVisible();
@@ -240,13 +273,16 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.click(page.getByRole("button", { name: "Settings", exact: true }));
   const settings = page.getByRole("dialog", { name: "Settings", exact: true });
   await expect(settings).toBeVisible();
-  await show.wait(3000);
+  await show.wait(1500);
+  await show.snap("settings");
+  await show.wait(1500);
 
   await show.chapter("Themes", "Default, Light or Dark.");
   for (const theme of ["Dark", "Light", "Default"]) {
     await show.click(settings.getByRole("button", { name: "Theme" }));
     await show.click(page.getByRole("listbox", { name: "Theme" }).getByRole("option", { name: theme, exact: true }));
     await show.wait(2000);
+    if (theme === "Dark") await show.snap("theme-dark");
   }
   await show.click(settings.getByRole("button", { name: "Close panel", exact: true }));
   await show.wait(800);
@@ -265,6 +301,16 @@ class Showcase {
 
   wait(ms: number) {
     return this.page.waitForTimeout(ms);
+  }
+
+  /** Saves a screenshot of the current screen to docs/screenshots/<name>.png, without the
+   * showcase's own cursor and caption overlays. The demo library lives inside this checkout, so
+   * its absolute path (shown in the header and detail panels) is swapped for "~/Music" first,
+   * keeping the local machine's directory layout out of published images. */
+  async snap(name: string) {
+    await this.page.evaluate(`window.__showcaseBeforeSnap(${JSON.stringify(SHOWCASE_MUSIC_ROOT)})`);
+    await this.page.screenshot({ path: path.join(SCREENSHOTS_DIR, `${name}.png`) });
+    await this.page.evaluate("window.__showcaseAfterSnap()");
   }
 
   async chapter(title: string, subtitle: string) {

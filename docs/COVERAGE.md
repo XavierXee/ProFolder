@@ -1,66 +1,56 @@
-# Test Coverage Audit — `docs/REQUIREMENTS.md` §1–§15 vs. `e2e/features/**` + `tests/**`
+# Test Coverage — `REQUIREMENTS.md` vs. the Test Suites
 
-*Task 9 of `docs/TODO.md` item 1. Produced by cross-referencing every requirement clause in
-`docs/REQUIREMENTS.md` against the current test corpus. Methodology: split across two Tester
-passes — Task 9.1 covered the backend/data-layer sections (§1, §2, §3, §4, §10, §12), Task 9.2
-covered the frontend/UI sections (§5, §6, §7, §8, §9, §11, §13, §14) — then consolidated here
-(Task 9.3). A separate, already-fully-gated Task 9.4 (Developer/Tester/Reviewer/Auditor cycle)
-closed one real gap this audit surfaced along the way (§11.3/§11.5, see below); its result is
-folded into this document rather than re-run. §15 (Custom Tabs) was added by a later, separate
-dev-loop cycle after Task 9 concluded — it is not part of the Task 9 audit's methodology,
-baseline counts, or "113 individual clauses" figure below; see its own section for citations.*
+*Maps each numbered clause of [`REQUIREMENTS.md`](REQUIREMENTS.md) (§1–§22) to the tests that
+prove it. Last audited 2026-10-24 against the current suites:*
 
-*Backend test baseline at time of writing: **21 test files, 181 tests, all passing**
-(`npx vitest run`), `tsc --noEmit` clean.*
+| Suite | Location | Size (all passing) |
+|---|---|---|
+| Backend unit + route tests | `tests/*.test.ts` | 57 files, 724 tests |
+| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 60 files, 949 tests |
+| End-to-end (Playwright + Cucumber) | `e2e/features/**/*.feature` | 30 features, 115 scenarios |
 
-*Rows below are organized one per `REQUIREMENTS.md` sub-clause (85 rows total). Several rows
-(e.g. §7.1, §8.1, §8.2, §5.1) bundle multiple individually-checked sub-clauses inline in their
-citation/verdict text rather than each getting its own row — accounting for those, the two
-Testers audited roughly **113 individual clauses** in total (43 in Task 9.1's backend pass, ~70
-in Task 9.2's frontend pass), which is where that clause count comes from even though the table
-itself has 85 addressable rows.*
+*Citations name the test file and, where useful, the `describe`/`it` title, rather than line
+numbers, which drift. Paths are relative to `tests/`, `frontend/src/` or `e2e/features/` when the
+prefix is obvious. §0 (principles) and §23 (development reference) describe intent and tooling
+rather than behavior, so they have no rows.*
 
 ## Verdict legend
 
-- **COVERED-UNIT** — asserted by a `tests/*.test.ts` vitest.
-- **COVERED-E2E** — asserted by an `e2e/features/**` Playwright/Cucumber scenario.
-- **COVERED-BOTH** — asserted at both layers.
-- **PARTIAL** — the requirement has more than one clause/sub-behavior and only some are covered; the gap is spelled out in the row.
-- **WRONG-LAYER** — the underlying logic is unit-tested but the requirement itself (a route, a UI rendering) is not — the coverage exists one layer down from what the requirement actually describes.
-- **NONE** — no test at any layer exercises this behavior; only established by reading the code.
-- **NOT-HEADLESS-VERIFIABLE** — a real, permanent limitation of this repo's test environment (no visual/paint-timing assertions possible in a headless runner), not a gap that can be closed by writing more tests. Per explicit user decision this session, these are **not** turned into TODO follow-ups.
-- **REQUIREMENT-SUSPECT** — while auditing, the Tester found the requirement text itself may not match the intended/actual behavior (flagged in addition to a coverage verdict, not instead of one).
+- **UNIT**: asserted by a backend or frontend Vitest test. Backend "route" tests run the real
+  Express app over HTTP (`supertest`) with a real in-memory database.
+- **E2E**: asserted by an end-to-end scenario driving the real UI against a real server.
+- **BOTH**: asserted at both layers.
+- **PARTIAL**: only some of the clause's sub-behaviors are covered; the gap is named.
+- **NONE**: no automated test; true by code inspection or manual verification only.
+- **NOT-HEADLESS**: a visual or OS-level claim (animation, paint timing, layout, a real native
+  dialog) that a headless test environment can't observe. It's a permanent limitation, not an
+  actionable gap.
 
-**Known blind spot in the original Task 9.1/9.2 audit:** six separate later follow-up cycles
-(TODO items 2, 4, 8, 9, 10, and 11 — duplicate-detection route, pagination, detail-panel
-interaction feedback, detail-panel read-only display, table column/row-interaction, and small
-backend validation/logic gaps respectively) each independently found the same class of
-staleness: a row's original NONE/PARTIAL verdict had been
-reached by checking e2e coverage only, without cross-checking
-whether unit-layer (`tests/**`/`frontend/src/**/test/**`) coverage had already closed the same
-clause from an earlier initiative. Rows already re-touched by items 2/4/5/7/8/9/10/11's cycles
-(noted in the changelog line below) have been corrected. Any row **not yet re-touched** by one of those
-cycles may still carry this same blind spot — treat its NONE/PARTIAL verdict as a starting point
-to verify against the current test corpus, not as settled fact, before scoping a follow-up item
-around it.
+## Summary
 
-## Summary counts (87 rows)
-
-| Verdict | Count |
+| Verdict | Rows |
 |---|---|
-| COVERED-UNIT | 41 |
-| COVERED-BOTH | 24 |
-| COVERED-E2E | 5 |
-| PARTIAL | 9 |
-| WRONG-LAYER (primary) | 1 (+1 more row carries it as a secondary/dual verdict — 10.6b) |
-| NONE | 5 |
-| NOT-HEADLESS-VERIFIABLE | 2 |
-| **Total rows** | **87** |
+| BOTH | 55 |
+| UNIT | 74 |
+| E2E | 2 |
+| PARTIAL | 6 |
+| NONE | 9 |
+| NOT-HEADLESS | 1 |
+| **Total** | **147** |
 
-Fully covered (COVERED-UNIT + COVERED-BOTH + COVERED-E2E) = 70/87 rows (80%). Rows with a real,
-actionable gap (PARTIAL + WRONG-LAYER + NONE) = 15/87 (17%). The remaining 2 rows
-(NOT-HEADLESS-VERIFIABLE) are a permanent environment limitation, not an actionable gap.
-(Updated by item 5's cycle: §2.1b, §2.10b, §2.10c moved from NONE, and §6.3 from WRONG-LAYER/COVERED-UNIT, to fully covered. Updated by item 7's cycle: §1.7b, §2.9 moved from NONE to COVERED-UNIT. Updated by item 8's cycle: §8.2 and §13.3 moved from PARTIAL to COVERED-BOTH; §8.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE animation clause. Updated by item 9's cycle: §8.3 and §8.4 moved from NONE/WRONG-LAYER to COVERED-UNIT. Updated by item 10's cycle: §5.1-§5.4 and §6.2 moved to COVERED-UNIT/COVERED-BOTH (§5.3's requirement text also reworded per user decision); §6.1 stays PARTIAL only for its permanent NOT-HEADLESS-VERIFIABLE truncation clause. Updated by item 11's cycle: §1.3b, §1.5b, §4.2, §12.3 all moved from NONE to COVERED-UNIT. Updated by item 12's cycle: §7.5 moved from PARTIAL+REQUIREMENT-SUSPECT to COVERED-BOTH (requirement text reworded per user decision). Updated by item 14's cycle: §7.6 and §11.1 moved from PARTIAL to COVERED-BOTH — see `docs/TODO.md`'s Task 9 follow-up items 5/6/7/8/9/10/11/12/14 closure notes. Updated by the ProFolder branding/theming/splash-screen cycle (item 9 in the main TODO list, not to be confused with the "Task 9 follow-ups" section): §14.1 reworded for the new 3-way dropdown mechanism (still PARTIAL, same no-flash-paint-timing gap as before); §14.2 reworded to note the chrome-vs-content-area brand-coverage boundary; new §14.3 (splash screen) and §14.4 (logo/favicon/title) added as COVERED-UNIT.)
+Fully covered (BOTH + UNIT + E2E): 131 of 147 rows (89%). Several of those rows still carry a
+NOT-HEADLESS sub-clause, noted in the row.
+
+**Open, actionable gaps** (PARTIAL/NONE rows that a test could close):
+- §2.3: `$RECYCLE.BIN` isn't tested by name. Several other names are only covered through the
+  generic dot-prefix rule.
+- §2.11: no regression test proves a scan leaves the files on disk untouched.
+- §2.12: the command-line scan (`src/cli/scan.ts`) has no test.
+- §22.1: the environment defaults are only partly asserted.
+
+The remaining NONE rows (§16.8, §20.4, §20.5, §21.1, §21.3, §21.6, §22.3) are either deliberately
+deferred limitations or desktop/packaging/container behavior. That behavior is verified by
+launching the packaged app or by the CI build jobs, not by an automated assertion.
 
 ---
 
@@ -68,243 +58,255 @@ actionable gap (PARTIAL + WRONG-LAYER + NONE) = 15/87 (17%). The remaining 2 row
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 1.1 | Project field set | COVERED-UNIT | `tests/scanner.integration.test.ts:51`, `:208` |
-| 1.2 | AudioFile field set | COVERED-UNIT | `tests/audioFileRepository.test.ts:52`, `tests/scanner.integration.test.ts:51` |
-| 1.3a | Status settable/persisted (both entities) | COVERED-BOTH | `e2e/features/projects-tab/detail-panel-status-tags-score.feature:24`, `e2e/features/files-tab/detail-panel-status-tags-score.feature:25` |
-| 1.3b | Runtime enforcement that status is only the 5 valid values | COVERED-UNIT | `tests/batchRoutes.test.ts` — new tests assert `PATCH /api/files/:id/status` and `PATCH /api/projects/:id/status` both return 400 with the exact error message for an invalid value, proving both routes' separately-defined guards |
-| 1.4 | Score null or 1-5 int, both entities | COVERED-UNIT | `tests/score.test.ts:5,10`, `tests/batchRoutes.test.ts:94` |
-| 1.5a | Tags trimmed/deduped/many-to-many | COVERED-UNIT | `tests/projectRepository.test.ts:178,162` |
-| 1.5b | Tags case-insensitive dedup specifically | COVERED-UNIT | New `tests/tagRepository.test.ts` — `findOrCreateTag` returns the same id across casings, a direct `SELECT COUNT(*) FROM tags` proves exactly one row (not just one array entry), and `addTagsToFiles` with both casings in one call confirms the dedup survives the attachment layer |
-| 1.6 | `contentModifiedAt` = later of folder/marker mtime | COVERED-UNIT | `tests/scanner.integration.test.ts:336` |
-| 1.7a | Audio file soft-delete preserves status/tags/score | COVERED-BOTH | `tests/scanner.integration.test.ts:136`, `e2e/features/scanning-settings/exclusion-toggles.feature` |
-| 1.7b | Project soft-delete (`markRemoved`) | COVERED-UNIT | `tests/projectRepository.test.ts` (`markRemoved`/`upsertProject` reactivation, status/tags/score preservation), `tests/scanner.integration.test.ts` (a real scan soft-removes/reactivates a whole project folder) |
+| 1.1 | Project field set | UNIT | `scanner.integration.test.ts` |
+| 1.2 | AudioFile field set | UNIT | `audioFileRepository.test.ts`, `scanner.integration.test.ts` |
+| 1.3a | Status settable and persisted (both entities) | BOTH | `fileStatusTagsScoreRoutes.test.ts`; `projects-tab/` and `files-tab/detail-panel-status-tags-score.feature` ("Editing status … persists after reload") |
+| 1.3b | Only catalog keys or `unknown` accepted | UNIT | `batchRoutes.test.ts` ("returns 400 for an invalid status value", files and projects); `statusRepository.test.ts` (`isKnownStatusKey`) |
+| 1.4 | Score is null or an integer 1–5 | UNIT | `score.test.ts`; `batchRoutes.test.ts` |
+| 1.5a | Tags trimmed, deduplicated, many-to-many | UNIT | `projectRepository.test.ts` |
+| 1.5b | Case-insensitive tag dedup | UNIT | `tagRepository.test.ts` ("findOrCreateTag case-insensitive dedup", "dedup survives addTagsToFiles…") |
+| 1.6 | `contentModifiedAt` = later of folder and marker mtime | UNIT | `scanner.integration.test.ts` |
+| 1.7a | Audio file soft-delete keeps user metadata | BOTH | `scanner.integration.test.ts`; `scanning-settings/exclusion-toggles.feature` ("Re-including a folder … restores the file with its prior status, score, and tags") |
+| 1.7b | Project soft-delete and reactivation | UNIT | `projectRepository.test.ts` ("reappearing project is reactivated … preserving its prior status/tags/score/notes"); `scanner.integration.test.ts` |
+| 1.8 | Notes on both entities, default empty, kept across rescans | UNIT | `audioFileRepository.test.ts` (`setNotes`, "preserves notes across a metadata update"); `projectRepository.test.ts` (`setNotes`); `fileStatusTagsScoreRoutes.test.ts` (`PATCH …/:id/notes`: empty string, 400 on non-string, 404 on unknown id) |
 
 ## §2 Scanning & Indexing
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 2.1a | Recursive async walk | COVERED-UNIT | `tests/scanner.integration.test.ts:51` |
-| 2.1b | Tolerates one bad file/folder without aborting | COVERED-UNIT | `tests/scanner.integration.test.ts:464` — EACCES on a nested subdirectory records a per-path error while still indexing a sibling file outside it |
-| 2.2 | Extension-based audio recognition | COVERED-UNIT | `tests/audioDetector.test.ts:17,28` |
-| 2.3 | Ignore list (dot-dirs, node_modules, .git, .Trash, .Spotlight-V100, .fseventsd, .TemporaryItems, $RECYCLE.BIN, .DS_Store, AppleDouble) | PARTIAL | `tests/ignoreRules.test.ts:5,10,52`; `$RECYCLE.BIN` never exercised by exact name; several only implicitly covered via the generic dot-prefix branch |
-| 2.4a | Package-extension priority (.logicx) | COVERED-UNIT | `tests/dawDetector.test.ts:70` |
-| 2.4b | Project-file extension detection (10 DAW types) | COVERED-UNIT | `tests/dawDetector.test.ts:49,25` |
-| 2.4c | Marker-subfolder fallback | COVERED-UNIT | `tests/dawDetector.test.ts:37` |
-| 2.4d | Priority-collision override | COVERED-UNIT | `tests/dawDetector.test.ts:95` — spot-checked directly during this consolidation; confirms `REQUIREMENTS.md` Appendix C's claim that this case is untested is **stale** |
-| 2.5 | Every folder gets Project row except plain-nested; nested project gets own row | COVERED-UNIT | `tests/scanner.integration.test.ts:249,283` |
-| 2.6 | Audio file → nearest-ancestor project association | COVERED-UNIT | `tests/projectDetector.test.ts:8,19` |
-| 2.7 | hasVideo/hasImage ancestor-propagation | COVERED-UNIT | `tests/mediaDetector.test.ts:34`, `tests/scanner.integration.test.ts:266` |
-| 2.8 | new/modified/unchanged/removed classification | COVERED-UNIT | `tests/scanner.integration.test.ts:88,98,118,136` |
-| 2.9 | Comparable removal detection for Projects | COVERED-UNIT | `tests/scanner.integration.test.ts` — a whole project folder disappearing between scans is marked removed via a real scan (not just the repository function in isolation); regression test proves an already-removed project isn't re-marked/re-touched on a subsequent no-op scan |
-| 2.10a | Aggregate scan stats recorded | COVERED-BOTH | `tests/scanner.integration.test.ts:54-58`, `e2e/steps/scanning.steps.ts:78` |
-| 2.10b | rootPath/duration/timestamps/per-path errors recorded | COVERED-BOTH | `tests/scanRunRepository.test.ts:42` (byte-for-byte round-trip incl. a multi-entry errors array), `tests/scanner.integration.test.ts:464` (a real EACCES persisted end-to-end), `e2e/features/scanning-settings/metrics-panel.feature:65` (persisted data reaches the UI after a reload) |
-| 2.10c | "Most recent scan run retrievable" (`GET /api/scan/last`) | COVERED-BOTH | `tests/scanRoutes.test.ts:38-90` (4 tests: 404-when-empty, agrees with POST response, reflects the second of two scans, full field-list/type shape), `e2e/features/scanning-settings/metrics-panel.feature:65` |
-| 2.11 | Scanning strictly read-only | NONE | No regression test proves this; true only by code inspection |
+| 2.1a | Recursive async walk | UNIT | `scanner.integration.test.ts` |
+| 2.1b | One bad file/folder doesn't abort the scan | UNIT | `scanner.integration.test.ts` (EACCES on a nested folder is recorded while a sibling is still indexed) |
+| 2.2 | Audio recognized by extension | UNIT | `audioDetector.test.ts` |
+| 2.3 | Ignore list | PARTIAL | `ignoreRules.test.ts`. `$RECYCLE.BIN` is never exercised by name, and several entries are only covered through the generic dot-prefix rule. |
+| 2.4a | Package-extension priority (`.logicx`) | UNIT | `dawDetector.test.ts` |
+| 2.4b | Project-file extensions (all DAWs) | UNIT | `dawDetector.test.ts` |
+| 2.4c | Marker-subfolder fallback | UNIT | `dawDetector.test.ts` |
+| 2.4d | Priority when several rules match | UNIT | `dawDetector.test.ts` ("prefers a project-file classification over a marker-subfolder classification…") |
+| 2.5 | Folder rows; plain folders inside a project omitted; nested projects kept | UNIT | `scanner.integration.test.ts` |
+| 2.6 | File → nearest DAW-project ancestor | UNIT | `projectDetector.test.ts` |
+| 2.7 | `hasVideo`/`hasImage` propagation | UNIT | `mediaDetector.test.ts`, `scanner.integration.test.ts` |
+| 2.8 | New/modified/unchanged/removed classification | UNIT | `scanner.integration.test.ts` |
+| 2.9 | Project removal detection | UNIT | `scanner.integration.test.ts` (whole folder disappears; an already-removed project isn't re-touched) |
+| 2.10a | Aggregate scan stats recorded | BOTH | `scanner.integration.test.ts`; e2e scan steps |
+| 2.10b | Root, timings and per-path errors persisted | BOTH | `scanRunRepository.test.ts`, `scanner.integration.test.ts`; `scanning-settings/metrics-panel.feature` |
+| 2.10c | Latest scan retrievable (`GET /api/scan/last`) | BOTH | `scanRoutes.test.ts`; `scanning-settings/metrics-panel.feature` |
+| 2.11 | Scanning is strictly read-only | NONE | True by code inspection; no regression test compares the tree before and after a scan. |
+| 2.12 | Command-line scan | NONE | `src/cli/scan.ts` is untested; it calls the same `scanner.ts` covered above. |
 
 ## §3 Scan Settings
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 3.1 | Exclude Samples default-on, case-insensitive | COVERED-BOTH | `tests/ignoreRules.test.ts:35,41`, `e2e/features/scanning-settings/scan-settings.feature:7` |
-| 3.2 | Exclude Backup default-on, case-insensitive | COVERED-BOTH | `tests/ignoreRules.test.ts:19,30`, `e2e/features/scanning-settings/scan-settings.feature:22` |
-| 3.3 | Both toggles persist across restart, next-scan-only | COVERED-BOTH | `tests/scanSettings.test.ts:34`, `e2e/features/scanning-settings/scan-settings.feature` |
-| 3.4 | Duplicate detection reads Samples live regardless of exclusion setting | COVERED-UNIT | `tests/duplicateDetector.test.ts:44` — structural proof only: the function never reads the setting at all, not proven by flipping the setting live |
-| 3.5 | Duplicate match threshold setting: persists, atomic validation, applies immediately (no rescan) | COVERED-UNIT / COVERED-INTEGRATION | `tests/scanSettings.test.ts` (default/round-trip/range/atomicity), `tests/configScanSettingsRoute.test.ts` (HTTP-level GET/PUT, 400s), `tests/projectDuplicatesRoute.test.ts` ("applies a changed duplicateMatchThresholdPercent immediately" — proves no-rescan-needed against real fixtures), `frontend/src/components/test/SettingsPanel.test.tsx` (new "Duplicate match threshold section" describe block) — no e2e coverage |
+| 3.1 | Exclude Samples, default on, case-insensitive | BOTH | `ignoreRules.test.ts`; `scanning-settings/scan-settings.feature` |
+| 3.2 | Exclude Backup, default on, case-insensitive | BOTH | `ignoreRules.test.ts`; `scan-settings.feature` |
+| 3.3 | Toggles persist and apply on the next scan | BOTH | `scanSettings.test.ts`, `configScanSettingsRoute.test.ts`; `scan-settings.feature` |
+| 3.4 | Duplicate detection reads Samples regardless of the exclusion | UNIT | `duplicateDetector.test.ts`. Structural proof: the detector never reads the setting. |
+| 3.5 | Duplicate threshold: persisted, validated, applies without a rescan | UNIT | `scanSettings.test.ts`, `configScanSettingsRoute.test.ts`, `projectDuplicatesRoute.test.ts` (changed threshold applies immediately), `SettingsPanel.test.tsx` |
+| 3.6 | Exclude by pattern: off by default, case-sensitive regex, invalid rejected on save and ignored at scan time | BOTH | `ignoreRules.test.ts` (case-sensitive match, disabled, non-match, "treats an invalid regex pattern as a non-match"); `configScanSettingsRoute.test.ts` (persist, 400 on invalid regex or wrong types); `scan-settings.feature` ("Toggling 'Exclude folders by pattern' on excludes the Stems fixture…") |
 
 ## §4 Scan Exclusions
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 4.1 | Excluded folder + contents not descended into | COVERED-BOTH | `tests/scanner.integration.test.ts:184`, `e2e/features/scanning-settings/exclusion-toggles.feature` |
-| 4.2 | Excluding parent auto-un-excludes/greys descendants | COVERED-UNIT | Corrects a stale prior verdict — already covered by an earlier initiative (Task 7): `ScanFolderPanel.test.tsx`'s "descendant pruning" block proves multi-level-deep auto-un-exclusion, and the "direct rendering" block proves a descendant checkbox is `disabled` when its parent is excluded (the DOM-testable half of "greyed"); visual dimming itself stays NOT-HEADLESS-VERIFIABLE |
-| 4.3 | Relative-path exclusions persist, applied next scan | COVERED-BOTH | `tests/scanExclusionRepository.test.ts:22,27`, `e2e/features/scanning-settings/exclusion-toggles.feature` |
-| 4.4 | Changing music root clears saved exclusions | COVERED-UNIT | `tests/musicRoot.test.ts:54`; explicitly out-of-scope for e2e per `root-path-control.feature`'s own header comment |
+| 4.1 | Excluded folders not descended into | BOTH | `scanner.integration.test.ts`; `exclusion-toggles.feature` |
+| 4.2 | Excluding a parent un-excludes and disables its descendants | UNIT | `ScanFolderPanel.test.tsx` (descendant pruning; descendant checkbox disabled). The greyed look itself is NOT-HEADLESS. |
+| 4.3 | Relative-path exclusions persist, applied next scan | BOTH | `scanExclusionRepository.test.ts`; `exclusion-toggles.feature` |
+| 4.4 | Changing the root clears exclusions | UNIT | `musicRoot.test.ts` ("clears any saved scan exclusions…") |
 
 ## §5 Project Folders View
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 5.1 | Columns (checkbox/name/Type/Status/Tags/Score/Audio Files count/Media/Reveal) | COVERED-BOTH | Corrects a stale prior verdict (Task 9 follow-up #10 found the Type/count/Media/Reveal sub-columns were already covered before that cycle): checkbox/name/Status/Tags/Score COVERED-E2E (`e2e/features/projects-tab/filtering.feature:17-59`, `batch-edit.feature:37-45`); Type column text/tooltip COVERED-UNIT (`ProjectsTable.test.tsx`'s `typeLabel`/`typeTooltip` block); Audio Files count COVERED-UNIT (per-project distinct counts asserted); Media column COVERED-UNIT (video/image/neither cases); Reveal action COVERED-UNIT (see 5.4) |
-| 5.2 | Type column DAW label/tooltip | COVERED-UNIT | Corrects a stale prior verdict, already covered before Task 9 follow-up #10: `ProjectsTable.test.tsx`'s `typeLabel`/`typeTooltip` block (3 tests — DAW label+tooltip, missing-`detectedVia` fallback, "Folder" fallback) |
-| 5.3 | Row click opens panel; clicking outside the panel, or its close button, closes it | COVERED-BOTH | opens COVERED-E2E (`detail-panel-status-tags-score.feature:18-22`); dismiss COVERED-UNIT (`ProjectDetailPanel.test.tsx`'s backdrop-click-dismiss and close-button tests). **Requirement reworded** by Task 9 follow-up #10 (user decision): the original "same-row click closes it" wording described a code path (`App.tsx`'s `handleProjectRowClick` toggle) confirmed unreachable via real mouse interaction — `ProjectDetailPanel`'s full-viewport backdrop intercepts a second click before it reaches the row (live-repro confirmed, not landed). Actual dismiss behavior (outside-click/close-button) was already covered pre-cycle. |
-| 5.4 | Reveal in Finder | COVERED-UNIT | Corrects a stale prior verdict (Task 9 follow-up #10 closed the remaining UI-action gap): server-side guard COVERED-UNIT (`tests/finderService.test.ts:22-40`, `tests/revealRoute.test.ts:50-69`); UI action itself COVERED-UNIT (`ProjectsTable.test.tsx`'s "Reveal in Finder" test — calls `onReveal` with path, stops propagation to `onRowClick`) — already covered before this cycle, verdict was stale |
+| 5.1 | Columns | BOTH | `ProjectsTable.test.tsx` (type, count, media cells); `projects-tab/filtering.feature`, `batch-edit.feature` |
+| 5.2 | Type label and tooltip | UNIT | `ProjectsTable.test.tsx` (`typeLabel`/`typeTooltip`) |
+| 5.3 | Row opens panel; outside click or close button closes it | BOTH | `projects-tab/detail-panel-status-tags-score.feature` ("Clicking a folder's row opens its detail panel"); `ProjectDetailPanel.test.tsx` (backdrop and close button) |
+| 5.4 | Reveal in Finder from the panel | UNIT | `ProjectDetailPanel.test.tsx` ("calls onReveal with the project path…"); server guard in §13.4 |
+| 5.5 | First tag + "+N" chip, tooltip, centered, "—" when empty | UNIT | `TagChips.test.tsx`; `FileRow.test.tsx`, `ProjectsTable.test.tsx` (chip rendered in the tag cell). Centering is NOT-HEADLESS. |
 
 ## §6 Audio Files View
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 6.1 | Columns (checkbox/play+filename/Status/Tags/Project/Score/Location+tooltip/Modified) | PARTIAL | Corrects a stale prior verdict (Task 9 follow-up #10 found the Project-column and tooltip sub-clauses were already/now covered): play/Status/Tags/Score COVERED-E2E; Modified/Location as sort targets COVERED-E2E (`sorting.feature:50-77`); Project column display COVERED-UNIT (`FileRow.test.tsx`, `projectId` rendered + "—" fallback, already covered pre-cycle); Location tooltip COVERED-UNIT (`FileRow.test.tsx`, new — `title={file.path}` asserted on the location element); truncation itself stays NOT-HEADLESS-VERIFIABLE (permanent, a CSS/visual claim), the only reason this row isn't fully covered |
-| 6.2 | Row click opens panel, excluding play/checkbox | COVERED-BOTH | Corrects a stale prior verdict (Task 9 follow-up #10 closed the remaining gap): row-click-opens and play-doesn't-open both COVERED-E2E; checkbox-doesn't-open now COVERED-UNIT (`FileRow.test.tsx`, new — checkbox click does not fire the row's `onClick`) |
-| 6.3 | Metrics tile (total/Draft/unscored/change counts) | COVERED-BOTH | `tests/audioFileRepository.test.ts:131-158` (the total/Draft/unscored aggregate), `e2e/features/scanning-settings/metrics-panel.feature:65` (a real triggered scan's exact `+1 changed` count, persisted via `GET /api/scan/last`, appears correctly in the Metrics panel after a reload — closes the prior UI-layer gap) |
+| 6.1 | Columns and their order; Location tooltip; truncation | PARTIAL | Order asserted in `FileTable.test.tsx` ("column order"); cells in `FileRow.test.tsx` (project, "—" fallback, `title` = full path); sort targets in `files-tab/sorting.feature`. Truncation is NOT-HEADLESS and is the only gap. |
+| 6.2 | Row opens panel, except play button and checkbox | BOTH | `files-tab/detail-panel-status-tags-score.feature`, `audio-player.feature` ("…without opening the detail panel"); `FileRow.test.tsx` (checkbox doesn't fire the row click) |
+| 6.3 | Library summary refreshed after scans and edits | BOTH | See §19 |
 
 ## §7 Filtering & Sorting
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 7.1 | Debounced search/status/score(incl. Unscored)/tags filter × 2 tabs (8 sub-clauses) | COVERED-E2E (all 8) | `e2e/features/{projects-tab,files-tab}/filtering.feature:17-48` both tabs — spot-checked directly during this consolidation, confirms search/status/score/unscored/tags/combined-filter/clear-all all present in both tabs |
-| 7.2 | Files/Projects Name/Score/Modified column-header sort (Files also Location) | COVERED-BOTH | Backend score-sort: `tests/audioFileRepository.test.ts`, `tests/projectRepository.test.ts`. Frontend column-header sort UI (click-to-sort, ascending/descending toggle, `aria-sort`/`aria-label="Sort by <Column>"`): `frontend/src/components/test/FileTable.test.tsx`, `ProjectsTable.test.tsx`. E2e: `e2e/features/files-tab/sorting.feature` (8 scenarios), `e2e/features/projects-tab/sorting.feature` (6 scenarios) |
-| 7.3 | Projects "Modified" sorts by `contentModifiedAt` not raw mtime | COVERED-BOTH | `tests/projectRepository.test.ts:143-153`, `sorting.feature:14-23` — spot-checked directly, confirms explicit ascending/descending sort assertion using stamped `contentModifiedAt` fixture values |
-| 7.4 | Filter/search change resets pagination to page 1 | **COVERED-BOTH** (updated — was NONE at time of Task 9.2's audit) | Closed by Task 9-follow-up-4: `tests/hooks/test/{useAudioFiles,useProjects}.test.ts`'s `updateFilters` reset test (pre-existing, from the frontend unit-test initiative's hooks task) + `frontend/src/test/App.pagination.test.tsx`'s real-UI proof that a filter change through the actual search box resets the visible page indicator |
-| 7.5 | "Clear" control (always visible, disabled when inactive) resets all filter/sort state | COVERED-BOTH | clear-effect COVERED-E2E; disabled-when-no-active-filters and enabled-with-active-filters both COVERED-UNIT (`FilterToolbar.test.tsx`'s "Clear button disabled state" block). **Requirement reworded** by Task 9 follow-up item 12 (user decision): the original "Clear (N)" / conditionally-appearing wording didn't match `FilterToolbar.tsx:200-211`'s actual always-visible, no-count, merely-`disabled` button — reworded to match actual behavior rather than changing the code |
-| 7.6 | "N of Total" result count shown | COVERED-BOTH | presence/format COVERED-E2E (`common.steps.ts:47-59`); tracks-filtered-count-correctly now proven at both layers — hook-level (`useAudioFiles.test.ts`/`useProjects.test.ts`: `total` updates to a genuinely new value, including a zero-total case, across `updateFilters`, not a stale one) and e2e (`files-tab/filtering.feature`/`projects-tab/filtering.feature`: exact post-filter text "1 of 1 files"/"1 of 1 projects" asserted after narrowing the result set) |
-| 7.7 | Page auto-clamps when filtered results shrink | **COVERED-UNIT** (updated — was NONE at time of Task 9.2's audit) | Closed by Task 9-follow-up-4: `useAudioFiles.test.ts`/`useProjects.test.ts` prove the clamp fires (and refetches at the clamped page) on a refetch/rescan shrink, AND prove via a negative control that a filter-change shrink can never trigger it — `updateFilters`'s own synchronous `page: 1` reset structurally preempts the clamp path. `docs/REQUIREMENTS.md` §7.7 reworded to drop the unreachable "filter change" trigger from its wording |
+| 7.1 | Debounced search; status (catalog-driven), score (incl. Unscored), tags filters; Folders filter on Files views; AND across types | BOTH | `files-tab/` and `projects-tab/filtering.feature` (search, status, exact score, Unscored, tag, combined, clear-all, empty result); `FilterToolbar.test.tsx` (debounce; "shows the Unknown sentinel plus every catalog status"; Association filter); `audioFileRepository.test.ts` (association filter). The Folders filter is unit-tested only. |
+| 7.2 | Column-header sorting, toggle, `aria-sort`, `aria-label` | BOTH | `FileTable.test.tsx`, `ProjectsTable.test.tsx` (sortable headers); `audioFileRepository.test.ts` ("sorts by status, project, and tags"), `projectRepository.test.ts` ("sorts by status, type, tags, and audioFileCount"); `files-tab/sorting.feature` (Track / File, Location, Modified, Score), `projects-tab/sorting.feature` (Project Folder, Modified, Score). The newer columns (Status, Tags, Type, Files, Project) are unit-tested only. |
+| 7.3 | Projects "Modified" uses `contentModifiedAt` | BOTH | `projectRepository.test.ts`, `scanner.integration.test.ts`; `projects-tab/sorting.feature` |
+| 7.3a | Unscored sorts first ascending, last descending | UNIT | `audioFileRepository.test.ts` (score sort: "null sorts first ascending … last descending") |
+| 7.3b | Status by key, tags by first tag, Files by active count | UNIT | `audioFileRepository.test.ts`, `projectRepository.test.ts` (the new-sort-key tests above) |
+| 7.4 | Filter or search change resets to page 1 | BOTH | `useAudioFiles.test.ts`, `useProjects.test.ts`; `test/App.pagination.test.tsx` |
+| 7.5 | Clear: always visible, disabled when idle, resets everything | BOTH | `FilterToolbar.test.tsx` (disabled state, locked-mode patch); `filtering.feature` ("Clearing all filters…") |
+| 7.6 | "N of Total" result count | BOTH | `useAudioFiles.test.ts`, `useProjects.test.ts`; `filtering.feature` (exact "1 of 1" text) |
+| 7.7 | Page clamps when a refetch shrinks the results | UNIT | `useAudioFiles.test.ts`, `useProjects.test.ts` (clamp on refetch, plus a negative control for filter changes) |
+| 7.8 | Shared, persisted page size; pagination controls | UNIT | `paginationSettings.test.ts`, `paginationRoutes.test.ts`, `useItemsPerPage.test.ts`, `Pagination.test.tsx`, `test/App.pagination.test.tsx` |
 
 ## §8 Detail Panels
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 8.1 | Slide-in panel, dismiss via close/Escape/backdrop, auto-focus close | PARTIAL | animation NOT-HEADLESS-VERIFIABLE (permanent); close-button COVERED-E2E; Escape-dismiss COVERED-UNIT (`FileDetailPanel.test.tsx:108-118`, `ProjectDetailPanel.test.tsx`) — corrects a stale prior verdict, this was already covered before Task 9 follow-up #8; backdrop-click-dismiss COVERED-UNIT (`FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx`, new); auto-focus COVERED-UNIT (same files, new — asserts the real 50ms `setTimeout` focus effect) |
-| 8.2 | Status/Score/Tags edit mechanics, "Saving…" indicator, optimistic rollback | COVERED-BOTH | status/score-set, tags-add-via-Enter, tags-remove COVERED-E2E (`e2e/features/files-tab/detail-panel-status-tags-score.feature:24-84`); score-click-again-to-clear COVERED-UNIT (`ScoreEditor.test.tsx:26-34`) — corrects a stale prior verdict, already covered; tags-add-via-blur COVERED-UNIT (`TagEditor.test.tsx`, new); "Saving…" indicator COVERED-UNIT (`FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx`, new, ×3 fields each); rollback-on-failure COVERED-UNIT (`FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx`) — corrects a stale prior verdict, already covered |
-| 8.3 | DAW badge/"Detected via"/duplicate-warning block/nested-DAW list/folder tree | COVERED-UNIT | Corrects a stale prior verdict (Task 9 follow-up #9 found 4 of 5 sub-elements were already covered before that cycle): DAW badge + "Detected via" note (`ProjectDetailPanel.test.tsx` "basic rendering" block), duplicate-warning block (same file, "duplicates banner" block, closed by item 2), nested-DAW project files list (same file, "DAW project files list" block) were all pre-existing; folder tree — genuinely closed by follow-up #9's new "folder content tree" block, proving depth-based default-expand/collapse and the toggle, not just static text |
-| 8.4 | File size, full path, "Reveal file/project in Finder" | COVERED-UNIT | Corrects a stale prior verdict (Task 9 follow-up #9 found file size, relative path, and both reveal actions were already covered before that cycle, via `FileDetailPanel.test.tsx`'s "basic rendering"/`formatBytes`/reveal-action blocks); the full absolute path (`file.path`) was the one genuine gap, closed by follow-up #9's extension to the "basic rendering" test |
+| 8.1 | Slide-in; dismiss by close, Escape or backdrop; auto-focus | PARTIAL | `FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx` (Escape, backdrop, close button, 50 ms auto-focus); close button also e2e. The slide animation is NOT-HEADLESS and is the only gap. |
+| 8.2 | Status, score, tags editing; "Saving…"; optimistic rollback | BOTH | `detail-panel-status-tags-score.feature` (both tabs: status, score, tags via Enter and via suggestion); `ScoreEditor.test.tsx` (click again to clear); `TagEditor.test.tsx` (add on blur); `FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx` ("Saving…", rollback) |
+| 8.3 | Project panel extras | UNIT | `ProjectDetailPanel.test.tsx` (DAW badge, "Detected via", duplicates banner, DAW project files list, folder content tree, Reveal/Copy/Move/Delete buttons) |
+| 8.4 | File panel extras | UNIT | `FileDetailPanel.test.tsx` (size via `formatBytes`, relative and absolute path, both reveal actions, Copy/Move/Delete buttons) |
+| 8.5 | Notes text area, 250 ms debounced save | UNIT | `FileDetailPanel.test.tsx` and `ProjectDetailPanel.test.tsx` ("… - notes": no save before the debounce, save after 250 ms, rollback on failure) |
 
 ## §9 Batch Operations
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 9.1 | Multi-select + select-all; selection clears on filter/page/tab change | **COVERED-BOTH** (updated — was PARTIAL at time of Task 9.2's audit) | checkboxes/select-all/clear-on-filter/clear-on-tab COVERED-E2E (unchanged); clear-on-page-change closed by Task 9-follow-up-4's `frontend/src/test/App.pagination.test.tsx` — a one-time, user-approved narrow exception to the `App.tsx` unit-test exclusion, since selection state lives entirely there and e2e can't reach page 2 without 51+ new same-prefix fixtures. Also found (not fixed) a real, likely-oversight sibling bug: sort-change resets the page but doesn't clear selection, unlike every other page-resetting handler — `docs/TODO.md` item 21 |
-| 9.2 | Batch Edit gated at 2+; set-score overwrite; add-tag union | COVERED-E2E | `batch-edit.feature` both tabs — spot-checked directly, confirms gating, overwrite, and union semantics all asserted |
-| 9.3 | Batch score AND tag edits on Projects cascade to files | **COVERED-BOTH** (updated — was PARTIAL at time of Task 9.2's audit) | Closed by Task 9-follow-up-3: `tests/batchTagCascadeRoute.test.ts` (13 tests) proves the tag-cascade at the HTTP route layer for the first time — cascade reaches all selected projects' files, no-leak to unselected, union-not-replace, soft-removed-file exclusion. Along the way, found the score-cascade sibling wasn't actually proven at the HTTP layer either (only e2e) — also closed, plus a real bug: both `PATCH /{projects,files}/batch/tags` 500'd and rolled back the whole batch on any unknown id (FK violation), fixed with a `filterExistingProjectIds`/`filterExistingFileIds` existence-check applied to all 4 batch routes. New e2e scenario (`projects-tab/batch-edit.feature`) additionally proves the tag-cascade through the real UI onto the Audio Files tab — previously untested (the existing tag scenario only asserted the Projects table) |
-| 9.4 | Batch edits on Files re-sync each affected project across multiple projects | COVERED-E2E | `e2e/features/files-tab/batch-edit-cascade.feature:46-115` — spot-checked directly, confirms `syncProjectsForFiles`'s dedupe-by-distinct-project loop for both score and tag cascades |
+| 9.1 | Multi-select, select-all, cleared on filter/page/tab change | BOTH | `files-tab/` and `projects-tab/batch-edit.feature` (header checkbox, clear on filter and tab change); `test/App.pagination.test.tsx` (clear on page change) |
+| 9.2 | Batch Edit at 2+; score overwrites; tag unions; Copy/Move/Delete | BOTH | `batch-edit.feature` (both tabs); `BatchEditPanel.test.tsx` (score, tag, Copy/Move/Delete actions); `file-ops/batch-delete.feature` |
+| 9.3 | Project batch edits cascade to files | BOTH | `batchTagCascadeRoute.test.ts`, `batchRoutes.test.ts`; `projects-tab/batch-edit.feature` (score and tag cascade, unselected project untouched) |
+| 9.4 | File batch edits re-sync each affected project | BOTH | `batchFileTagsRoute.test.ts` ("re-syncs the owning project…"); `files-tab/batch-edit-cascade.feature` |
 
 ## §10 Duplicate Detection
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 10.1 | `GET /api/projects/:id/duplicates` route itself | COVERED-INTEGRATION / WRONG-LAYER | `tests/projectDuplicatesRoute.test.ts:418` proves the route wires the name-gated relaxation end-to-end (real HTTP + real DB + real files), but still no e2e coverage (`e2e/features/` has no `duplicat*` hits) |
-| 10.2a | (filename,size) pair matching | COVERED-UNIT | `tests/duplicateDetector.test.ts:101,155` |
-| 10.2b | filename matching case-insensitive | PARTIAL | implemented (`sampleKey` lowercases) but no test uses actually-different-case filenames |
-| 10.2c | Samples search any-depth; top-level-only "Imported" exclusion | COVERED-UNIT | `tests/duplicateDetector.test.ts:71,79` |
-| 10.3 | >=3 matches AND (ratio >= configurable base threshold unconditionally, OR ratio >= base-10pp when normalized names match, clamped at 0) | COVERED-UNIT | `tests/duplicateDetector.test.ts:120,131` (original too-few-matches/below-ratio negatives) plus the name-gated relaxation suite at `tests/duplicateDetector.test.ts:268,294,315,328,345,363,378,402` (regression case, below-relaxed-floor, count-floor-not-relaxed, false-positive name-gating guard, both-reasons, case/whitespace normalization, punctuation-boundary (fuzzy matching scoped out), and empty-name boundary), plus the "configurable minMatchRatio parameter" suite proving the threshold is genuinely caller-supplied (not a vestigial default) and the derived relaxed ratio tracks a lowered base without inverting or going negative; also route-level end-to-end proof at `tests/projectDuplicatesRoute.test.ts:418` and the live-no-rescan-needed test (§3.5) |
-| 10.4 | Plain folder never candidate/target; ancestor/descendant excluded | COVERED-UNIT | `tests/duplicateDetector.test.ts:236,204` |
-| 10.5a | Excludes different-DAW candidates | COVERED-UNIT | `tests/duplicateDetector.test.ts:225` |
-| 10.5b | Excludes scan-excluded candidates (§4) | NONE | Filter only implemented in the untested route (10.1), not in unit-tested functions |
-| 10.6 | Sorted by descending match ratio | COVERED-UNIT | `tests/duplicateDetector.test.ts:178` |
-| 10.6b | UI display (name/path/count/overlap%, "Same name" badge) | COVERED-UNIT / WRONG-LAYER | `frontend/src/components/test/ProjectDetailPanel.test.tsx:395,416,438` cover the badge's presence/absence/co-existence with existing content at the component-test layer, but still no e2e proof the Project-detail-panel duplicate-warning block (§8.3) ever renders |
+| 10.1 | `GET /api/projects/:id/duplicates` | UNIT | `projectDuplicatesRoute.test.ts` (real HTTP, database and sample files). No e2e scenario. |
+| 10.2a | (filename, size) matching | UNIT | `duplicateDetector.test.ts` |
+| 10.2b | Filename matching is case-insensitive | UNIT | `projectDuplicatesRoute.test.ts` ("matches sample filenames case-insensitively") |
+| 10.2c | Samples at any depth; top-level-only "Imported" | UNIT | `duplicateDetector.test.ts` |
+| 10.3 | ≥3 matches AND (ratio ≥ threshold, OR same name and ratio ≥ threshold − 10) | UNIT | `duplicateDetector.test.ts` (negative cases, the name-gated relaxation suite, configurable threshold); `projectDuplicatesRoute.test.ts` |
+| 10.4 | Plain folders never compared; ancestor/descendant excluded | UNIT | `duplicateDetector.test.ts` ("excludes a candidate whose folder is an ancestor or descendant…") |
+| 10.5a | Different DAW excluded | UNIT | `duplicateDetector.test.ts`, `projectDuplicatesRoute.test.ts` |
+| 10.5b | Scan-excluded candidate excluded | UNIT | `projectDuplicatesRoute.test.ts` ("excludes a scan-excluded candidate, with a positive control…") |
+| 10.6 | Sorted by descending ratio | UNIT | `duplicateDetector.test.ts` |
+| 10.6b | UI display and "Same name" badge | UNIT | `ProjectDetailPanel.test.tsx` (duplicates banner). No e2e scenario renders it. |
 
 ## §11 Playback
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 11.1 | Play starts/pauses same file; switching files switches playback | COVERED-BOTH | start+switch COVERED-E2E (`audio-player.feature:23-31`); same-file pause-on-second-click COVERED-UNIT (new `frontend/src/test/App.audioPlayer.test.tsx` — App-level test, since the toggle decision lives in `App.tsx`'s `handlePlayClick`, unreachable from any single component; a real e2e proof was deliberately rejected since the fixture WAVs' real ~0.5ms duration makes a second real click race `onEnded`, whereas jsdom never fires it unless dispatched, making the App-level test the correct, deterministic layer) |
-| 11.2 | Filename/relative path/play-pause/stop/seek slider/elapsed-total time/close | PARTIAL | filename, stop-resets-time, close-hides-bar COVERED-E2E; relative path text, play/pause icon state, seek slider, elapsed/total time deliberately excluded (feature file's own doc comment) — NONE |
-| 11.3 | Server-side Range streaming; inline playback/format error | **COVERED-UNIT** (updated — was NONE at time of Task 9.2's audit) | Closed and hardened by Task 9.4: `tests/audioStreamRoute.test.ts` (7 tests — legitimate stream, Range support, relative-traversal id, absolute-path id, id+query-string trick, DB-path-outside-root repro, symlink-inside-root-pointing-outside repro) |
-| 11.4 | Bottom padding while player bar visible | NOT-HEADLESS-VERIFIABLE | — |
-| 11.5 | Streaming endpoint only serves DB-stored path, not arbitrary request paths | **COVERED-UNIT** (updated — was NONE at time of Task 9.2's audit) | Closed and hardened by Task 9.4 (same `tests/audioStreamRoute.test.ts` suite). Fix: `GET /:id/audio` (`src/api/routes/files.ts`) now calls shared `isWithinRoot(file.path, getEffectiveMusicRoot(db))` (exported from `src/config/musicRoot.ts` — relocated there from `src/services/FinderService.ts` by Task 9 follow-up item 13's cohesion cleanup; `fs.realpathSync`-based, symlink-safe, fails closed) before streaming; both id-miss and path-outside-root failure modes return an identical `404`. Escalated and re-verified after a symlink-based bypass was found and closed (Auditor pass, PASS ×2) |
+| 11.1 | Play, pause on second click, switch file | BOTH | `files-tab/audio-player.feature`; `test/App.audioPlayer.test.tsx` (same-file toggle) |
+| 11.2 | Player bar contents and controls | BOTH | `audio-player.feature` (filename, stop resets to 0:00, close hides); `AudioPlayerBar.test.tsx` (relative path, play/pause, seek, stop, `formatTime`, reset on file change, play-rejection error) |
+| 11.3 | Range streaming; inline playback error | UNIT | `audioStreamRoute.test.ts` (Range support); `AudioPlayerBar.test.tsx` (play rejection) |
+| 11.4 | Bottom padding while the bar is visible | NOT-HEADLESS | Layout only. |
+| 11.5 | Streams only the stored path, inside the root | UNIT | `audioStreamRoute.test.ts` (traversal id, absolute-path id, query-string trick, stored path outside root, symlink escaping the root) |
 
 ## §12 Score & Tag Linking
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 12.1a | File edit → project recompute score=MAX | COVERED-BOTH | `tests/linkSync.test.ts:65`, `e2e/features/files-tab/detail-panel-status-tags-score.feature:103` — spot-checked directly, both citations confirmed exact |
-| 12.1b | File edit → project recompute tags=union, drop-when-orphaned | COVERED-BOTH | `tests/linkSync.test.ts:76,95`, same e2e scenario |
-| 12.1c | Recompute scoped to that project's files only | COVERED-UNIT | `tests/linkSync.test.ts:111` |
-| 12.2a | Project edit → cascade score overwrites files | COVERED-BOTH | `tests/linkSync.test.ts:124`, `e2e/features/projects-tab/detail-panel-status-tags-score.feature:86` |
-| 12.2b | Project edit → cascade tags union (not replace) | COVERED-BOTH | `tests/linkSync.test.ts:154`, same e2e scenario |
-| 12.3 | Two directions independent/one-way, no ping-pong | COVERED-UNIT | `tests/linkSync.test.ts` — new HTTP-route-level tests prove a sibling file's score/tags are untouched by patching another file (file→project direction doesn't cascade back), and a project's own score doesn't drift after a project→file cascade; the property lives in route wiring (which `linkSync.ts` function each handler calls), so these go through real routes rather than calling `linkSync.ts` directly |
-| 12.4 | New file mid-scan inherits project's existing score/tags | COVERED-UNIT | `tests/scanner.integration.test.ts:118`, `tests/linkSync.test.ts:173,184`; no e2e coverage |
+| 12.1a | File edit → project score = max | BOTH | `linkSync.test.ts`; `files-tab/detail-panel-status-tags-score.feature` ("Editing a file's score and tags recomputes its project live…") |
+| 12.1b | File edit → project tags = union, orphaned tags dropped | BOTH | `linkSync.test.ts`; same scenario |
+| 12.1c | Recompute scoped to that project | UNIT | `linkSync.test.ts` |
+| 12.2a | Project score overwrites files | BOTH | `linkSync.test.ts`; `projects-tab/detail-panel-status-tags-score.feature` |
+| 12.2b | Project tags union onto files | BOTH | `linkSync.test.ts`; same scenario ("…without wiping a file's own tag") |
+| 12.3 | Directions independent, no ping-pong | UNIT | `linkSync.test.ts` (route-level tests: a sibling file is untouched; the project score doesn't drift after a cascade) |
+| 12.4 | New file inherits project score and tags | UNIT | `scanner.integration.test.ts`, `linkSync.test.ts` |
 
 ## §13 Settings & Configuration
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 13.1 | Music root override: text field/native picker, validated, persisted | PARTIAL | text-field validate/save/cancel COVERED-E2E (`root-path-control.feature:66-97`); must-exist/must-be-dir/persistence COVERED-UNIT (`tests/musicRoot.test.ts:43-52,36-41`); native "Browse…" picker NONE, effectively NOT-HEADLESS-VERIFIABLE (opens a real native dialog Playwright can't see) |
-| 13.2 | Per-folder include/exclude panel + trigger scan from it | COVERED-E2E | `exclusion-toggles.feature:46-115` |
-| 13.3 | Settings panel toggles with "Saving…"/"Saved"/"Failed" feedback | COVERED-BOTH | toggle mechanics + "Saved" COVERED-E2E; "Saving…"/"Failed" states COVERED-UNIT (`SettingsPanel.test.tsx:144-178`) — corrects a stale prior verdict, this was already covered before Task 9 follow-up #8 confirmed it |
-| 13.4 | Reveal-in-Finder refused server-side for outside-root paths | COVERED-UNIT | `tests/revealRoute.test.ts:50-69`, `tests/finderService.test.ts:22-40`; no e2e from the actual UI button |
-| 13.5 | 6 independent typed-text confirmation toggles (tab/status/tag deletion by name, copy/move/delete by literal word), off by default | COVERED-UNIT | backend settings module `tests/confirmationSettings.test.ts`; toggle rendering/persistence `SettingsPanel.test.tsx`; typed-confirmation mechanics `ConfirmTextInput.test.tsx`, `useTypedConfirmation.test.ts`, `useConfirmationRequired.test.ts`; per-action dialogs `DeleteTabConfirmDialog.test.tsx`, `DeleteStatusConfirmDialog.test.tsx`, `DeleteCatalogTagConfirmDialog.test.tsx`, `CopyMoveDeleteDialog.test.tsx`; no dedicated e2e scenario for the typed-text gate itself (each dialog's e2e coverage elsewhere exercises the untyped/default-off path only) |
+| 13.1 | Music root: text field or native picker, validated, persisted | BOTH | `scanning-settings/root-path-control.feature` (invalid path, cancel, save); `musicRoot.test.ts`; `RootPathControl.test.tsx`; `folderPickerService.test.ts`, `electronFolderPickerService.test.ts`. The real native dialog is NOT-HEADLESS. |
+| 13.2 | Scan Library panel: tree, Select All/Unselect All, scan, result banner | BOTH | `ScanFolderPanel.test.tsx`; `exclusion-toggles.feature` (exclude and rescan, Select All / Unselect All) |
+| 13.3 | Settings toggles with save feedback; Apply-buttoned fields | BOTH | `SettingsPanel.test.tsx` ("Saving…"/"Failed", threshold and pattern Apply); `scan-settings.feature` |
+| 13.4 | Reveal refused outside the root | UNIT | `revealRoute.test.ts`, `finderService.test.ts`, `electronFinderService.test.ts` |
+| 13.5 | Six typed-confirmation toggles, on by default | BOTH | `confirmationSettings.test.ts` ("defaults all six confirmation toggles to true"); `SettingsPanel.test.tsx`; `ConfirmTextInput.test.tsx`, `useTypedConfirmation.test.ts`, `useConfirmationRequired.test.ts`; `CopyMoveDeleteDialog.test.tsx`, `DeleteTabConfirmDialog.test.tsx`, `DeleteStatusConfirmDialog.test.tsx`, `DeleteCatalogTagConfirmDialog.test.tsx`; e2e file-op and tab-delete steps type the confirmation word or name (`e2e/steps/fileOps.steps.ts`, `customTabs.steps.ts`) |
+| 13.6 | Items per page 5–500, default 50, all tabs | UNIT | `paginationSettings.test.ts` (default, bounds, non-integer); `SettingsPanel.test.tsx` ("Items per page"); `useItemsPerPage.test.ts` |
+| 13.7 | Theme selector and desktop-only data location live in Settings | BOTH | `SettingsPanel.test.tsx` ("Data Location section (desktop-only)"); `ThemeSelector.test.tsx`; `theming/theme-toggle.feature` |
+| 13.8 | Setters validate everything before writing | UNIT | `paginationSettings.test.ts`, `metricsSettings.test.ts`, `scanSettings.test.ts`, `confirmationSettings.test.ts` ("throws and leaves the stored value untouched…") |
 
 ## §14 Theming
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 14.1 | ProFolder(default)/Light/Dark dropdown, localStorage persistence, no-flash, legacy migration | PARTIAL | select+persist+transition-chain+default+reload-survival COVERED-E2E (`theme-toggle.feature:19-49`); legacy-key migration COVERED-UNIT (`App.theme.test.tsx`); no-flash-before-paint claim NOT-HEADLESS-VERIFIABLE / functionally NONE (no paint-timing test attempted) |
-| 14.2 | All interactive components have distinct dark/light color treatments; zero component-level theme-conditional logic, all theming via CSS tokens | PARTIAL: architecture claim (no component holds `isDark`/`isProFolder` branching) COVERED-UNIT via the permanent `isDarkIsProFolderSweep.test.ts` regression test (independently mutation-tested across multiple files, including a comment-adjacency probe); actual rendered color-treatment/contrast claim remains NOT-HEADLESS-VERIFIABLE. Several ProFolder-specific color roles are still interim placeholders reusing Light's values pending a future visual-design pass (documented in `index.css`, not a coverage gap — a known, user-approved open item) |
-| 14.3 | Splash screen: 1s, full-viewport, theme-aware background, logo + "Syncing…" | COVERED-UNIT | `SplashScreen.test.tsx` (timing, token-class background, logo accessible label); visual appearance NOT-HEADLESS-VERIFIABLE |
-| 14.4 | Logo mark in header + favicon; header/tab title "ProFolder" | COVERED-UNIT | `Logo.test.tsx`, `App.theme.test.tsx` (header/footer text assertions); favicon file existence/reference verified manually, not by an automated test |
+| 14.1 | Default/Light/Dark, persisted, no flash, legacy migration | PARTIAL | `theme-toggle.feature` (select, persist, default, reload); `ThemeSelector.test.tsx`; `test/App.theme.test.tsx` (legacy migration). The no-flash claim is NOT-HEADLESS. |
+| 14.2 | Token-only theming, no theme-conditional component logic | PARTIAL | `test/isDarkIsProFolderSweep.test.ts`, `test/index.css.tokens.test.ts`. Rendered colors and contrast are NOT-HEADLESS. |
+| 14.3 | 1-second splash screen | UNIT | `SplashScreen.test.tsx` |
+| 14.4 | Logo, favicon, "ProFolder" title | UNIT | `Logo.test.tsx`, `test/App.theme.test.tsx`. The favicon file is checked manually. |
 
 ## §15 Custom Tabs
 
-*Added after the original Task 9 audit (§1–§14) — §15 didn't exist yet at that time, so it carries
-no Task-9-era staleness risk. Coverage below reflects the feature's own dev-loop cycle
-(repository/route/component/e2e tasks, plus the later Escape-key-scoping fix), not a
-retrospective audit.*
-
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 15.1 | Custom tab creation: name, type choice, optional Status/Score/Tags pickers | COVERED-BOTH | `tests/customTabsRoute.test.ts` (`POST /api/custom-tabs` validation/persistence, incl. invalid-entry filtering and default-empty-arrays); `CreateCustomTabModal.test.tsx` (name validation, exact submit payload, default type, success/error paths); `e2e/features/custom-tabs/create-and-delete.feature` (create-with-filter and create-with-no-filter scenarios for both types) |
-| 15.2 | Status/Score/Tags locked at creation, no edit UI | COVERED-UNIT | No `PATCH`/edit route or UI exists for a custom tab's own filter fields (`src/api/routes/customTabs.ts` only exposes GET/POST/DELETE) — confirmed by absence; `CustomFilesTabPanel.test.tsx`/`CustomProjectsTabPanel.test.tsx`'s "locked filters seed the initial fetch" blocks prove the tab's statuses/scores/tags are read once into the initial fetch and never re-derived from any editable control |
-| 15.3 | Search/sort live on top of locked subset; Status/Score/Tags pickers hidden while locked | COVERED-BOTH | pickers-hidden COVERED-UNIT (`CustomFilesTabPanel.test.tsx`/`CustomProjectsTabPanel.test.tsx` "locked pickers are hidden" blocks; `FilterToolbar.tsx`'s own `locked` prop, asserted directly in neither file's dedicated test but exercised here); live-search/live-sort COVERED-BOTH (same two files' "live search"/"live sort" blocks asserting the locked params + new term/sort both reach the API call; `e2e/features/custom-tabs/locked-filtering.feature` "Locked filter controls are hidden but search and sort remain live" and "Typing a search term further narrows the already-locked result set") |
-| 15.4 | Search/sort reset to defaults on tab switch-away-and-back (remount, not just cold start) | COVERED-E2E | `e2e/features/custom-tabs/locked-filtering.feature`'s "Switching away from a custom tab and back resets live search and sort" scenario — sets a search term and sort, switches to Project Folders and back, asserts both reset. Not separately unit-tested (the remount mechanics live in `App.tsx`'s conditional-render + `key={custom-${id}}`, which is App-level wiring, not either panel's own logic) |
-| 15.5 | Same row interactions as the default tabs: detail panel, status/score/tags edit incl. §12 linking, batch edit, pagination, reveal | COVERED-BOTH | detail panel open/edit + linking COVERED-UNIT (`CustomFilesTabPanel.test.tsx`/`CustomProjectsTabPanel.test.tsx`'s "editing status/tags/score inside the panel" blocks, explicitly asserting which cross-type refresh props fire per field, mirroring §12's file↔project directions); batch edit COVERED-UNIT (same files' "batch edit" blocks); reveal COVERED-UNIT (same files' "reveal" blocks, success + failure-banner); pagination/selection-reset-on-filter-or-page-change COVERED-UNIT (same files' "selection resets on filter/page change" blocks); real-UI walkthrough COVERED-E2E (`e2e/features/custom-tabs/locked-filtering.feature`'s cascade scenario opens a file detail panel inside a custom Files tab, edits its score, and confirms the parent project's score updated on the Project Folders tab) |
-| 15.6 | Playback is global/app-level, not per-tab | COVERED-UNIT | `CustomFilesTabPanel.test.tsx`'s "playback pass-through (App-level/global, not local state)" block — `playingFileId`/`isPlaying`/`onPlayClick` are asserted as pure pass-through props with no local play/pause state in the panel; `CustomProjectsTabPanel` has no player wiring at all (Projects rows aren't playable), consistent with playback living once in `App.tsx`. No e2e scenario plays audio while switching between a custom tab and a default tab specifically, but the unit-level pass-through proof plus `App.tsx`'s single `<AudioPlayerBar>` mount (unconditional, outside the tab-switch conditional) make this low-risk |
-| 15.7 | "×" delete button + confirmation dialog; deleting the active tab falls back to Project Folders | COVERED-BOTH | dialog mechanics COVERED-UNIT (`DeleteTabConfirmDialog.test.tsx` — renders tabName, Confirm/Cancel call the right callback, Escape/backdrop dismiss, theming); delete-and-fallback COVERED-BOTH (`frontend/src/test/App.customTabs.test.tsx`'s single wiring test drives the full create→switch→delete→confirm→fallback-to-Project-Folders path through real `App.tsx` state; `e2e/features/custom-tabs/create-and-delete.feature`'s "Cancelling the delete confirmation leaves the tab in place" and "Confirming the delete removes the tab and falls back to Project Folders when it was active" scenarios) |
-
-Repository-layer round-trip (JSON-array field encode/decode, creation-order listing, delete
-idempotence/non-existent-id) is additionally COVERED-UNIT via `tests/customTabRepository.test.ts`
-and doesn't map to a single requirement clause above since it's implementation plumbing underneath
-15.1/15.2's persistence, not a distinct user-facing behavior.
-
----
+| 15.1 | Creation modal: name, type, filters | BOTH | `customTabsRoute.test.ts`, `CreateCustomTabModal.test.tsx`; `custom-tabs/create-and-delete.feature` |
+| 15.2 | Criteria locked; no edit route or UI | UNIT | `customTabs.ts` exposes no PATCH (checked by inspection); `CustomFilesTabPanel.test.tsx`, `CustomProjectsTabPanel.test.tsx` (locked filters seed the fetch) |
+| 15.3 | Live search and sort over the locked set; pickers hidden | BOTH | Both panel tests ("locked pickers are hidden, search/sort stay live"); `custom-tabs/locked-filtering.feature` |
+| 15.4 | Search and sort reset when switching away and back | E2E | `locked-filtering.feature` ("Switching away from a custom tab and back resets live search and sort") |
+| 15.5 | Same row interactions as the default tabs | BOTH | Both panel tests (detail panel and editing, batch edit, reveal, Copy/Move/Delete wiring, selection reset); `locked-filtering.feature` (cascade from a custom tab); `file-ops/custom-tab-reachability.feature` |
+| 15.6 | Playback is global | UNIT | `CustomFilesTabPanel.test.tsx` (playback props are pass-through) |
+| 15.7 | Delete with confirmation; active tab falls back | BOTH | `DeleteTabConfirmDialog.test.tsx`, `test/App.customTabs.test.tsx`; `create-and-delete.feature` (cancel, confirm and fall back) |
+| 15.8 | Association filter for Files tabs | UNIT | `CreateCustomTabModal.test.tsx` (association in payload, cleared when switching type); `customTabRepository.test.ts` (association round-trip); `audioFileRepository.test.ts` (associated/unassociated/omitted) |
+| 15.9 | Drag-and-drop reorder, persisted | BOTH | `customTabRepository.test.ts` (`reorder`), `customTabsRoute.test.ts` (`PUT /api/custom-tabs/reorder`), `test/App.customTabs.test.tsx` (drag-and-drop, rollback on failure, drop onto itself); `custom-tabs/reorder-and-scroll.feature` (persisted across reload) |
+| 15.10 | Horizontal scroll and All tabs panel | BOTH | `TabListPanel.test.tsx`, `test/App.tabListPanel.test.tsx`, `test/App.customTabs.test.tsx`; `reorder-and-scroll.feature` (scrolls instead of wrapping; navigate from All tabs) |
+| 15.11 | Catalog deletes and renames propagate to tab filters | UNIT | `customTabRepository.test.ts` (`pruneStatusFromAllTabs`, `pruneTagFromAllTabs`, `renameTagInAllTabs`); `test/App.statusCatalog.test.tsx` (active filter pruned) |
 
 ## §16 Copy, Move & Delete
 
-*Added by the Copy/Move/Delete feature's own dev-loop cycle (`docs/TODO.md` item 5, Tasks 1-12),
-after both the original Task 9 audit and the later §15 cycle — carries no staleness risk from
-either. Coverage below reflects that feature's own tasks (TrashService/FileOpsService,
-single-file DB rekey, project-subtree DB rekey, routes, API client + destination picker,
-`CopyMoveDeleteDialog`, wiring into the default and custom detail/batch panels, e2e), not a
-retrospective audit.*
+| # | Clause | Verdict | Citation |
+|---|---|---|---|
+| 16.1 | Available from both panels and the batch panel, in default and custom tabs | BOTH | `FileDetailPanel.test.tsx`, `ProjectDetailPanel.test.tsx`, `BatchEditPanel.test.tsx`, `test/App.fileOps.test.tsx`, both custom panel tests; `file-ops/{copy,move,delete,project-move,batch-delete,custom-tab-reachability}.feature` |
+| 16.2 | Delete goes to the Trash | BOTH | `trashService.test.ts` (real `~/.Trash` relocation of a file and a folder, AppleScript escaping); `electronTrashService.test.ts`; `CopyMoveDeleteDialog.test.tsx` (wording); `delete.feature`, `batch-delete.feature` |
+| 16.3 | Destinations restricted to the root; re-validated server-side | UNIT | `fileOpsService.test.ts` (outside root, symlink escape, missing destination); `fileOpsRoutes.test.ts`, `projectOpsRoutes.test.ts` (400 outside root); `DestinationFolderPicker.test.tsx`; `file-ops/destination-picker.feature` |
+| 16.4 | Project subtree moved or copied atomically with metadata | BOTH | `subtreeRekey.test.ts` (nesting, rollback, literal prefix match); `projectOpsRoutes.test.ts`; `project-move.feature` |
+| 16.5 | Single file keeps metadata; project association recomputed | BOTH | `audioFileRepository.test.ts` (`moveFile`/`cloneFile`, DAW vs plain folder association); `fileOpsRoutes.test.ts`; `move.feature`, `copy.feature` |
+| 16.6 | Move rejects collisions; Copy auto-renames | UNIT | `fileOpsService.test.ts` (NameConflictError, Finder-style renames); `fileOpsRoutes.test.ts`, `projectOpsRoutes.test.ts` (409). No e2e scenario creates a collision. |
+| 16.7 | Batch results per item; partial failure kept | BOTH | `fileOpsRoutes.test.ts`, `projectOpsRoutes.test.ts` (partial failure doesn't roll back); `test/App.fileOps.test.tsx` (summary banner); `batch-delete.feature` (all-succeed case only) |
+| 16.8 | Deferred API limitations | NONE | Documented, deliberately not fixed. The UI-side guard `excludeNestedProjectIds` is tested in `BatchEditPanel.test.tsx` and `CustomProjectsTabPanel.test.tsx`. |
+
+## §17 Statuses & Tags Catalog
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 16.1 | Reachable from the File detail panel, Project detail panel, and batch panel, in both default and custom tabs | COVERED-BOTH | single-item wiring COVERED-UNIT (`FileDetailPanel.test.tsx`'s/`ProjectDetailPanel.test.tsx`'s "Copy/Move/Delete buttons" blocks; default-tab callback plumbing in `frontend/src/test/App.fileOps.test.tsx`'s "App - file operations (Copy/Move/Delete) wiring, Files tab"/"...Projects tab" describe blocks; custom-tab equivalent in `CustomFilesTabPanel.test.tsx`'s/`CustomProjectsTabPanel.test.tsx`'s "Copy/Move/Delete wiring" blocks); batch wiring COVERED-UNIT (`BatchEditPanel.test.tsx`'s "Copy/Move/Delete actions" block; default-tab batch plumbing in `App.fileOps.test.tsx`'s "App - batch Copy/Move/Delete wiring (Task 10)" blocks; custom-tab batch plumbing in `CustomFilesTabPanel.test.tsx`'s/`CustomProjectsTabPanel.test.tsx`'s "batch Copy/Move/Delete wiring" blocks); real-UI walkthrough COVERED-E2E for the default tabs (`e2e/features/file-ops/{copy,move,delete,project-move}.feature`, each driven from a detail panel) and for a custom tab specifically (`e2e/features/file-ops/custom-tab-reachability.feature`, Delete driven from a custom Audio Files tab's own detail panel) |
-| 16.2 | Delete moves to macOS Trash (reversible), not permanent deletion | COVERED-BOTH | actual Trash relocation COVERED-UNIT via a real `~/.Trash` filesystem check, not a mock — `tests/trashService.test.ts`'s "actually moves a real file to ~/.Trash and removes it from its original location" and "...a real folder (with a file inside it)..." (lines 236, 253); UI wording COVERED-UNIT (`CopyMoveDeleteDialog.test.tsx`'s `buildExplanationText` "delete, single file, states Trash (not permanent deletion)..." case); app-level removal-from-active-list COVERED-E2E (`e2e/features/file-ops/delete.feature`, `batch-delete.feature`) — the e2e layer confirms the row disappears from the app's own table, not the file's actual `~/.Trash` location (that's the unit-layer citation above) |
-| 16.3 | Copy/Move destinations restricted to the configured music root; destination picker only shows in-root folders; backend independently re-validates | COVERED-UNIT | picker itself sources folders from the pre-existing `GET /api/folders/tree` (already root-scoped by construction, not a new containment check introduced by this feature — not re-tested here); this clause's own new coverage is the backend's independent re-validation on every route regardless of what the picker sent: `tests/fileOpsService.test.ts`'s "rejects with PathOutsideRootError when the source/destination is outside the configured root" and "...for a symlink inside root pointing outside it" (both `movePath` and `copyPath`); `tests/fileOpsRoutes.test.ts`'s "returns 400 when destDir resolves outside the configured music root" (copy and move); `tests/projectOpsRoutes.test.ts`'s "400s when the destination is outside the configured music root..." |
-| 16.4 | Moving/copying a project folder relocates/duplicates the whole subtree (project + nested sub-projects + all contained files) atomically, preserving status/tags/score, via in-place DB rekey rather than rescan | COVERED-BOTH | DB-rekey mechanics COVERED-UNIT (`tests/subtreeRekey.test.ts` — single project, nested sub-project, three-level-deep nesting, atomicity/rollback-on-collision, and the LIKE-wildcard-hazard proof that a literal prefix match is used, not SQL `LIKE`); route-level COVERED-UNIT (`tests/projectOpsRoutes.test.ts`'s "clones the whole subtree (project + nested sub-project + files), leaving the source untouched" and "physically moves and DB-rekeys the whole subtree, leaving nothing at the old location"); real-UI walkthrough COVERED-E2E (`e2e/features/file-ops/project-move.feature`'s "Moving a project folder relocates its own row and its file, preserving both metadata") |
-| 16.5 | Moving/copying a single audio file preserves status/tags/score; project association is recomputed from the new location | COVERED-BOTH | DB-rekey mechanics COVERED-UNIT (`tests/audioFileRepository.test.ts`'s `describe("moveFile")`/`describe("cloneFile")` blocks, including the project-(re)association tests: moving into a different project recomputes both projects' aggregates, moving outside any project clears `projectId`, and the "name merely starts with a project's name" / plain-folder / DAW-folder positive-and-negative control tests at lines 571-710); route-level COVERED-UNIT (`tests/fileOpsRoutes.test.ts`'s "moves/copies a file to destDir" tests); real-UI walkthrough COVERED-E2E (`e2e/features/file-ops/move.feature`, `copy.feature` — both assert status/score/tags survived) |
-| 16.6 | Name-collision behavior: Move rejects (no overwrite); Copy auto-renames Finder-style (`"name copy"`, `"name copy 2"`, ...) | COVERED-UNIT | `tests/fileOpsService.test.ts`'s `movePath` "rejects with NameConflictError when the destination already has an item with the same name..." and `copyPath`'s "auto-renames Finder-style on collision for a file/directory..." + "skips past an already-taken 'copy' name..."; route-level `tests/fileOpsRoutes.test.ts`'s "returns 409 on a name collision..." and `tests/projectOpsRoutes.test.ts`'s "409s on a name collision...". No e2e scenario currently drives an actual collision (the 8 e2e scenarios use collision-free fixture destinations) — unit/route layer only |
-| 16.7 | Batch Copy/Move/Delete report success/failure per item; a partial failure does not roll back items that already succeeded | COVERED-BOTH | route-level per-item independence COVERED-UNIT (`tests/fileOpsRoutes.test.ts`'s `POST /batch/copy`/`POST /batch/move`/`DELETE /batch` "processes each id independently: partial failure doesn't roll back the successful items" trio; `tests/projectOpsRoutes.test.ts`'s "batch routes" partial-failure trio, same pattern); UI banner/refetch wiring COVERED-UNIT (`frontend/src/test/App.fileOps.test.tsx`'s "App - batch Copy/Move/Delete wiring (Task 10)" blocks assert a pluralized succeeded/failed banner and that the batch panel stays open; `CustomFilesTabPanel.test.tsx`'s/`CustomProjectsTabPanel.test.tsx`'s "batch Copy/Move/Delete wiring" blocks for the custom-tab equivalent); real-UI walkthrough COVERED-E2E (`e2e/features/file-ops/batch-delete.feature`'s two-file batch delete) — the e2e scenario is an all-succeed case only, not a mixed partial-failure one, so the partial-failure branch itself is unit/route-layer only |
-| 16.8 | Known, deliberately deferred limitations (misleading nonexistent-destination error message; `batch/copy` id-dedup gap; `batch/move` order-dependent ancestor+descendant flattening for non-UI callers) | NONE (by design) | Not test-covered at any layer — these are documented-but-not-fixed gaps, not asserted behaviors. Findings and reasoning recorded in `docs/TODO.md`'s "Found along the way" list under "Copy/Move/Delete feature" (grep that file for the phrase); the ancestor+descendant case's *frontend mitigation* (`excludeNestedProjectIds`, which prevents the UI itself from ever sending such a batch) is separately COVERED-UNIT via `BatchEditPanel.test.tsx`'s dedup tests and `CustomProjectsTabPanel.test.tsx`'s "excludes a selected nested sub-project from a batch Move, sending only the parent's id" — but the underlying raw-API gap this clause describes remains untested and unfixed, as intended |
+| 17.1 | Panel lists the catalog, never Unknown | BOTH | `TagsStatusesPanel.test.tsx`; `statuses-tags/catalog-crud.feature` ("…shows the seeded default statuses, but never the built-in Unknown sentinel") |
+| 17.2 | Status add, edit and delete (reassign to Unknown); Unknown protected | BOTH | `statusRepository.test.ts`, `statusesRoute.test.ts`, `TagsStatusesPanel.test.tsx`, `test/App.statusCatalog.test.tsx`; `catalog-crud.feature` (create, edit name and color, delete reassigns to Unknown) |
+| 17.3 | Tag add, rename (409 on collision) and delete | BOTH | `tagRepository.test.ts`, `tagsRoute.test.ts` (409 on duplicate and colliding rename), `TagsStatusesPanel.test.tsx`; `catalog-crud.feature` (create, assign, delete; rename) |
+| 17.4 | Typed confirmation on delete; cancel leaves the catalog unchanged | BOTH | `DeleteStatusConfirmDialog.test.tsx`, `DeleteCatalogTagConfirmDialog.test.tsx`; `catalog-crud.feature` (cancel scenarios) |
+| 17.5 | Per-tag usage counts | UNIT | `statsRoute.test.ts` (`/api/stats/tag-counts`), `audioFileRepository.test.ts` (zero-fill for unused tags) |
 
-Repository/service-layer plumbing not mapped to a single requirement clause above: `NodeFileOpsService`'s EXDEV (cross-device rename) fallback-to-copy-then-delete, including its own rollback-on-partial-failure handling, is COVERED-UNIT via `tests/fileOpsService.test.ts`'s `movePath` EXDEV block (7 tests covering the fallback itself, directory variants, non-EXDEV passthrough, and three distinct failure-during-fallback shapes); `MacTrashService`'s AppleScript string-escaping (quotes, backslashes, multi-path batches) is COVERED-UNIT via `tests/trashService.test.ts`'s escaping block; the physical-operation-succeeded-but-DB-update-failed inconsistency handling (both single-item and batch, both files and projects) is COVERED-UNIT via `tests/fileOpsRoutes.test.ts`'s and `tests/projectOpsRoutes.test.ts`'s respective "discoverably reports (does not silently swallow)"/"surfaces (does not silently swallow)" tests.
+## §18 Keyboard & Accessibility
 
----
+| # | Clause | Verdict | Citation |
+|---|---|---|---|
+| 18.1 | Arrow/Enter/Space row navigation and its exceptions | UNIT | `useRowKeyboardNav.test.tsx`, `test/App.rowKeyboardNav.test.tsx` |
+| 18.2 | Closed panels are inert and out of the Tab order | E2E | `accessibility/tab-order.feature` (Settings, Create Custom Tab and All tabs, closed and open) |
+| 18.3 | Disambiguated accessible names | BOTH | `FileTable.test.tsx`, `ProjectsTable.test.tsx` (`aria-label="Sort by …"`); every e2e sort and filter step selects by these names |
+| 18.4 | Nested Escape closes only the innermost layer | UNIT | `CreateCustomTabModal.test.tsx` ("Escape scoping with a nested dropdown open"), `MultiSelectDropdown.test.tsx` |
 
-## Spot-check results (Task 9.3)
+## §19 Library Metrics
 
-10 citations were opened and independently verified during this consolidation (not a re-audit of
-every row — that was the two Testers' job — but a sanity check on a sample weighted toward
-multi-clause requirements where a shortcut verdict would be most likely):
+| # | Clause | Verdict | Citation |
+|---|---|---|---|
+| 19.1 | Two sections of metric tiles | UNIT | `MetricsPanel.test.tsx` |
+| 19.2 | Total/status/tag tiles; editable per section; defaults | BOTH | `metricsSettings.test.ts` (defaults, validation, no partial write), `MetricsPanel.test.tsx`, `statsRoute.test.ts`; `scanning-settings/metrics-panel-editable.feature` ("…persists across reload without leaking into Projects") |
+| 19.3 | Stale status or tag shows its raw key | UNIT | `MetricsPanel.test.tsx` ("stale metric reference tolerance") |
+| 19.4 | Latest scan change count | BOTH | `MetricsPanel.test.tsx`; `metrics-panel.feature` |
 
-1. §2.4d `tests/dawDetector.test.ts:95` — confirmed: test title is literally "prefers a
-   project-file classification over a marker-subfolder classification when both are present
-   (priority-collision case, §2.4)" and asserts exactly that. **This also confirms
-   `REQUIREMENTS.md` Appendix C's existing claim that this case is untested is stale** (see
-   Appendix C refresh below).
-2. §11.3/§11.5 `tests/audioStreamRoute.test.ts` — confirmed: 7 `it()` blocks present, matching
-   the described legitimate-stream/Range/traversal-id/absolute-id/query-trick/DB-path-outside-root/symlink-bypass coverage exactly.
-3. §7.1 `e2e/features/{projects-tab,files-tab}/filtering.feature` — confirmed: both files
-   contain all 8 described scenarios (search, status, score, Unscored, tags, combined
-   status+tag, clear-all) with matching Background fixtures.
-4. §8.2 `e2e/features/files-tab/detail-panel-status-tags-score.feature` — confirmed: status-set
-   (line 24), score-set (line 33), tags-add-via-Enter + via-suggestion (line 62-84) all present;
-   confirmed the claimed gaps (score-clear, tags-via-blur, "Saving…"/rollback) are genuinely
-   absent from this file.
-5. §12.1a/§12.1b `tests/linkSync.test.ts:65,76,95,111` + e2e line 103 — confirmed exact line
-   numbers via `grep -n "it("`; all 4 cited lines match their described test titles precisely.
-6. §9.4 `e2e/features/files-tab/batch-edit-cascade.feature:46-115` — confirmed: all 3 scenarios
-   (batch score cascade across 2 projects, live-recompute fallback, batch tag cascade) present
-   and match the described dedupe-loop proof.
-7. §1.4 `tests/score.test.ts:5,10` — confirmed: line 5 is `isValidScore` null/1-5 acceptance,
-   line 10 is out-of-range/non-integer rejection.
-8. §10.3 `tests/duplicateDetector.test.ts:120,131` — confirmed: line 120 is the too-few-matches
-   negative case, line 131 is the below-ratio-threshold negative case.
-9. §7.3 `tests/projectRepository.test.ts:143-153` + `sorting.feature:14-23` — confirmed: unit
-   test explicitly sorts by `contentModifiedAt` (not raw mtime) with stamped fixture timestamps,
-   ascending and descending; e2e scenario matches with 3 fixtures stamped by `globalSetup.ts`.
-10. Backend baseline itself — ran `npx vitest run --reporter=basic`: confirmed **21 test files,
-    181 tests, all passing**, matching the number both Testers and Task 9.4 converged on.
+## §20 Security Model
 
-**Result: all 10 held up exactly as cited — no discrepancies found requiring a correction to any
-row above.**
+| # | Clause | Verdict | Citation |
+|---|---|---|---|
+| 20.1 | Loopback by default; `HOST` opt-in | UNIT | `serverBinding.test.ts` |
+| 20.2 | Host-header allow-list (DNS-rebinding protection) | UNIT | `hostCheck.test.ts` (parsing, allow-list resolution, 403 for foreign and look-alike hosts, rejected writes never land, `ALLOWED_HOSTS`) |
+| 20.3 | Music-root containment on every path-touching route | UNIT | `revealRoute.test.ts`, `finderService.test.ts`, `audioStreamRoute.test.ts`, `fileOpsService.test.ts`, `electronTrashService.test.ts`, `electronFinderService.test.ts` |
+| 20.4 | Desktop server on an OS-assigned loopback port | NONE | `electron/main.ts`, verified by launching the packaged app |
+| 20.5 | Docker publishes on host loopback only | NONE | `docker-compose.yml` configuration |
+
+## §21 Desktop App
+
+| # | Clause | Verdict | Citation |
+|---|---|---|---|
+| 21.1 | Embedded server and window | NONE | `electron/main.ts`, verified by launching the packaged app (arm64 and, through Rosetta, the x64 half of the universal build) |
+| 21.2 | Electron OS-integration services | UNIT | `electronFinderService.test.ts`, `electronTrashService.test.ts`, `electronFolderPickerService.test.ts`, `electronDbFilePickerService.test.ts` |
+| 21.3 | Default database and music locations | NONE | `electron/main.ts`; the env overrides are exercised by the e2e and showcase setups |
+| 21.4 | Database location: trial-open, persist, restart | UNIT | `dbLocationRoute.test.ts`, `desktopPrefs.test.ts`, `desktopPrefs.adversarial.test.ts`, `SettingsPanel.test.tsx` (Data Location section) |
+| 21.5 | Recovery dialog when the custom location fails | UNIT | `dbOpenRecovery.test.ts` (reset clears the override before relaunching; quit). The native dialog is NOT-HEADLESS. |
+| 21.6 | Packaging targets and allowlisted contents | NONE | Built by the CI package jobs; contents checked manually by listing each platform's `app.asar` |
+
+## §22 Configuration & Deployment
+
+| # | Clause | Verdict | Citation |
+|---|---|---|---|
+| 22.1 | Environment variables and defaults | PARTIAL | `serverBinding.test.ts` (`HOST`), `hostCheck.test.ts` (`ALLOWED_HOSTS`), `musicRoot.test.ts` (fallback to the configured default). `PORT` and `DB_PATH` defaults aren't asserted. |
+| 22.2 | Web mode: dev proxy; production serves API and frontend from one origin | UNIT | `staticFrontendServing.test.ts`. The dev proxy is used by every e2e run. |
+| 22.3 | Docker image and compose setup | NONE | Built by the CI `docker` job; not run in a test |
+| 22.4 | Migrations run on open | UNIT | Every backend test opens a fresh database through `runMigrations`; `statusRepository.test.ts` ("returns the 4 seeded defaults … after migration") |
