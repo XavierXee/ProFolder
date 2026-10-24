@@ -61,6 +61,10 @@ your files: ProFolder only reads your folder and keeps its own small database ne
 ProFolder runs as a desktop app (macOS, with Windows and Linux builds), or in your browser
 from Docker or the source code.
 
+<video src="docs/screenshots/showcase.webm" controls muted width="900"></video>
+
+[Watch the feature tour video](docs/screenshots/showcase.webm) if it doesn't play above.
+
 ## Installation
 
 ### Desktop app
@@ -215,12 +219,23 @@ Save a view you use often as a tab of its own. For example, "Ready to Release" c
 audio file whose status is Done. A custom tab can filter by status, score, tags and, for audio
 files, whether they belong to a project. Search and sorting still work inside it.
 
+Custom tabs are also a simple way to organize your discography. Give the tracks of an album or EP
+a shared tag (for example `summer-ep`), then create a tab that filters on that tag: "Summer EP"
+now lists every track of the release, wherever the files live on your drive.
+
 Drag tabs to reorder them. When there are more tabs than fit, the tab bar scrolls, and the
 **All tabs** button lists every tab so you can jump straight to one.
 
-<p align="center">
-  <img src="docs/screenshots/custom-tab.png" alt="A custom tab called Ready to Release listing only finished audio files" width="900">
-</p>
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/custom-tab.png" alt="A custom tab called Ready to Release listing only finished audio files"></td>
+    <td width="50%"><img src="docs/screenshots/custom-tab-ep.png" alt="A custom tab called Summer EP listing the three tracks tagged summer-ep"></td>
+  </tr>
+  <tr>
+    <td align="center">Ready to Release: every finished file</td>
+    <td align="center">Summer EP: one release's tracks</td>
+  </tr>
+</table>
 
 ### Your own statuses and tags
 
@@ -307,7 +322,7 @@ The technical documentation is in [`docs/`](docs):
   the architecture, configuration, commands, desktop packaging and CI.
 - [`docs/COVERAGE.md`](docs/COVERAGE.md) maps each requirement to the tests that cover it.
 
-To regenerate the screenshots in this README (and a demo video), run `npm run showcase`.
+To regenerate the screenshots and the video in this README, run `npm run showcase`.
 
 ## License
 

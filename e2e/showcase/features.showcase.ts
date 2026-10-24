@@ -227,6 +227,20 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.wait(2500);
   await show.snap("custom-tab");
 
+  await show.chapter("Albums & EPs", "Tag a release's tracks and give it a tab — your discography, one tab per album or EP.");
+  await show.click(page.getByRole("button", { name: "Create custom tab" }));
+  await expect(createTab).toBeVisible();
+  await show.wait(800);
+  await show.type(createTab.getByLabel("Name"), "Summer EP");
+  await show.click(createTab.getByRole("radio", { name: "Audio Files" }));
+  await show.click(createTab.getByRole("button", { name: /^Tags/ }));
+  await show.click(createTab.getByRole("listbox", { name: "Filter by tags" }).locator("label", { hasText: /^summer-ep$/ }));
+  await show.wait(600);
+  await show.click(createTab.getByRole("button", { name: "Create" }));
+  await expect(page.getByRole("button", { name: "Summer EP", exact: true })).toBeVisible();
+  await show.wait(2500);
+  await show.snap("custom-tab-ep");
+
   await show.click(page.getByRole("button", { name: "Show all tabs" }));
   const allTabs = page.getByRole("dialog", { name: "All tabs" });
   await show.wait(1500);

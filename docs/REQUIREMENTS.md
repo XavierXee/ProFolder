@@ -744,7 +744,7 @@ e2e/            Playwright + Cucumber features, steps and fixtures; showcase rec
 | `npm run test:coverage` | Unit tests with a combined coverage report in `coverage/` |
 | `npm run test:e2e` | End-to-end suite, headless |
 | `npm run typecheck:e2e` | Type-check the e2e code |
-| `npm run showcase` | Slow feature walkthrough: records `showcase-output/showcase.webm` and refreshes `docs/screenshots/` |
+| `npm run showcase` | Slow feature walkthrough: records `showcase-output/showcase.webm`, then refreshes `docs/screenshots/` (the screenshots plus a copy of the video) |
 | `npm run dist:mac:arm64` / `dist:mac:universal` / `dist:win` / `dist:linux` | Package the desktop app into `release/` |
 
 23.4. **Tests.**

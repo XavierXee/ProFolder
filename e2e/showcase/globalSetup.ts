@@ -19,7 +19,7 @@ const PROJECT_SEEDS: Record<string, Seed> = {
 };
 
 const FILE_SEEDS: Record<string, Seed> = {
-  "Summer Single - Radio Edit.wav": { status: "released", score: 5, tags: ["pop", "single", "radio"] },
+  "Summer Single - Radio Edit.wav": { status: "released", score: 5, tags: ["pop", "single", "radio", "summer-ep"] },
   "Summer Single - Extended Mix.wav": { status: "done", score: 4, tags: ["pop"] },
   "Club Remix.wav": { status: "done", score: 3, tags: ["edm", "remix"] },
   "Idea 01.wav": { status: "draft", tags: ["sketch"] },
