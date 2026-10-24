@@ -297,6 +297,7 @@ tags come back with it.
 - Sync ProFolder tags with macOS Finder tags.
 - Send finished tracks to the Music app, with playlists based on tags.
 - Signed and notarized desktop builds.
+- Add companion app for mobile devices.
 
 ## For developers
 
