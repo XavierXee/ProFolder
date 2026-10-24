@@ -322,7 +322,8 @@ The technical documentation is in [`docs/`](docs):
   the architecture, configuration, commands, desktop packaging and CI.
 - [`docs/COVERAGE.md`](docs/COVERAGE.md) maps each requirement to the tests that cover it.
 
-To regenerate the screenshots and the video in this README, run `npm run showcase`.
+To regenerate the screenshots and the video in this README, run `npm run showcase`, then
+`npm run showcase:compress` to shrink the video under GitHub's 10MB limit.
 
 ## License
 

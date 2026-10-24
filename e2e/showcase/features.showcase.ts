@@ -16,8 +16,26 @@ const SCREENSHOTS_DIR = path.resolve(import.meta.dirname, "..", "..", "docs", "s
 
 // Headless video has no mouse pointer, so draw one (plus a click pulse) and a caption bar.
 // Both are aria-hidden and ignore pointer events so they never affect the app or its locators.
+//
+// The demo library lives inside this checkout, so its absolute path (shown in the header and
+// detail panels) would expose the local machine's directory layout in the published video and
+// screenshots. Every displayed occurrence is swapped for "~/Music" as soon as it's rendered.
 const OVERLAY_SCRIPT = `
   window.addEventListener("DOMContentLoaded", () => {
+    const root = ${JSON.stringify(SHOWCASE_MUSIC_ROOT)};
+    const hidePath = () => {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (node.nodeValue.includes(root)) node.nodeValue = node.nodeValue.split(root).join("~/Music");
+      }
+      for (const input of document.querySelectorAll("input, textarea")) {
+        if (input.value.includes(root)) input.value = input.value.split(root).join("~/Music");
+      }
+    };
+    // Runs again after its own edits, but finds nothing left to replace, so it settles at once.
+    new MutationObserver(hidePath).observe(document.body, { childList: true, subtree: true, characterData: true });
+    hidePath();
+
     const cursor = document.createElement("div");
     cursor.id = "showcase-cursor";
     cursor.setAttribute("aria-hidden", "true");
@@ -52,18 +70,12 @@ const OVERLAY_SCRIPT = `
       caption.style.opacity = "1";
     };
 
-    // Screenshot helpers (see Showcase.snap): hide both overlays, and rewrite the demo
-    // library's absolute path wherever it's displayed.
+    // Screenshot helpers (see Showcase.snap): hide both overlays. The path pass is repeated
+    // because the observer above doesn't see input values changed through their property.
     const overlays = [cursor, caption];
-    window.__showcaseBeforeSnap = (root) => {
+    window.__showcaseBeforeSnap = () => {
       overlays.forEach((el) => { el.style.visibility = "hidden"; });
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        if (node.nodeValue.includes(root)) node.nodeValue = node.nodeValue.split(root).join("~/Music");
-      }
-      for (const input of document.querySelectorAll("input")) {
-        if (input.value.includes(root)) input.value = input.value.split(root).join("~/Music");
-      }
+      hidePath();
     };
     window.__showcaseAfterSnap = () => {
       overlays.forEach((el) => { el.style.visibility = "visible"; });
@@ -316,11 +328,9 @@ class Showcase {
   }
 
   /** Saves a screenshot of the current screen to docs/screenshots/<name>.png, without the
-   * showcase's own cursor and caption overlays. The demo library lives inside this checkout, so
-   * its absolute path (shown in the header and detail panels) is swapped for "~/Music" first,
-   * keeping the local machine's directory layout out of published images. */
+   * showcase's own cursor and caption overlays. */
   async snap(name: string) {
-    await this.page.evaluate(`window.__showcaseBeforeSnap(${JSON.stringify(SHOWCASE_MUSIC_ROOT)})`);
+    await this.page.evaluate("window.__showcaseBeforeSnap()");
     await this.page.screenshot({ path: path.join(SCREENSHOTS_DIR, `${name}.png`) });
     await this.page.evaluate("window.__showcaseAfterSnap()");
   }
