@@ -4,6 +4,11 @@ productName: ProFolder
 directories:
   output: release
 
+# The only native dependency, better-sqlite3, ships ready-made Node-API binaries for every
+# OS/arch (picked at runtime, see `files` below), and Node-API binaries load in Electron as-is.
+# Rebuilding would only try to compile it from source, which also can't target another OS.
+npmRebuild: false
+
 # This app only ships an English UI, so the ~190 other Chromium locale packs electron-builder
 # bundles by default (~49MB) are pure dead weight.
 electronLanguages:
@@ -11,33 +16,58 @@ electronLanguages:
 
 # Only the compiled Electron/backend output and the built frontend are needed at runtime
 # (electron/main.ts dynamically imports from dist-electron/src/..., and the embedded server
-# serves dist/frontend). Without this allowlist, electron-builder's default "**/*" packed the
+# serves dist/frontend). Without an allowlist, electron-builder's default "**/*" packs the
 # whole repo checkout into app.asar, including raw TS source, e2e/tests/docs, local tool
-# folders, and -
-# worse - the real local data/library.db and .env from this machine.
-files:
-  - dist-electron/**/*
-  - dist/frontend/**/*
-  - node_modules/**/*
-  - package.json
-  - "!**/*.map"
-  # better-sqlite3 ships prebuilt native binaries for every OS/arch it supports; a mac-only
-  # build only ever runs the two darwin ones, so the win32/linux prebuilds (~13MB) are dead
-  # weight too.
-  - "!node_modules/better-sqlite3/prebuilds/win32-*.node"
-  - "!node_modules/better-sqlite3/prebuilds/linux-*.node"
-  - "!node_modules/better-sqlite3/prebuilds/linuxmusl-*.node"
+# folders, and - worse - the real local data/library.db and .env from this machine.
+#
+# The list is repeated in full under mac/win/linux because each platform also drops the
+# other platforms' better-sqlite3 prebuilds (it ships one per OS/arch and picks the right one
+# at runtime; the foreign ones are ~13MB of dead weight). Don't shorten a platform list to just
+# its exclusions: a platform-level list holding only "!" patterns packs the entire repo.
 
 mac:
   target: dmg
   icon: build/icon.icns
+  files:
+    - dist-electron/**/*
+    - dist/frontend/**/*
+    - node_modules/**/*
+    - package.json
+    - "!**/*.map"
+    - "!node_modules/better-sqlite3/prebuilds/win32-*.node"
+    - "!node_modules/better-sqlite3/prebuilds/linux-*.node"
+    - "!node_modules/better-sqlite3/prebuilds/linuxmusl-*.node"
+  # A universal build merges an x64 and an arm64 build, combining each native binary that
+  # differs between them into one two-architecture file. The better-sqlite3 prebuilds are
+  # byte-identical in both (each build carries both darwin prebuilds), so they're kept as-is.
+  x64ArchFiles: "**/node_modules/better-sqlite3/prebuilds/darwin-*.node"
 
 win:
   target: nsis
   icon: build/icon.ico
+  files:
+    - dist-electron/**/*
+    - dist/frontend/**/*
+    - node_modules/**/*
+    - package.json
+    - "!**/*.map"
+    - "!node_modules/better-sqlite3/prebuilds/darwin-*.node"
+    - "!node_modules/better-sqlite3/prebuilds/linux-*.node"
+    - "!node_modules/better-sqlite3/prebuilds/linuxmusl-*.node"
 
 linux:
   target:
     - AppImage
     - deb
   icon: build/icon.png
+  files:
+    - dist-electron/**/*
+    - dist/frontend/**/*
+    - node_modules/**/*
+    - package.json
+    - "!**/*.map"
+    - "!node_modules/better-sqlite3/prebuilds/darwin-*.node"
+    - "!node_modules/better-sqlite3/prebuilds/win32-*.node"
+  category: Audio
+  # Required by the .deb package (otherwise read from package.json's author email).
+  maintainer: Xavier de Frutos

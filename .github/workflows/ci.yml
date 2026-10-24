@@ -5,6 +5,9 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+  # Manual run from the Actions tab: also builds the desktop apps (without releasing them),
+  # to check packaging before tagging a version.
+  workflow_dispatch:
 
 # A newer push to the same branch/PR cancels the run still in progress.
 concurrency:
@@ -128,31 +131,87 @@ jobs:
           cache-to: type=gha,mode=max
 
   package:
-    name: macOS release (.dmg)
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    name: Desktop app (${{ matrix.name }})
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     needs: [unit, e2e, build, docker]
-    runs-on: macos-latest
-    permissions:
-      contents: write # to create the GitHub Release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Two separate macOS builds: a native Apple Silicon one (smaller download) and a
+          # universal one (Intel + Apple Silicon in one app, roughly twice the size).
+          - name: macOS Apple Silicon
+            artifact: macos-arm64
+            os: macos-latest
+            script: dist:mac:arm64
+            files: release/*-arm64.dmg
+          - name: macOS Universal
+            artifact: macos-universal
+            os: macos-latest
+            script: dist:mac:universal
+            files: release/*-universal.dmg
+          - name: Windows
+            artifact: windows
+            os: windows-latest
+            script: dist:win
+            files: release/*.exe
+          - name: Linux
+            artifact: linux
+            os: ubuntu-latest
+            script: dist:linux
+            files: |
+              release/*.AppImage
+              release/*.deb
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: "" # this job does need Electron
-      CSC_IDENTITY_AUTO_DISCOVERY: "false" # unsigned until a Developer ID certificate is added
+      CSC_IDENTITY_AUTO_DISCOVERY: "false" # unsigned until signing certificates are added
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+      # The build scripts use `mkdir -p`/`cp`, which cmd.exe (npm's default shell on Windows)
+      # doesn't have. Git Bash is preinstalled on the Windows runners.
+      - name: Run npm scripts with Git Bash
+        if: ${{ runner.os == 'Windows' }}
+        run: npm config set script-shell "C:\\Program Files\\Git\\bin\\bash.exe"
       - run: npm ci
       # --publish never: electron-builder would otherwise try to upload to GitHub itself when it
-      # detects a tagged CI build; the release is created explicitly in the next step instead.
-      - run: npm run dist:mac -- --publish never
+      # detects a tagged CI build; the release job below creates the release instead. On a v*
+      # tag, the tag's version (v1.2.3 -> 1.2.3) is stamped into the app and its file names.
+      - name: Package
+        run: |
+          args=(--publish never)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            args+=("-c.extraMetadata.version=${GITHUB_REF_NAME#v}")
+          fi
+          npm run ${{ matrix.script }} -- "${args[@]}"
       - uses: actions/upload-artifact@v7
         with:
-          name: macos-dmg
-          path: release/*.dmg
+          name: desktop-${{ matrix.artifact }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
           retention-days: 14
+
+  release:
+    name: GitHub Release
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    needs: [package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to create the GitHub Release
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: desktop-*
+          merge-multiple: true
+          path: release
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" release/*.dmg --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --generate-notes
