@@ -18,6 +18,11 @@
 ## Contents
 
 - [What is ProFolder?](#what-is-profolder)
+- [Installation](#installation)
+  - [Desktop app](#desktop-app)
+  - [Docker](#docker)
+  - [From source](#from-source)
+- [Getting started](#getting-started)
 - [Features](#features)
   - [Your projects, found automatically](#your-projects-found-automatically)
   - [Every audio file in one list](#every-audio-file-in-one-list)
@@ -32,11 +37,6 @@
   - [Duplicate project detection](#duplicate-project-detection)
   - [Scanning you control](#scanning-you-control)
   - [Settings, safety and themes](#settings-safety-and-themes)
-- [Installation](#installation)
-  - [Desktop app](#desktop-app)
-  - [Docker](#docker)
-  - [From source](#from-source)
-- [Getting started](#getting-started)
 - [Privacy and safety](#privacy-and-safety)
 - [Roadmap](#roadmap)
 - [For developers](#for-developers)
@@ -60,6 +60,68 @@ your files: ProFolder only reads your folder and keeps its own small database ne
 
 ProFolder runs as a desktop app (macOS, with Windows and Linux builds), or in your browser
 from Docker or the source code.
+
+## Installation
+
+### Desktop app
+
+Download the latest version from the
+[Releases page](https://github.com/XavierXee/ProFolder/releases):
+
+| Your computer | File to download |
+|---|---|
+| Mac with Apple Silicon (M1 or later) | `ProFolder-<version>-arm64.dmg` (smaller) |
+| Any Mac (Intel or Apple Silicon) | `ProFolder-<version>-universal.dmg` |
+| Windows (64-bit) | `ProFolder Setup <version>.exe` |
+| Linux (64-bit) | `ProFolder-<version>.AppImage` or `profolder_<version>_amd64.deb` |
+
+The builds aren't signed yet, so your system warns you the first time you open the app:
+
+- **macOS:** open the `.dmg` and drag ProFolder to Applications. The first time you open it,
+  macOS blocks it. Go to **System Settings → Privacy & Security** and click **Open Anyway**. If
+  macOS says the app "is damaged", run `xattr -dr com.apple.quarantine /Applications/ProFolder.app`
+  in Terminal, then open it again.
+- **Windows:** if SmartScreen appears, click **More info → Run anyway**.
+- **Linux:** make the AppImage executable (`chmod +x ProFolder-*.AppImage`) and run it, or
+  install the `.deb` with `sudo apt install ./profolder_*_amd64.deb`.
+
+ProFolder was built and tested on macOS. The Windows and Linux versions are new and haven't been
+tested much yet.
+
+### Docker
+
+Run ProFolder in a container and use it from your browser. You need Docker and `make`:
+
+```bash
+git clone https://github.com/XavierXee/ProFolder.git && cd ProFolder
+make up MUSIC_DIR="$HOME/Music"   # then open http://localhost:5175
+```
+
+`make down` stops it, and `make help` lists the other commands. A few actions need a desktop
+(revealing a file in Finder, the folder picker and deleting to the Trash), so they don't work
+inside the container.
+
+### From source
+
+You need [Node.js](https://nodejs.org) 24 or later:
+
+```bash
+git clone https://github.com/XavierXee/ProFolder.git && cd ProFolder
+npm install
+cp .env.example .env   # set MUSIC_ROOT if your music isn't in ~/Music
+npm run dev            # then open http://localhost:5173
+```
+
+## Getting started
+
+1. **Pick your production folder.** Click the folder path at the top of the window, then type a
+   path or browse to one. By default ProFolder uses your Music folder.
+2. **Scan it.** Press **Scan Library**, untick any folders you want to skip, and press **Scan**.
+   A large library may take a minute the first time; later scans are quicker.
+3. **Review and organize.** Browse **Project Folders** and **Audio Files**, open items to set a
+   status, score and tags, and create custom tabs for the views you use most.
+4. **Rescan whenever you've been working.** New bounces and projects show up, and everything you
+   entered is kept.
 
 ## Features
 
@@ -208,72 +270,16 @@ tags come back with it.
 - In the desktop app, choose where ProFolder keeps its database.
 - Pick a theme: Default, Light or Dark.
 
-<p align="center">
-  <img src="docs/screenshots/settings.png" alt="The settings panel" width="440">
-  <img src="docs/screenshots/theme-dark.png" alt="ProFolder in the dark theme" width="440">
-</p>
-
-## Installation
-
-### Desktop app
-
-Download the latest version from the
-[Releases page](https://github.com/XavierXee/ProFolder/releases):
-
-| Your computer | File to download |
-|---|---|
-| Mac with Apple Silicon (M1 or later) | `ProFolder-<version>-arm64.dmg` (smaller) |
-| Any Mac (Intel or Apple Silicon) | `ProFolder-<version>-universal.dmg` |
-| Windows (64-bit) | `ProFolder Setup <version>.exe` |
-| Linux (64-bit) | `ProFolder-<version>.AppImage` or `profolder_<version>_amd64.deb` |
-
-The builds aren't signed yet, so your system warns you the first time you open the app:
-
-- **macOS:** open the `.dmg` and drag ProFolder to Applications. The first time you open it,
-  macOS blocks it. Go to **System Settings → Privacy & Security** and click **Open Anyway**. If
-  macOS says the app "is damaged", run `xattr -dr com.apple.quarantine /Applications/ProFolder.app`
-  in Terminal, then open it again.
-- **Windows:** if SmartScreen appears, click **More info → Run anyway**.
-- **Linux:** make the AppImage executable (`chmod +x ProFolder-*.AppImage`) and run it, or
-  install the `.deb` with `sudo apt install ./profolder_*_amd64.deb`.
-
-ProFolder was built and tested on macOS. The Windows and Linux versions are new and haven't been
-tested much yet.
-
-### Docker
-
-Run ProFolder in a container and use it from your browser. You need Docker and `make`:
-
-```bash
-git clone https://github.com/XavierXee/ProFolder.git && cd ProFolder
-make up MUSIC_DIR="$HOME/Music"   # then open http://localhost:5175
-```
-
-`make down` stops it, and `make help` lists the other commands. A few actions need a desktop
-(revealing a file in Finder, the folder picker and deleting to the Trash), so they don't work
-inside the container.
-
-### From source
-
-You need [Node.js](https://nodejs.org) 24 or later:
-
-```bash
-git clone https://github.com/XavierXee/ProFolder.git && cd ProFolder
-npm install
-cp .env.example .env   # set MUSIC_ROOT if your music isn't in ~/Music
-npm run dev            # then open http://localhost:5173
-```
-
-## Getting started
-
-1. **Pick your production folder.** Click the folder path at the top of the window, then type a
-   path or browse to one. By default ProFolder uses your Music folder.
-2. **Scan it.** Press **Scan Library**, untick any folders you want to skip, and press **Scan**.
-   A large library may take a minute the first time; later scans are quicker.
-3. **Review and organize.** Browse **Project Folders** and **Audio Files**, open items to set a
-   status, score and tags, and create custom tabs for the views you use most.
-4. **Rescan whenever you've been working.** New bounces and projects show up, and everything you
-   entered is kept.
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/theme-light.png" alt="The settings panel in the Light theme"></td>
+    <td width="50%"><img src="docs/screenshots/theme-dark.png" alt="The settings panel in the Dark theme"></td>
+  </tr>
+  <tr>
+    <td align="center">Light</td>
+    <td align="center">Dark</td>
+  </tr>
+</table>
 
 ## Privacy and safety
 

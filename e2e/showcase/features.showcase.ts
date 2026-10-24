@@ -273,16 +273,14 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.click(page.getByRole("button", { name: "Settings", exact: true }));
   const settings = page.getByRole("dialog", { name: "Settings", exact: true });
   await expect(settings).toBeVisible();
-  await show.wait(1500);
-  await show.snap("settings");
-  await show.wait(1500);
+  await show.wait(3000);
 
   await show.chapter("Themes", "Default, Light or Dark.");
   for (const theme of ["Dark", "Light", "Default"]) {
     await show.click(settings.getByRole("button", { name: "Theme" }));
     await show.click(page.getByRole("listbox", { name: "Theme" }).getByRole("option", { name: theme, exact: true }));
     await show.wait(2000);
-    if (theme === "Dark") await show.snap("theme-dark");
+    if (theme !== "Default") await show.snap(`theme-${theme.toLowerCase()}`);
   }
   await show.click(settings.getByRole("button", { name: "Close panel", exact: true }));
   await show.wait(800);
