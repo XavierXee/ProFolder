@@ -309,6 +309,7 @@ tags come back with it.
 
 ## Roadmap
 
+- Add export csv/excel feature
 - Sync ProFolder tags with macOS Finder tags.
 - Send finished tracks to the Music app, with playlists based on tags.
 - Signed and notarized desktop builds.
