@@ -79,7 +79,7 @@ linux:
   category: Audio
   # Required by the .deb package (otherwise read from package.json's author email).
   maintainer: Xavier de Frutos
-  # Linux names default to package.json's "name" (music-library-manager); use the app's name.
+  # Linux names default to package.json's "name" (music-library-manager); use a lowercase one.
   executableName: profolder
 
 deb:

@@ -55,6 +55,23 @@ let embeddedServer: HttpServer | undefined;
 // The actual OS-assigned port the embedded server ended up bound to (see `createProductionWindow`),
 // read by the reuse-guard branch below to reopen a window against the already-running server.
 let embeddedServerPort: number | undefined;
+// Environment variables this process set itself (the desktop DB_PATH/MUSIC_ROOT defaults below),
+// as opposed to ones an operator passed in. See `relaunch`.
+const injectedEnvKeys: string[] = [];
+
+/**
+ * Restarts the app, e.g. after the data location changes. A relaunched app inherits this
+ * process's environment, so the DB_PATH/MUSIC_ROOT values set at startup are removed first:
+ * left in place, the new instance would take DB_PATH as operator-provided and never read the
+ * newly saved location (or, after a reset, would reopen the location that just failed).
+ * `app.exit()` rather than `app.quit()`, which emits `before-quit`/`window-all-closed` and could
+ * be intercepted.
+ */
+function relaunch(): void {
+  for (const key of injectedEnvKeys) delete process.env[key];
+  app.relaunch();
+  app.exit();
+}
 
 async function createWindow(): Promise<void> {
   // Block until both dev servers are actually up before loading the window — without this, the
@@ -170,6 +187,7 @@ async function createProductionWindow(): Promise<void> {
       const { getDbPathOverride } = await import("../src/config/desktopPrefs.js");
       dbPathOverrideInEffect = getDbPathOverride(prefsFilePath);
       process.env.DB_PATH = dbPathOverrideInEffect ?? path.join(app.getPath("userData"), "library.db");
+      injectedEnvKeys.push("DB_PATH");
     }
     if (!process.env.MUSIC_ROOT) {
       // Web mode defaults MUSIC_ROOT to "~/Music" (see config.ts) when nothing else is
@@ -178,6 +196,7 @@ async function createProductionWindow(): Promise<void> {
       // user needs SOME real folder to scan on first launch, unlike the DB path (which can start
       // empty and simply gets created by `openDb`).
       process.env.MUSIC_ROOT = app.getPath("music");
+      injectedEnvKeys.push("MUSIC_ROOT");
     }
 
     const [
@@ -247,14 +266,7 @@ async function createProductionWindow(): Promise<void> {
           return choice === 0 ? "reset" : "quit";
         },
         clearDbPathOverride,
-        // Same relaunch mechanism as the `/api/config/db-location` route's own `relaunchApp`
-        // below, for consistency: `app.relaunch()` schedules a fresh launch of the app once the
-        // current process exits, and `app.exit()` (not `app.quit()`, which would instead emit
-        // `before-quit`/`window-all-closed` and could be intercepted) exits it immediately.
-        relaunch: () => {
-          app.relaunch();
-          app.exit();
-        },
+        relaunch,
         quit: () => app.quit(),
       });
       return;
@@ -269,10 +281,7 @@ async function createProductionWindow(): Promise<void> {
       runtimeMode: "desktop",
       dbFilePickerService: new ElectronDbFilePickerService(),
       dbPrefsFilePath: prefsFilePath,
-      relaunchApp: () => {
-        app.relaunch();
-        app.exit();
-      },
+      relaunchApp: relaunch,
     });
 
     // Binds to port 0 (an OS-assigned free port) rather than `config.port` — a packaged install

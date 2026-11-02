@@ -653,13 +653,15 @@ development (`npm run dev:electron`), the window loads the Vite dev server inste
 Web mode uses the macOS `open`/AppleScript implementations instead, so in web mode those
 features only work on macOS.
 
-21.3. By default, the desktop app keeps its database in the OS user-data directory
-(`<userData>/library.db`), and its music root defaults to the OS Music folder. `DB_PATH` and
+21.3. By default, the desktop app keeps its database in the OS user-data directory, named after
+the app (`<userData>/library.db`, e.g. `~/Library/Application Support/ProFolder/library.db` on
+macOS), and its music root defaults to the OS Music folder. `DB_PATH` and
 `MUSIC_ROOT` environment variables still override both.
 
 21.4. **Database location** (Settings, desktop only). The user can pick another existing
 database file. It is trial-opened before being accepted, saved in `<userData>/desktop-prefs.json`,
-and takes effect after an automatic restart: a live database handle is never swapped.
+and takes effect after an automatic restart: a live database handle is never swapped. The
+restarted app reads the saved location afresh rather than inheriting the previous one.
 
 21.5. If the database can't be opened at startup while a custom location is in effect, a dialog
 offers to reset to the default location and relaunch, or to quit

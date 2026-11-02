@@ -1,5 +1,6 @@
 {
-  "name": "music-library-manager",
+  "name": "ProFolder",
+  "productName": "ProFolder",
   "license": "MIT",
   "version": "1.0.0",
   "description": "Local macOS app for scanning, indexing, and tagging a music-production folder (Ableton projects, exports, drafts, sample libraries).",
