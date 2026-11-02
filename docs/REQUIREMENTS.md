@@ -666,8 +666,9 @@ offers to reset to the default location and relaunch, or to quit
 (`src/config/dbOpenRecovery.ts`). This keeps a bad location from leaving the app permanently
 stuck.
 
-21.6. **Packaging** (`electron-builder.yml`, all builds unsigned for now):
-- macOS: arm64 `.dmg` and universal `.dmg`;
+21.6. **Packaging** (`electron-builder.yml`, no signing certificate yet):
+- macOS: arm64 `.dmg` and universal `.dmg`, ad-hoc signed without hardened runtime (an unsigned
+  bundle has a broken signature, which Apple Silicon reports as "damaged");
 - Windows: x64 NSIS installer;
 - Linux: x64 `.AppImage` and `.deb` (package and executable name `profolder`).
 
@@ -675,7 +676,8 @@ Each build packs only the compiled app (`dist-electron/`, `dist/frontend/`), `no
 `package.json`, through an explicit allowlist repeated in full per platform. That keeps the
 repo's local database, `.env` and sources out of the package. Each platform keeps only its own
 `better-sqlite3` prebuilt binaries, and no native rebuild step is needed, since those binaries
-are Node-API and load in Electron as-is.
+are Node-API and load in Electron as-is. Only `dependencies` are packaged, so the Electron main
+process loads dev-only packages (such as `wait-on`, used in dev mode) through a dynamic import.
 
 ## 22. Configuration & Deployment
 

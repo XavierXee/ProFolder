@@ -1,0 +1,34 @@
+name: E2E tests
+
+# Manual only (Actions tab → E2E tests → Run workflow): the suite is too unreliable on the hosted
+# runners to gate every push, so it runs on demand instead of in the CI workflow.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: E2E tests (Playwright + Cucumber)
+    # macOS because the delete scenarios go through the real macOS Trash (osascript).
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1" # the e2e suite drives the web app, not Electron
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: npm run test:e2e
+      - name: Upload Playwright report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

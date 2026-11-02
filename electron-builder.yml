@@ -28,6 +28,14 @@ electronLanguages:
 mac:
   target: dmg
   icon: build/icon.icns
+  # Ad-hoc signature (no certificate) until a Developer ID is set up. Unsigned isn't an option:
+  # packaging edits the bundle, which breaks Electron's own linker signature, and Apple Silicon
+  # reports an app with a broken signature as "damaged" with no way to open it. An ad-hoc signed
+  # app gets the regular unidentified-developer prompt instead (System Settings → Open Anyway).
+  identity: "-"
+  # Hardened runtime only matters for notarization, which needs a real identity. With an ad-hoc
+  # signature its library validation can refuse to load Electron's own frameworks at launch.
+  hardenedRuntime: false
   files:
     - dist-electron/**/*
     - dist/frontend/**/*

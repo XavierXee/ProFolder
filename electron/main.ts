@@ -1,6 +1,5 @@
 import { app, BrowserWindow, dialog } from "electron";
 import path from "node:path";
-import waitOn from "wait-on";
 // Type-only imports — erased at compile time, so unlike the dynamic `import()`s inside
 // `createProductionWindow` below, these do NOT trigger `better-sqlite3`'s/`config.ts`'s
 // module-level side effects at load time. They exist purely so the module-level tracking
@@ -67,6 +66,11 @@ async function createWindow(): Promise<void> {
   // 404s because `dist/frontend` doesn't exist yet (see `src/api/server.ts`), so an HTTP-based
   // 2XX check against it would never succeed and would hang forever. Vite's dev server root
   // does return 2XX in dev mode, so it's checked with `http-get:...`.
+  //
+  // Imported here rather than at the top of the file: wait-on is a devDependency, so it isn't
+  // packaged, and a static import would crash the packaged app on launch before it gets to
+  // production mode.
+  const { default: waitOn } = await import("wait-on");
   await waitOn({
     resources: [`tcp:localhost:${API_DEV_SERVER_PORT}`, `http-get://localhost:5173`],
   });
