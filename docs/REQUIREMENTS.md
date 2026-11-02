@@ -763,9 +763,11 @@ e2e/            Playwright + Cucumber features, steps and fixtures; showcase rec
 - type-checking of all four TypeScript projects;
 - the unit tests with coverage (the summary goes to the job page and the HTML report is attached
   as an artifact);
-- the e2e suite on macOS (one retry on CI);
 - the web build;
 - a Docker image build.
+
+The e2e suite has its own workflow (`.github/workflows/e2e.yml`) that only runs when started by
+hand from the Actions tab. It runs on macOS, with one retry on CI.
 
 Pushing a `v*` tag additionally:
 - publishes the image to `ghcr.io/xavierxee/profolder`;
