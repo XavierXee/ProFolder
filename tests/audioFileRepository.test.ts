@@ -212,6 +212,29 @@ describe("findAllActivePaged", () => {
     ]);
   });
 
+  it("stores durations and sorts by them when sortBy is 'duration'", () => {
+    insertAudioFile(db, makeFile({ id: "long.wav", durationSeconds: 300.5 }));
+    insertAudioFile(db, makeFile({ id: "short.wav", durationSeconds: 12 }));
+    insertAudioFile(db, makeFile({ id: "unknown.wav" })); // duration not read: stored as null
+    for (const id of ["long.wav", "short.wav", "unknown.wav"]) setTags(db, id, ["duration-test"]);
+
+    const page = (sortDir: "asc" | "desc") =>
+      findAllActivePaged(db, { tags: ["duration-test"], sortBy: "duration", sortDir, limit: 10, offset: 0 }).items;
+
+    expect(page("asc").map((f) => [f.id, f.durationSeconds])).toEqual([
+      ["unknown.wav", null],
+      ["short.wav", 12],
+      ["long.wav", 300.5],
+    ]);
+    expect(page("desc").map((f) => f.id)).toEqual(["long.wav", "short.wav", "unknown.wav"]);
+  });
+
+  it("replaces the duration when a changed file's metadata is updated", () => {
+    insertAudioFile(db, makeFile({ id: "take.wav", durationSeconds: 10 }));
+    updateAudioFileMetadata(db, makeFile({ id: "take.wav", durationSeconds: 42 }));
+    expect(findById(db, "take.wav")?.durationSeconds).toBe(42);
+  });
+
   it("sorts by status, project, and tags (the 3 new sort keys)", () => {
     // 3 dedicated fresh files (not the 25 seeded ones), each with the exact combination of
     // status/projectId/tags needed to exercise all 3 new keys off one small setup. project_id

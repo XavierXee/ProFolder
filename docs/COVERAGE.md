@@ -1,12 +1,12 @@
 # Test Coverage — `REQUIREMENTS.md` vs. the Test Suites
 
 *Maps each numbered clause of [`REQUIREMENTS.md`](REQUIREMENTS.md) (§1–§22) to the tests that
-prove it. Last audited 2026-10-24 against the current suites:*
+prove it. Last audited 2026-11-03 against the current suites:*
 
 | Suite | Location | Size (all passing) |
 |---|---|---|
-| Backend unit + route tests | `tests/*.test.ts` | 57 files, 724 tests |
-| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 60 files, 949 tests |
+| Backend unit + route tests | `tests/*.test.ts` | 58 files, 735 tests |
+| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 60 files, 951 tests |
 | End-to-end (Playwright + Cucumber) | `e2e/features/**/*.feature` | 30 features, 115 scenarios |
 
 *Citations name the test file and, where useful, the `describe`/`it` title, rather than line
@@ -31,14 +31,14 @@ rather than behavior, so they have no rows.*
 | Verdict | Rows |
 |---|---|
 | BOTH | 55 |
-| UNIT | 74 |
+| UNIT | 76 |
 | E2E | 2 |
 | PARTIAL | 6 |
 | NONE | 9 |
 | NOT-HEADLESS | 1 |
-| **Total** | **147** |
+| **Total** | **149** |
 
-Fully covered (BOTH + UNIT + E2E): 131 of 147 rows (89%). Several of those rows still carry a
+Fully covered (BOTH + UNIT + E2E): 133 of 149 rows (89%). Several of those rows still carry a
 NOT-HEADLESS sub-clause, noted in the row.
 
 **Open, actionable gaps** (PARTIAL/NONE rows that a test could close):
@@ -92,6 +92,7 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 | 2.10c | Latest scan retrievable (`GET /api/scan/last`) | BOTH | `scanRoutes.test.ts`; `scanning-settings/metrics-panel.feature` |
 | 2.11 | Scanning is strictly read-only | NONE | True by code inspection; no regression test compares the tree before and after a scan. |
 | 2.12 | Command-line scan | NONE | `src/cli/scan.ts` is untested; it calls the same `scanner.ts` covered above. |
+| 2.13 | Durations read at scan time; unreadable → `null`; backfill; kept on copy | UNIT | `audioDuration.test.ts`; `scanner.integration.test.ts` ("audio durations": recorded, re-read on change, filled in when missing); `audioFileRepository.test.ts` ("replaces the duration…"); `subtreeRekey.test.ts` ("copies each file's duration to its clone"). Only WAV is parsed in tests (generated fixtures); the other formats were checked by hand against real files. |
 
 ## §3 Scan Settings
 
@@ -127,7 +128,7 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
-| 6.1 | Columns and their order; Location tooltip; truncation | PARTIAL | Order asserted in `FileTable.test.tsx` ("column order"); cells in `FileRow.test.tsx` (project, "—" fallback, `title` = full path); sort targets in `files-tab/sorting.feature`. Truncation is NOT-HEADLESS and is the only gap. |
+| 6.1 | Columns and their order; Location tooltip; truncation | PARTIAL | Order asserted in `FileTable.test.tsx` ("column order"); cells in `FileRow.test.tsx` (project, "—" fallback, `title` = full path, duration `m:ss` / "—"); sort targets in `files-tab/sorting.feature`. Truncation is NOT-HEADLESS and is the only gap. |
 | 6.2 | Row opens panel, except play button and checkbox | BOTH | `files-tab/detail-panel-status-tags-score.feature`, `audio-player.feature` ("…without opening the detail panel"); `FileRow.test.tsx` (checkbox doesn't fire the row click) |
 | 6.3 | Library summary refreshed after scans and edits | BOTH | See §19 |
 
@@ -136,10 +137,11 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
 | 7.1 | Debounced search; status (catalog-driven), score (incl. Unscored), tags filters; Folders filter on Files views; AND across types | BOTH | `files-tab/` and `projects-tab/filtering.feature` (search, status, exact score, Unscored, tag, combined, clear-all, empty result); `FilterToolbar.test.tsx` (debounce; "shows the Unknown sentinel plus every catalog status"; Association filter); `audioFileRepository.test.ts` (association filter). The Folders filter is unit-tested only. |
-| 7.2 | Column-header sorting, toggle, `aria-sort`, `aria-label` | BOTH | `FileTable.test.tsx`, `ProjectsTable.test.tsx` (sortable headers); `audioFileRepository.test.ts` ("sorts by status, project, and tags"), `projectRepository.test.ts` ("sorts by status, type, tags, and audioFileCount"); `files-tab/sorting.feature` (Track / File, Location, Modified, Score), `projects-tab/sorting.feature` (Project Folder, Modified, Score). The newer columns (Status, Tags, Type, Files, Project) are unit-tested only. |
+| 7.2 | Column-header sorting, toggle, `aria-sort`, `aria-label` | BOTH | `FileTable.test.tsx`, `ProjectsTable.test.tsx` (sortable headers); `audioFileRepository.test.ts` ("sorts by status, project, and tags"), `projectRepository.test.ts` ("sorts by status, type, tags, and audioFileCount"); `files-tab/sorting.feature` (Track / File, Location, Modified, Score), `projects-tab/sorting.feature` (Project Folder, Modified, Score). The newer columns (Status, Tags, Type, Files, Project, Duration) are unit-tested only. |
 | 7.3 | Projects "Modified" uses `contentModifiedAt` | BOTH | `projectRepository.test.ts`, `scanner.integration.test.ts`; `projects-tab/sorting.feature` |
 | 7.3a | Unscored sorts first ascending, last descending | UNIT | `audioFileRepository.test.ts` (score sort: "null sorts first ascending … last descending") |
 | 7.3b | Status by key, tags by first tag, Files by active count | UNIT | `audioFileRepository.test.ts`, `projectRepository.test.ts` (the new-sort-key tests above) |
+| 7.3c | Duration sort; unknown sorts first ascending | UNIT | `audioFileRepository.test.ts` ("stores durations and sorts by them…"); `FileTable.test.tsx` (Duration header calls `onSortChange("duration")`) |
 | 7.4 | Filter or search change resets to page 1 | BOTH | `useAudioFiles.test.ts`, `useProjects.test.ts`; `test/App.pagination.test.tsx` |
 | 7.5 | Clear: always visible, disabled when idle, resets everything | BOTH | `FilterToolbar.test.tsx` (disabled state, locked-mode patch); `filtering.feature` ("Clearing all filters…") |
 | 7.6 | "N of Total" result count | BOTH | `useAudioFiles.test.ts`, `useProjects.test.ts`; `filtering.feature` (exact "1 of 1" text) |

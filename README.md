@@ -143,8 +143,8 @@ and reveal it in Finder.
 ### Every audio file in one list
 
 **Audio Files** gathers every bounce, mix, export and memo in one place: WAV, AIFF, MP3, M4A,
-FLAC and OGG. Each file shows the project it belongs to and the folder it lives in, so a file
-called `Final v3.wav` is never a mystery.
+FLAC and OGG. Each file shows its length, the project it belongs to and the folder it lives in,
+so a file called `Final v3.wav` is never a mystery.
 
 Sample packs and Ableton's backup folders are skipped by default, so the list holds your own
 music rather than thousands of drum hits.
@@ -309,6 +309,15 @@ tags come back with it.
 
 ## Roadmap
 
+- show total duration of custom tab
+- custom tabs, add tracks ordering (for project sequencing)
+- advanced option for custom tabs creation (filter by folder)
+- enable giving score and status in tabs instead of just panels
+- add option to exclude unscored items in custom tabs
+- Add Auto play to play next track in the list
+- "Name is required" in custom tabs should dissapear when typing
+- Scan complete notification should dissapear after a few seconds
+- add edit custom tabs filters
 - Add export csv/excel feature
 - Sync ProFolder tags with macOS Finder tags.
 - Send finished tracks to the Music app, with playlists based on tags.

@@ -22,7 +22,7 @@ export type FileFilters = {
   tags?: string[];
   /** Whether the file belongs to a project folder; omit means no filter (everything). */
   association?: "associated" | "unassociated";
-  sortBy?: "name" | "modifiedAt" | "folder" | "score" | "status" | "project" | "tags";
+  sortBy?: "name" | "modifiedAt" | "folder" | "score" | "status" | "project" | "tags" | "duration";
   sortDir?: "asc" | "desc";
   page?: number;
   pageSize?: number;

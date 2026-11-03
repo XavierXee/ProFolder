@@ -10,6 +10,7 @@ import {
   loadFingerprints,
   insertAudioFile,
   updateAudioFileMetadata,
+  setDuration,
   touchLastSeen,
   markRemoved as markAudioFilesRemoved,
 } from "../database/repositories/audioFileRepository.js";
@@ -22,6 +23,7 @@ import { insertScanRun } from "../database/repositories/scanRunRepository.js";
 import { getExcludedPaths } from "../database/repositories/scanExclusionRepository.js";
 import { applyProjectMetadataToNewFile } from "../database/repositories/linkSync.js";
 import { getScanSettings } from "../config/scanSettings.js";
+import { readDurations } from "./audioDuration.js";
 
 export async function runScan(options: ScanOptions, db: Database.Database): Promise<ScanStats> {
   const startedAt = new Date();
@@ -60,6 +62,25 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
   // per-subdirectory error (e.g. EACCES on one nested folder) still lets foldersScanned
   // count the root and any other reachable folders, so this guard doesn't apply there.
   const rootUnreachable = foldersScanned === 0 && errors.some((error) => error.path === rootPath);
+
+  // Durations are read from each file's headers, which is asynchronous, so it happens here
+  // rather than inside the (synchronous) transaction below. Only files whose row is about to be
+  // written get read: new, reappearing and changed files, plus unchanged ones with no duration
+  // yet (rows from before durations were recorded, or files that couldn't be read last time).
+  const needsDuration = new Map<string, string>();
+  for (const file of audioFiles) {
+    const fingerprint = existingFingerprints.get(file.relativePath);
+    if (
+      !fingerprint ||
+      fingerprint.isRemoved ||
+      !fingerprint.hasDuration ||
+      fingerprint.size !== file.stats.size ||
+      fingerprint.modifiedAt !== file.stats.mtime.toISOString()
+    ) {
+      needsDuration.set(file.relativePath, file.absolutePath);
+    }
+  }
+  const durations = await readDurations(needsDuration);
 
   const nowIso = new Date().toISOString();
 
@@ -119,6 +140,7 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
         filename: file.filename,
         extension: path.extname(file.filename).toLowerCase(),
         size: file.stats.size,
+        durationSeconds: durations.get(id) ?? null,
         createdAt: file.stats.birthtime.toISOString(),
         modifiedAt: modifiedAtIso,
         containingFolder: path.dirname(file.absolutePath),
@@ -146,6 +168,7 @@ export async function runScan(options: ScanOptions, db: Database.Database): Prom
         modifiedFiles++;
       } else {
         touchLastSeen(db, id, nowIso);
+        if (!fingerprint.hasDuration) setDuration(db, id, durations.get(id) ?? null);
       }
       existingFingerprints.delete(id);
     }

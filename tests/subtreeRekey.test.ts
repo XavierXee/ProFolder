@@ -478,6 +478,16 @@ describe("cloneProjectSubtree — nested sub-project", () => {
     expect(tagsTableCount(db)).toBe(tagsBefore);
   });
 
+  it("copies each file's duration to its clone", () => {
+    buildNestedFixture();
+    db.prepare(`UPDATE audio_files SET duration_seconds = 187.25 WHERE id = ?`).run("50%_Off/master.wav");
+
+    cloneProjectSubtree(db, "50%_Off", `${MUSIC_ROOT}/60_Percent Off`, MUSIC_ROOT);
+
+    expect(findFileById(db, "60_Percent Off/master.wav")!.durationSeconds).toBe(187.25);
+    expect(findFileById(db, "60_Percent Off/InnerMix/take1.wav")!.durationSeconds).toBeNull();
+  });
+
   it("throws when the source project id doesn't exist", () => {
     expect(() =>
       cloneProjectSubtree(db, "does-not-exist", `${MUSIC_ROOT}/x`, MUSIC_ROOT)

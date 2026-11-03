@@ -51,6 +51,7 @@ function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
     filename: "Kick One.wav",
     extension: ".wav",
     size: 1000,
+    durationSeconds: null,
     modifiedAt: "2026-01-01T00:00:00.000Z",
     containingFolder: "Drums",
     status: "unknown",

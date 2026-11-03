@@ -3,7 +3,7 @@ import { render, within } from "@testing-library/react";
 import LoadingRows from "../LoadingRows.js";
 
 describe("LoadingRows", () => {
-  it("renders properly as 8 skeleton table rows, each with 8 cells", () => {
+  it("renders properly as 8 skeleton table rows, each with one cell per Audio Files column (9)", () => {
     const { container } = render(
       <table>
         <tbody>
@@ -17,7 +17,7 @@ describe("LoadingRows", () => {
 
     rows.forEach((row) => {
       const cells = within(row as HTMLElement).getAllByRole("cell");
-      expect(cells).toHaveLength(8);
+      expect(cells).toHaveLength(9);
       cells.forEach((cell) => {
         expect(cell.querySelector(".skeleton")).not.toBeNull();
       });

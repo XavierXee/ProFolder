@@ -23,6 +23,9 @@ export type AudioFile = {
   extension: string;
 
   size: number;
+  /** Playback length in seconds, read from the file during a scan; null if not read yet or
+   * unreadable. */
+  durationSeconds: number | null;
   createdAt?: string;
   modifiedAt: string;
 

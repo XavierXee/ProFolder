@@ -22,11 +22,12 @@ import {
 import { setExcludedPaths } from "../src/database/repositories/scanExclusionRepository.js";
 import { setScanSettings } from "../src/config/scanSettings.js";
 import { getLastScanRun } from "../src/database/repositories/scanRunRepository.js";
+import { makeWav } from "./wavFixture.js";
 
 let tmpRoot: string;
 let db: Database.Database;
 
-async function writeFile(relPath: string, content = ""): Promise<void> {
+async function writeFile(relPath: string, content: string | Buffer = ""): Promise<void> {
   const absPath = path.join(tmpRoot, relPath);
   await fs.mkdir(path.dirname(absPath), { recursive: true });
   await fs.writeFile(absPath, content);
@@ -533,6 +534,43 @@ describe("runScan", () => {
     const trackAIndex = ids.indexOf(path.join("Ableton Projects", "Track A"));
     const trackBIndex = ids.indexOf(path.join("Ableton Projects", "Track B"));
     expect(trackBIndex).toBeLessThan(trackAIndex);
+  });
+});
+
+describe("audio durations", () => {
+  function durationOf(filename: string): number | null | undefined {
+    return findAllActiveFiles(db).find((f) => f.filename === filename)?.durationSeconds;
+  }
+
+  it("records each audio file's duration, and null for a file that can't be read", async () => {
+    await writeFile("Exports/Single.wav", makeWav(3));
+    await runScan({ rootPath: tmpRoot }, db);
+
+    expect(durationOf("Single.wav")).toBeCloseTo(3, 3);
+    // The shared fixture files hold placeholder text, not real audio.
+    expect(durationOf("Track A - Final.wav")).toBeNull();
+  });
+
+  it("reads the duration again when a file changes", async () => {
+    await writeFile("Exports/Single.wav", makeWav(3));
+    await runScan({ rootPath: tmpRoot }, db);
+
+    await writeFile("Exports/Single.wav", makeWav(5));
+    await runScan({ rootPath: tmpRoot }, db);
+
+    expect(durationOf("Single.wav")).toBeCloseTo(5, 3);
+  });
+
+  it("fills in a missing duration on an unchanged file at the next scan", async () => {
+    await writeFile("Exports/Single.wav", makeWav(3));
+    await runScan({ rootPath: tmpRoot }, db);
+    // As for a row recorded before durations existed.
+    db.prepare(`UPDATE audio_files SET duration_seconds = NULL`).run();
+
+    const stats = await runScan({ rootPath: tmpRoot }, db);
+
+    expect(durationOf("Single.wav")).toBeCloseTo(3, 3);
+    expect(stats.modifiedFiles).toBe(0);
   });
 });
 

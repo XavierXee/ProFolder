@@ -5,8 +5,10 @@ import { loadActiveDawProjectIds } from "./projectRepository.js";
 import { syncProjectFromFiles } from "./linkSync.js";
 import { findAll as findAllStatuses } from "./statusRepository.js";
 
-export type AudioFileUpsertInput = Omit<AudioFile, "tags" | "status" | "score" | "notes"> & {
+export type AudioFileUpsertInput = Omit<AudioFile, "tags" | "status" | "score" | "notes" | "durationSeconds"> & {
   status?: TrackStatus;
+  /** Omitted means unknown (stored as NULL), e.g. not read by the caller. */
+  durationSeconds?: number | null;
 };
 
 type AudioFileRow = {
@@ -16,6 +18,7 @@ type AudioFileRow = {
   filename: string;
   extension: string;
   size: number;
+  duration_seconds: number | null;
   created_at: string | null;
   modified_at: string;
   containing_folder: string;
@@ -39,7 +42,7 @@ export type AudioFileFilters = {
   projectId?: string;
   /** Whether the file belongs to a project folder; omit/undefined means no filter (everything). */
   association?: "associated" | "unassociated";
-  sortBy?: "name" | "modifiedAt" | "folder" | "score" | "status" | "project" | "tags";
+  sortBy?: "name" | "modifiedAt" | "folder" | "score" | "status" | "project" | "tags" | "duration";
   sortDir?: "asc" | "desc";
   limit?: number;
   offset?: number;
@@ -109,6 +112,7 @@ function rowToAudioFile(row: AudioFileRow, tags: string[]): AudioFile {
     filename: row.filename,
     extension: row.extension,
     size: row.size,
+    durationSeconds: row.duration_seconds,
     createdAt: row.created_at ?? undefined,
     modifiedAt: row.modified_at,
     containingFolder: row.containing_folder,
@@ -123,19 +127,25 @@ function rowToAudioFile(row: AudioFileRow, tags: string[]): AudioFile {
   };
 }
 
+export type AudioFileFingerprint = { size: number; modifiedAt: string; isRemoved: boolean; hasDuration: boolean };
+
 /** Existing rows keyed by id, loaded once before a scan for change detection. Includes
  * soft-removed rows (with `isRemoved: true`) so a reappearing file's id/path is
  * recognized as already occupying a row — routing it to a reactivation/update path
- * instead of a plain INSERT, which would otherwise hit `UNIQUE constraint failed`. */
-export function loadFingerprints(
-  db: Database.Database
-): Map<string, { size: number; modifiedAt: string; isRemoved: boolean }> {
+ * instead of a plain INSERT, which would otherwise hit `UNIQUE constraint failed`.
+ * `hasDuration` lets the scan fill in durations missing from unchanged rows. */
+export function loadFingerprints(db: Database.Database): Map<string, AudioFileFingerprint> {
   const rows = db
-    .prepare(`SELECT id, size, modified_at, is_removed FROM audio_files`)
-    .all() as { id: string; size: number; modified_at: string; is_removed: number }[];
-  const map = new Map<string, { size: number; modifiedAt: string; isRemoved: boolean }>();
+    .prepare(`SELECT id, size, modified_at, is_removed, duration_seconds FROM audio_files`)
+    .all() as { id: string; size: number; modified_at: string; is_removed: number; duration_seconds: number | null }[];
+  const map = new Map<string, AudioFileFingerprint>();
   for (const row of rows) {
-    map.set(row.id, { size: row.size, modifiedAt: row.modified_at, isRemoved: row.is_removed === 1 });
+    map.set(row.id, {
+      size: row.size,
+      modifiedAt: row.modified_at,
+      isRemoved: row.is_removed === 1,
+      hasDuration: row.duration_seconds !== null,
+    });
   }
   return map;
 }
@@ -144,16 +154,17 @@ export function loadFingerprints(
 export function insertAudioFile(db: Database.Database, file: AudioFileUpsertInput): void {
   db.prepare(
     `INSERT INTO audio_files (
-      id, path, relative_path, filename, extension, size, created_at, modified_at,
+      id, path, relative_path, filename, extension, size, duration_seconds, created_at, modified_at,
       containing_folder, project_id, status,
       first_seen_at, last_seen_at, is_removed
     ) VALUES (
-      @id, @path, @relativePath, @filename, @extension, @size, @createdAt, @modifiedAt,
+      @id, @path, @relativePath, @filename, @extension, @size, @durationSeconds, @createdAt, @modifiedAt,
       @containingFolder, @projectId, @status,
       @firstSeenAt, @lastSeenAt, 0
     )`
   ).run({
     ...file,
+    durationSeconds: file.durationSeconds ?? null,
     createdAt: file.createdAt ?? null,
     projectId: file.projectId ?? null,
     status: file.status ?? "unknown",
@@ -161,20 +172,27 @@ export function insertAudioFile(db: Database.Database, file: AudioFileUpsertInpu
 }
 
 /** Update filesystem-derived fields for a modified (or reactivated, soft-removed → reappeared)
- * file; preserves user-set status/tags/score and clears is_removed. */
+ * file; preserves user-set status/tags/score and clears is_removed. The duration is replaced
+ * too, since the file's content may have changed. */
 export function updateAudioFileMetadata(db: Database.Database, file: AudioFileUpsertInput): void {
   db.prepare(
     `UPDATE audio_files SET
       path = @path, relative_path = @relativePath, filename = @filename, extension = @extension,
-      size = @size, created_at = @createdAt, modified_at = @modifiedAt,
+      size = @size, duration_seconds = @durationSeconds, created_at = @createdAt, modified_at = @modifiedAt,
       containing_folder = @containingFolder, project_id = @projectId,
       last_seen_at = @lastSeenAt, is_removed = 0
     WHERE id = @id`
   ).run({
     ...file,
+    durationSeconds: file.durationSeconds ?? null,
     createdAt: file.createdAt ?? null,
     projectId: file.projectId ?? null,
   });
+}
+
+/** Stores a duration read for a file whose row is otherwise unchanged. */
+export function setDuration(db: Database.Database, id: string, durationSeconds: number | null): void {
+  db.prepare(`UPDATE audio_files SET duration_seconds = ? WHERE id = ?`).run(durationSeconds, id);
 }
 
 export function touchLastSeen(db: Database.Database, id: string, lastSeenAt: string): void {
@@ -222,6 +240,7 @@ function tagsForFiles(db: Database.Database, audioFileIds: string[]): Map<string
  * project's display name, to keep this a single-table query like every other sort key here). */
 function sortColumnFor(sortBy: AudioFileFilters["sortBy"]): string {
   if (sortBy === "modifiedAt") return "modified_at";
+  if (sortBy === "duration") return "duration_seconds";
   if (sortBy === "folder") return "containing_folder";
   if (sortBy === "score") return "score";
   if (sortBy === "status") return "status";

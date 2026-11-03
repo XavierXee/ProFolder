@@ -95,6 +95,7 @@ type AudioFileRow = {
   filename: string;
   extension: string;
   size: number;
+  duration_seconds: number | null;
   created_at: string | null;
   modified_at: string;
   containing_folder: string;
@@ -313,11 +314,11 @@ export function cloneProjectSubtree(
 
       db.prepare(
         `INSERT INTO audio_files (
-          id, path, relative_path, filename, extension, size, created_at, modified_at,
+          id, path, relative_path, filename, extension, size, duration_seconds, created_at, modified_at,
           containing_folder, project_id, status, score,
           first_seen_at, last_seen_at, is_removed
         ) VALUES (
-          @id, @path, @relativePath, @filename, @extension, @size, @createdAt, @modifiedAt,
+          @id, @path, @relativePath, @filename, @extension, @size, @durationSeconds, @createdAt, @modifiedAt,
           @containingFolder, @projectId, @status, @score,
           @firstSeenAt, @lastSeenAt, 0
         )`
@@ -328,6 +329,7 @@ export function cloneProjectSubtree(
         filename: row.filename,
         extension: row.extension,
         size: row.size,
+        durationSeconds: row.duration_seconds,
         createdAt: row.created_at,
         modifiedAt: row.modified_at,
         containingFolder: newContainingFolder,

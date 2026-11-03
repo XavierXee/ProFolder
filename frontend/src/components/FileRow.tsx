@@ -4,6 +4,7 @@ import StatusBadge from "./StatusBadge.js";
 import ScoreBadge from "./ScoreBadge.js";
 import { RowCheckbox } from "./RowCheckbox.js";
 import { TagChips } from "./TagChips.js";
+import { formatTime as formatDuration } from "./AudioPlayerBar.js";
 
 function formatTime(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -92,6 +93,11 @@ export function FileRow({
         <p className="text-xs leading-relaxed truncate text-ink-muted" title={file.path}>
           {location}
         </p>
+      </td>
+      <td className="px-4 py-3.5 whitespace-nowrap text-center">
+        <span className="text-xs font-mono text-ink-muted">
+          {file.durationSeconds === null ? "—" : formatDuration(file.durationSeconds)}
+        </span>
       </td>
       <td className="px-4 py-3.5 w-32 text-center">
         <StatusBadge status={file.status} truncate />

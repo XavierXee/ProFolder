@@ -126,6 +126,13 @@ disk.
 2.12. A scan can be started from the UI (§13.2) or from the command line
 (`npm run scan -- <root>`, `src/cli/scan.ts`), which prints the scan summary.
 
+2.13. A scan records each audio file's playback length (`durationSeconds`), read from the file's
+headers without decoding the audio (`src/scanner/audioDuration.ts`, via `music-metadata`). Only
+files whose row is being written are read: new, reappearing and changed files, plus unchanged
+files that have no duration yet. A file that can't be parsed gets a `null` duration instead of
+failing the scan, and is retried at the next scan. Copying a file or folder (§16) keeps its
+duration.
+
 ## 3. Scan Settings (Toggleable Ignore Rules)
 
 3.1. "Exclude Samples folders" (default on) skips any folder literally named "Samples"
@@ -196,8 +203,8 @@ the Audio Files view and of custom tabs.
 
 6.1. Displays every active audio file as a paginated, filterable, sortable table with these
 columns, in order: selection checkbox, Track / File (play button + filename/extension), Project
-(id), Location (containing folder path, truncated, with a full-path tooltip), Status, Tags
-(§5.5), Score, Modified date.
+(id), Location (containing folder path, truncated, with a full-path tooltip), Duration (`m:ss`,
+or "—" when unknown), Status, Tags (§5.5), Score, Modified date.
 
 6.2. Clicking a row (outside the play button and checkbox) opens a detail panel (§8) with the
 file's size, full path, project association and editable metadata.
@@ -222,7 +229,7 @@ Different filter types are combined with AND.
 
 7.2. Sorting is done by clicking a column header:
 - Projects: Project Folder, Type, Status, Tags, Score, Files, Modified.
-- Files: Track / File, Project, Location, Status, Tags, Score, Modified.
+- Files: Track / File, Project, Location, Duration, Status, Tags, Score, Modified.
 
 Clicking a header sorts by that column ascending, clicking it again toggles to descending, and
 clicking a different header switches the sort to that column. Each sort header is a button with
@@ -238,6 +245,9 @@ first in ascending order and last in descending order (SQLite's default `NULL` o
 7.3b. Status sorts by the status key (alphabetically), not by catalog order. Tags sort by each
 item's alphabetically-first tag; items without tags sort as `NULL` (first ascending). Files
 sorts by the count of active audio files in the project.
+
+7.3c. Duration sorts by length in seconds; files with an unknown duration sort as `NULL` (first
+ascending).
 
 7.4. Changing any filter or the search text resets pagination back to page 1.
 

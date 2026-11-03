@@ -13,6 +13,7 @@ function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
     filename: "track.wav",
     extension: ".wav",
     size: 1024,
+    durationSeconds: null,
     modifiedAt: "2026-01-15T10:30:00.000Z",
     containingFolder: "Song",
     status: "draft",
@@ -142,6 +143,7 @@ describe("FileTable - sortable headers", () => {
     expect(within(getHeader(/^Score$/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Score");
     expect(within(getHeader(/^Location$/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Location");
     expect(within(getHeader(/^Modified$/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Modified");
+    expect(within(getHeader(/^Duration$/)).getByRole("button")).toHaveAttribute("aria-label", "Sort by Duration");
   });
 
   it("calls onSortChange with the clicked column's sort key", async () => {
@@ -160,6 +162,9 @@ describe("FileTable - sortable headers", () => {
 
     await user.click(within(getHeader(/Modified/)).getByRole("button"));
     expect(onSortChange).toHaveBeenLastCalledWith("modifiedAt");
+
+    await user.click(within(getHeader(/^Duration$/)).getByRole("button"));
+    expect(onSortChange).toHaveBeenLastCalledWith("duration");
   });
 });
 
@@ -177,20 +182,25 @@ describe("FileTable - fixed column widths", () => {
       Array.from(th.classList).find((cls) => /^w-\[\d+%\]$/.test(cls))
     );
 
-    expect(widths).toHaveLength(8);
+    expect(widths).toHaveLength(9);
     expect(widths.every(Boolean)).toBe(true);
+    const total = widths.reduce((sum, cls) => sum + Number(cls!.match(/\d+/)![0]), 0);
+    expect(total).toBe(100);
   });
 });
 
 describe("FileTable - column order", () => {
   it("leads with Track / File, Project, Location, and keeps each row cell under its header", () => {
     const { container } = renderTable({
-      files: [makeFile({ filename: "beat.wav", projectId: "proj-1", relativePath: "Artist/Album/beat.wav", tags: ["rock"] })],
+      files: [
+        makeFile({ filename: "beat.wav", projectId: "proj-1", relativePath: "Artist/Album/beat.wav", tags: ["rock"], durationSeconds: 125 }),
+      ],
     });
 
     const headers = Array.from(container.querySelectorAll("thead th")).map((th) => th.textContent?.trim());
     expect(headers.slice(1, 4)).toEqual(["Track / File", "Project", "Location"]);
     expect(headers.slice(4)).toEqual([
+      expect.stringContaining("Duration"),
       expect.stringContaining("Status"),
       expect.stringContaining("Tags"),
       expect.stringContaining("Score"),
@@ -201,7 +211,8 @@ describe("FileTable - column order", () => {
     expect(cells[1]).toHaveTextContent("beat.wav");
     expect(cells[2]).toHaveTextContent("proj-1");
     expect(cells[3]).toHaveTextContent("Artist / Album");
-    expect(cells[5]).toHaveTextContent("rock");
+    expect(cells[4]).toHaveTextContent("2:05");
+    expect(cells[6]).toHaveTextContent("rock");
   });
 });
 

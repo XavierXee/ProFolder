@@ -12,6 +12,7 @@ function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
     filename: "track.wav",
     extension: ".wav",
     size: 1024,
+    durationSeconds: null,
     modifiedAt: "2026-01-15T10:30:00.000Z",
     containingFolder: "Song",
     status: "draft",
@@ -108,6 +109,19 @@ describe("FileRow", () => {
     expect(screen.getByText("+1")).toBeInTheDocument();
   });
 
+  // Cells: checkbox, track, project, location, duration, status, tags, score, modified.
+  it("shows the duration as minutes and seconds", () => {
+    renderRow({ file: makeFile({ durationSeconds: 754.9 }) });
+
+    expect(screen.getAllByRole("cell")[4]).toHaveTextContent(/^12:34$/);
+  });
+
+  it("shows '—' when the duration is unknown", () => {
+    renderRow({ file: makeFile({ durationSeconds: null }) });
+
+    expect(screen.getAllByRole("cell")[4]).toHaveTextContent(/^—$/);
+  });
+
   it("renders the projectId when set", () => {
     renderRow({ file: makeFile({ projectId: "proj-42" }) });
 
@@ -119,7 +133,7 @@ describe("FileRow", () => {
 
     // Both the tags cell and the project cell render "—" in this case.
     expect(container.querySelectorAll("td")[2].textContent).toBe("—");
-    expect(container.querySelectorAll("td")[5].textContent).toBe("—");
+    expect(container.querySelectorAll("td")[6].textContent).toBe("—");
   });
 
   it("shows a 'Play <filename>' label and play icon when not currently playing this file", () => {
@@ -289,7 +303,7 @@ describe("FileRow - token-driven styling (no isDark/isProFolder props)", () => {
     const { container } = renderRow({ file: makeFile({ filename: "beat.wav", tags: [], projectId: "proj-1" }) });
 
     expect(screen.getByText("beat.wav")).toHaveClass("text-ink");
-    const tagsCell = container.querySelectorAll("td")[5];
+    const tagsCell = container.querySelectorAll("td")[6];
     expect(tagsCell.textContent).toBe("—");
     expect(tagsCell.querySelector("span")).toHaveClass("text-ink-faint");
   });

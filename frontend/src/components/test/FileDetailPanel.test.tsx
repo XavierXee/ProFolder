@@ -55,6 +55,7 @@ function makeFile(overrides: Partial<AudioFile> = {}): AudioFile {
     filename: "track.wav",
     extension: ".wav",
     size: 2048,
+    durationSeconds: null,
     modifiedAt: "2026-01-15T10:30:00.000Z",
     containingFolder: "Song",
     status: "draft",
