@@ -110,6 +110,32 @@ export function create(db: Database.Database, input: CreateCustomTabInput): Cust
   };
 }
 
+/**
+ * Replaces an existing tab's name, type, filters and ordered flag (its place in the tab bar and
+ * creation date are kept). Returns the updated tab, or undefined if there's no tab with this id.
+ * An ordered tab's saved file order is kept even when it's turned off or its filters change: it
+ * only ranks the files that are members, so it simply comes back if the tab is ordered again.
+ */
+export function update(db: Database.Database, id: number, input: CreateCustomTabInput): CustomTab | undefined {
+  const ordered = input.type === "files" && input.ordered === true;
+  const result = db
+    .prepare(
+      `UPDATE custom_tabs SET name = ?, type = ?, statuses = ?, scores = ?, tags = ?, association = ?, ordered = ?
+       WHERE id = ?`
+    )
+    .run(
+      input.name,
+      input.type,
+      JSON.stringify(input.statuses),
+      JSON.stringify(input.scores),
+      JSON.stringify(input.tags),
+      input.association ?? null,
+      ordered ? 1 : 0,
+      id
+    );
+  return result.changes > 0 ? findById(db, id) : undefined;
+}
+
 /** Hard-deletes a custom tab by id. Returns whether a row was actually deleted. */
 export function deleteById(db: Database.Database, id: number): boolean {
   const result = db.prepare(`DELETE FROM custom_tabs WHERE id = ?`).run(id);

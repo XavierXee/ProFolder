@@ -8,6 +8,7 @@ import type { StatusDef } from "../../api/client.js";
 
 vi.mock("../../api/client.js", () => ({
   createCustomTab: vi.fn(),
+  updateCustomTab: vi.fn(),
   getStatuses: vi.fn(),
 }));
 
@@ -405,5 +406,60 @@ describe("CreateCustomTabModal - ordered option", () => {
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(mockCreateCustomTab).toHaveBeenCalledWith(expect.objectContaining({ type: "projects", ordered: false })));
+  });
+});
+
+describe("CreateCustomTabModal - editing an existing tab", () => {
+  const existing: CustomTab = {
+    id: 9,
+    name: "Summer EP",
+    type: "files",
+    statuses: ["done"],
+    scores: [5],
+    tags: ["rock"],
+    association: "unassociated",
+    ordered: false,
+    sortOrder: 0,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+
+  it("starts from the tab's current settings, titled 'Edit' with a Save button", () => {
+    renderModal({ editingTab: existing });
+
+    expect(screen.getByRole("dialog", { name: "Edit custom tab" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Edit Custom Tab" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toHaveValue("Summer EP");
+    expect(screen.getByRole("radio", { name: "Audio Files" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Only files outside of project folders" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Ordered/ })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: /^Tags/ })).toHaveTextContent("(1)");
+    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create" })).not.toBeInTheDocument();
+  });
+
+  it("saves the changes through updateCustomTab, not createCustomTab, and reports the saved tab", async () => {
+    const saved = { ...existing, name: "Summer EP (Deluxe)", ordered: true };
+    vi.mocked(api.updateCustomTab).mockReset().mockResolvedValue(saved);
+    const user = userEvent.setup({ delay: null });
+    const onSaved = vi.fn();
+    const { props } = renderModal({ editingTab: existing, onSaved });
+
+    await user.clear(screen.getByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "Summer EP (Deluxe)");
+    await user.click(screen.getByRole("checkbox", { name: /Ordered/ }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(saved));
+    expect(api.updateCustomTab).toHaveBeenCalledWith(9, {
+      name: "Summer EP (Deluxe)",
+      type: "files",
+      statuses: ["done"],
+      scores: [5],
+      tags: ["rock"],
+      association: "unassociated",
+      ordered: true,
+    });
+    expect(mockCreateCustomTab).not.toHaveBeenCalled();
+    expect(props.onClose).toHaveBeenCalled();
   });
 });

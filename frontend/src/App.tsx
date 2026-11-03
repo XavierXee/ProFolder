@@ -18,7 +18,7 @@ import BatchEditPanel from "./components/BatchEditPanel.js";
 import AudioPlayerBar from "./components/AudioPlayerBar.js";
 import RootPathControl from "./components/RootPathControl.js";
 import CreateCustomTabModal from "./components/CreateCustomTabModal.js";
-import TabListPanel, { type TabListItem } from "./components/TabListPanel.js";
+import TabListPanel, { PencilIcon, type TabListItem } from "./components/TabListPanel.js";
 import DeleteTabConfirmDialog from "./components/DeleteTabConfirmDialog.js";
 import CustomFilesTabPanel from "./components/CustomFilesTabPanel.js";
 import CustomProjectsTabPanel from "./components/CustomProjectsTabPanel.js";
@@ -153,6 +153,10 @@ export default function App() {
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
   const [showCreateTabModal, setShowCreateTabModal] = useState(false);
   const [deletingTab, setDeletingTab] = useState<CustomTab | null>(null);
+  const [editingTab, setEditingTab] = useState<CustomTab | null>(null);
+  // Bumped per tab on each save, so an open tab's panel remounts and reloads with the new filters
+  // (the panels only read a tab's filters when they mount).
+  const [tabEditCounts, setTabEditCounts] = useState<Record<number, number>>({});
   const [showTabListPanel, setShowTabListPanel] = useState(false);
   // Custom-tab drag-and-drop reordering (native HTML5 drag events, not a library — the dragged
   // tab's id lives in this state, not in a dataTransfer payload, since reordering is purely
@@ -170,7 +174,7 @@ export default function App() {
   const allTabListItems: TabListItem[] = [
     { id: "projects", label: "Project Folders" },
     { id: "files", label: "Audio Files" },
-    ...customTabs.map((tab) => ({ id: tab.id, label: tab.name })),
+    ...customTabs.map((tab) => ({ id: tab.id, label: tab.name, custom: true })),
   ];
 
   useTruncatedTextScroll();
@@ -549,6 +553,15 @@ export default function App() {
     handleTabChange(tab.id);
   }
 
+  function handleCustomTabSaved(tab: CustomTab) {
+    setCustomTabs((prev) => prev.map((t) => (t.id === tab.id ? tab : t)));
+    setTabEditCounts((prev) => ({ ...prev, [tab.id]: (prev[tab.id] ?? 0) + 1 }));
+  }
+
+  function customTabById(id: string | number): CustomTab | undefined {
+    return customTabs.find((t) => t.id === id);
+  }
+
   async function handleDeleteTabConfirm() {
     if (!deletingTab) return;
     const id = deletingTab.id;
@@ -799,6 +812,14 @@ export default function App() {
                     {tab.name}
                   </button>
                   <button
+                    onClick={() => setEditingTab(tab)}
+                    aria-label={`Edit tab ${tab.name}`}
+                    title={`Edit tab ${tab.name}`}
+                    className="flex items-center justify-center w-4 h-4 ml-1.5 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover"
+                  >
+                    <PencilIcon className="w-3 h-3" />
+                  </button>
+                  <button
                     onClick={() => setDeletingTab(tab)}
                     aria-label={`Delete tab ${tab.name}`}
                     title={`Delete tab ${tab.name}`}
@@ -911,7 +932,7 @@ export default function App() {
             activeCustomTab &&
             (activeCustomTab.type === "files" ? (
               <CustomFilesTabPanel
-                key={`custom-${activeCustomTab.id}`}
+                key={`custom-${activeCustomTab.id}-${tabEditCounts[activeCustomTab.id] ?? 0}`}
                 tab={activeCustomTab}
                 allTags={allTags}
                 refreshStats={refreshStats}
@@ -926,7 +947,7 @@ export default function App() {
               />
             ) : (
               <CustomProjectsTabPanel
-                key={`custom-${activeCustomTab.id}`}
+                key={`custom-${activeCustomTab.id}-${tabEditCounts[activeCustomTab.id] ?? 0}`}
                 tab={activeCustomTab}
                 allTags={allTags}
                 refreshStats={refreshStats}
@@ -1018,6 +1039,15 @@ export default function App() {
           activeTabId={activeTab}
           onSelect={(id) => handleTabChange(id as Tab)}
           onClose={() => setShowTabListPanel(false)}
+          // Edit/Delete close the panel first, so only one overlay is open at a time.
+          onEdit={(id) => {
+            setShowTabListPanel(false);
+            setEditingTab(customTabById(id) ?? null);
+          }}
+          onDelete={(id) => {
+            setShowTabListPanel(false);
+            setDeletingTab(customTabById(id) ?? null);
+          }}
         />
 
         <BatchEditPanel
@@ -1048,10 +1078,15 @@ export default function App() {
         />
 
         <CreateCustomTabModal
-          open={showCreateTabModal}
+          open={showCreateTabModal || editingTab !== null}
           allTags={allTags}
-          onClose={() => setShowCreateTabModal(false)}
+          onClose={() => {
+            setShowCreateTabModal(false);
+            setEditingTab(null);
+          }}
           onCreated={handleCustomTabCreated}
+          editingTab={editingTab}
+          onSaved={handleCustomTabSaved}
         />
 
         <DeleteTabConfirmDialog

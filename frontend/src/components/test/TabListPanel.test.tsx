@@ -119,3 +119,25 @@ describe("TabListPanel - backdrop click to dismiss", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("TabListPanel - edit and delete for custom tabs", () => {
+  const tabs: TabListItem[] = [
+    { id: "projects", label: "Project Folders" },
+    { id: 7, label: "My Custom Tab", custom: true },
+  ];
+
+  it("offers Edit and Delete only on custom tabs, reporting the tab's id", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    renderPanel({ tabs, onEdit, onDelete });
+
+    expect(screen.queryByRole("button", { name: "Edit Project Folders" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete Project Folders" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Edit My Custom Tab" }));
+    expect(onEdit).toHaveBeenCalledWith(7);
+    await user.click(screen.getByRole("button", { name: "Delete My Custom Tab" }));
+    expect(onDelete).toHaveBeenCalledWith(7);
+  });
+});

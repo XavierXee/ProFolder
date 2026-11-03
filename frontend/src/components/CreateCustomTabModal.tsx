@@ -13,9 +13,14 @@ type Props = {
   allTags: string[];
   onClose: () => void;
   onCreated: (tab: CustomTab) => void;
+  /** When set, the panel edits this tab instead of creating one: its fields start from the tab,
+   * the button reads "Save", and the result goes to `onSaved`. */
+  editingTab?: CustomTab | null;
+  onSaved?: (tab: CustomTab) => void;
 };
 
-export default function CreateCustomTabModal({ open, allTags, onClose, onCreated }: Props) {
+export default function CreateCustomTabModal({ open, allTags, onClose, onCreated, editingTab = null, onSaved }: Props) {
+  const editing = editingTab !== null;
   const { statuses: catalogStatuses } = useStatusCatalog();
   const statusOptions = buildStatusOptions(catalogStatuses);
   /** Widest realistic "Status" trigger label: every status (including "Unknown") selected at once. */
@@ -35,18 +40,19 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
 
   useEffect(() => {
     if (!open) return;
-    setName("");
-    setType("projects");
-    setStatuses([]);
-    setScores([]);
-    setTags([]);
-    setAssociation(undefined);
-    setOrdered(true);
+    setName(editingTab?.name ?? "");
+    setType(editingTab?.type ?? "projects");
+    setStatuses(editingTab?.statuses ?? []);
+    setScores(editingTab?.scores ?? []);
+    setTags(editingTab?.tags ?? []);
+    setAssociation(editingTab?.association);
+    // A projects tab being edited may switch to Audio Files: offer Ordered ticked, as for a new tab.
+    setOrdered(editingTab?.type === "files" ? editingTab.ordered : true);
     setNameError(undefined);
     setError(undefined);
     setSubmitting(false);
     setTimeout(() => closeRef.current?.focus(), 50);
-  }, [open]);
+  }, [open, editingTab]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -67,7 +73,7 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
     setError(undefined);
     setSubmitting(true);
     try {
-      const tab = await api.createCustomTab({
+      const input = {
         name: trimmedName,
         type,
         statuses,
@@ -75,11 +81,15 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
         tags,
         association: type === "files" ? association : undefined,
         ordered: type === "files" && ordered,
-      });
-      onCreated(tab);
+      };
+      if (editingTab) {
+        onSaved?.(await api.updateCustomTab(editingTab.id, input));
+      } else {
+        onCreated(await api.createCustomTab(input));
+      }
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create tab");
+      setError(err instanceof Error ? err.message : editing ? "Failed to save tab" : "Failed to create tab");
     } finally {
       setSubmitting(false);
     }
@@ -103,7 +113,7 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Create custom tab"
+        aria-label={editing ? "Edit custom tab" : "Create custom tab"}
         // Stays mounted (CSS-slid off-screen) while "closed" so its slide transition can animate
         // — without `inert`, its controls were still real, keyboard-reachable "ghost" Tab stops
         // despite being invisible and unclickable. See FileDetailPanel.tsx's identical comment.
@@ -112,7 +122,7 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
       >
         <div className={`flex items-start justify-between gap-4 px-6 py-4 border-b ${divider}`}>
           <div className="min-w-0">
-            <h2 className="text-base font-mono font-medium text-blue-400">New Custom Tab</h2>
+            <h2 className="text-base font-mono font-medium text-blue-400">{editing ? "Edit Custom Tab" : "New Custom Tab"}</h2>
           </div>
           <button
             ref={closeRef}
@@ -281,7 +291,7 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
               disabled={submitting}
               className="px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 profolder:bg-surface-selected profolder:hover:bg-surface-selected profolder:text-chrome-ink-secondary profolder:border profolder:border-chrome-ink-secondary"
             >
-              {submitting ? "Creating…" : "Create"}
+              {editing ? (submitting ? "Saving…" : "Save") : submitting ? "Creating…" : "Create"}
             </button>
           </div>
         </form>

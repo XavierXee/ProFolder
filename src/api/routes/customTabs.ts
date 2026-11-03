@@ -3,10 +3,12 @@ import type Database from "better-sqlite3";
 import {
   findAll,
   create,
+  update,
   deleteById,
   reorder,
   findOrderedFilesTab,
   membershipOf,
+  type CreateCustomTabInput,
 } from "../../database/repositories/customTabRepository.js";
 import { moveFileInOrderedTab } from "../../database/repositories/audioFileRepository.js";
 import { isKnownStatusKey } from "../../database/repositories/statusRepository.js";
@@ -19,6 +21,54 @@ function parseId(raw: string): number | undefined {
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isInteger(parsed) || parsed < 1 || String(parsed) !== raw) return undefined;
   return parsed;
+}
+
+/** Validates a create/edit request body. Unknown statuses, invalid scores and blank tags are
+ * dropped rather than rejected; only a missing name or an unknown type is an error. */
+function parseTabInput(db: Database.Database, body: unknown): { input: CreateCustomTabInput } | { error: string } {
+  const { name, type, statuses, scores, tags, association, ordered } = (body ?? {}) as {
+    name?: unknown;
+    type?: unknown;
+    statuses?: unknown;
+    scores?: unknown;
+    tags?: unknown;
+    association?: unknown;
+    ordered?: unknown;
+  };
+
+  if (typeof name !== "string" || name.trim().length === 0) return { error: "name is required" };
+  if (type !== "files" && type !== "projects") return { error: "type must be 'files' or 'projects'" };
+
+  const validStatuses = Array.isArray(statuses)
+    ? statuses.filter((s): s is TrackStatus => typeof s === "string" && isKnownStatusKey(db, s))
+    : [];
+  const validScores = Array.isArray(scores)
+    ? scores.filter((s): s is number | "unscored" => s === "unscored" || (typeof s === "number" && isValidScore(s)))
+    : [];
+  const validTags = Array.isArray(tags)
+    ? tags
+        .filter((t): t is string => typeof t === "string")
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0)
+    : [];
+  // Association is a files-only concept (projects have no concept of being associated
+  // with another project), so it's forced to undefined for a "projects" tab regardless
+  // of what the client sent — a stored-but-inapplicable value would be confusing.
+  const validAssociation =
+    type === "files" && (association === "associated" || association === "unassociated") ? association : undefined;
+
+  return {
+    input: {
+      name: name.trim(),
+      type,
+      statuses: validStatuses,
+      scores: validScores,
+      tags: validTags,
+      association: validAssociation,
+      // Files tabs only, like association; the repository stores false for a projects tab.
+      ordered: ordered === true,
+    },
+  };
 }
 
 export function createCustomTabsRouter(db: Database.Database): Router {
@@ -34,64 +84,16 @@ export function createCustomTabsRouter(db: Database.Database): Router {
   router.post(
     "/",
     asyncHandler(async (req, res) => {
-      const { name, type, statuses, scores, tags, association, ordered } = req.body as {
-        name?: unknown;
-        type?: unknown;
-        statuses?: unknown;
-        scores?: unknown;
-        tags?: unknown;
-        association?: unknown;
-        ordered?: unknown;
-      };
-
-      if (typeof name !== "string" || name.trim().length === 0) {
-        res.status(400).json({ error: "name is required" });
+      const parsed = parseTabInput(db, req.body);
+      if ("error" in parsed) {
+        res.status(400).json({ error: parsed.error });
         return;
       }
-
-      if (type !== "files" && type !== "projects") {
-        res.status(400).json({ error: "type must be 'files' or 'projects'" });
-        return;
-      }
-
-      const validStatuses = Array.isArray(statuses)
-        ? statuses.filter((s): s is TrackStatus => typeof s === "string" && isKnownStatusKey(db, s))
-        : [];
-      const validScores = Array.isArray(scores)
-        ? scores.filter(
-            (s): s is number | "unscored" => s === "unscored" || (typeof s === "number" && isValidScore(s))
-          )
-        : [];
-      const validTags = Array.isArray(tags)
-        ? tags
-            .filter((t): t is string => typeof t === "string")
-            .map((t) => t.trim())
-            .filter((t) => t.length > 0)
-        : [];
-      // Association is a files-only concept (projects have no concept of being associated
-      // with another project), so it's forced to undefined for a "projects" tab regardless
-      // of what the client sent — a stored-but-inapplicable value would be confusing.
-      const validAssociation =
-        type === "files" && (association === "associated" || association === "unassociated")
-          ? association
-          : undefined;
-
-      const tab = create(db, {
-        name: name.trim(),
-        type,
-        statuses: validStatuses,
-        scores: validScores,
-        tags: validTags,
-        association: validAssociation,
-        // Files tabs only, like association; the repository stores false for a projects tab.
-        ordered: ordered === true,
-      });
-      res.status(201).json(tab);
+      res.status(201).json(create(db, parsed.input));
     })
   );
 
-  // Registered before `/:id` only for readability (create → reorder → delete) — there's no
-  // actual route-matching collision risk since this is PUT and `/:id` below is DELETE.
+  // Must stay registered before `PUT /:id` below, which would otherwise take "reorder" as an id.
   router.put(
     "/reorder",
     asyncHandler(async (req, res) => {
@@ -101,6 +103,29 @@ export function createCustomTabsRouter(db: Database.Database): Router {
         return;
       }
       res.json({ tabs: reorder(db, orderedIds) });
+    })
+  );
+
+  // After "/reorder" so that path isn't taken for an id.
+  router.put(
+    "/:id",
+    asyncHandler(async (req, res) => {
+      const id = parseId(req.params.id!);
+      if (id === undefined) {
+        res.status(400).json({ error: "invalid id" });
+        return;
+      }
+      const parsed = parseTabInput(db, req.body);
+      if ("error" in parsed) {
+        res.status(400).json({ error: parsed.error });
+        return;
+      }
+      const tab = update(db, id, parsed.input);
+      if (!tab) {
+        res.status(404).json({ error: "Custom tab not found" });
+        return;
+      }
+      res.json(tab);
     })
   );
 

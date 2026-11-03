@@ -269,6 +269,59 @@ describe("/api/custom-tabs", () => {
     });
   });
 
+  describe("PUT /api/custom-tabs/:id (edit)", () => {
+    async function createTab(body: Record<string, unknown>) {
+      const res = await request(app).post("/api/custom-tabs").send(body);
+      expect(res.status).toBe(201);
+      return res.body as { id: number; sortOrder: number; createdAt: string };
+    }
+
+    it("replaces the name, filters and options, keeping the tab's place and creation date", async () => {
+      await createTab({ name: "First", type: "projects" });
+      const tab = await createTab({ name: "EP", type: "files", tags: ["ep"], ordered: true });
+
+      const res = await request(app)
+        .put(`/api/custom-tabs/${tab.id}`)
+        .send({ name: " Summer EP ", type: "files", statuses: ["done"], scores: [5], tags: ["summer"], association: "unassociated", ordered: false });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        id: tab.id,
+        name: "Summer EP",
+        type: "files",
+        statuses: ["done"],
+        scores: [5],
+        tags: ["summer"],
+        association: "unassociated",
+        ordered: false,
+        sortOrder: tab.sortOrder,
+        createdAt: tab.createdAt,
+      });
+      const { body } = await request(app).get("/api/custom-tabs");
+      expect(body.tabs.map((t: { name: string }) => t.name)).toEqual(["First", "Summer EP"]);
+    });
+
+    it("drops association and ordered when the tab becomes a Project Folders tab", async () => {
+      const tab = await createTab({ name: "EP", type: "files", association: "associated", ordered: true });
+
+      const res = await request(app).put(`/api/custom-tabs/${tab.id}`).send({ name: "EP", type: "projects", association: "associated", ordered: true });
+
+      expect(res.body.association).toBeUndefined();
+      expect(res.body.ordered).toBe(false);
+    });
+
+    it("validates like create: 400 without a name or with a bad type", async () => {
+      const tab = await createTab({ name: "EP", type: "files" });
+      expect((await request(app).put(`/api/custom-tabs/${tab.id}`).send({ name: " ", type: "files" })).status).toBe(400);
+      expect((await request(app).put(`/api/custom-tabs/${tab.id}`).send({ name: "EP", type: "albums" })).status).toBe(400);
+    });
+
+    it("returns 404 for an unknown tab and 400 for a malformed id", async () => {
+      expect((await request(app).put("/api/custom-tabs/999").send({ name: "X", type: "files" })).status).toBe(404);
+      expect((await request(app).put("/api/custom-tabs/abc").send({ name: "X", type: "files" })).status).toBe(400);
+    });
+  });
+
   describe("DELETE /api/custom-tabs/:id", () => {
     it("deletes an existing tab and it no longer shows up in a follow-up GET", async () => {
       const createRes = await request(app)

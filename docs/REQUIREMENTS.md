@@ -463,8 +463,14 @@ a creation modal offering:
   tabs, including "Unscored");
 - for Audio Files tabs only, an association filter (§15.8).
 
-15.2. A custom tab's filter criteria are **locked at creation time**. There is no edit UI, only
-create and delete.
+15.2. A custom tab's filter criteria are **locked** while browsing it: the tab's own filter bar
+offers search but no status/score/tag pickers. They're changed by **editing the tab**: a pencil
+button next to each custom tab's "×" in the tab bar (and the same Edit button in the All tabs
+panel, §15.10) reopens the custom tab panel filled in with the tab's name, type, filters,
+locations and Ordered option, with a **Save** button instead of Create (`PUT
+/api/custom-tabs/:id`, validated like creation). Saving keeps the tab's place in the tab bar,
+renames it there, and reloads it if it's open. An ordered tab's saved order is kept through
+edits, including turning Ordered off and on again.
 
 15.3. Within a custom tab, free-text search and sort order remain live on top of the locked
 subset, exactly as in the default tabs. Neither is part of the tab's saved definition. The
@@ -482,7 +488,7 @@ Reveal in Finder.
 15.6. Playback is global, not per tab. A single player bar is shared across the whole app, so a
 file started from a custom tab keeps playing when the user switches tabs.
 
-15.7. Each custom tab has its own "×" delete button. Clicking it opens a confirmation dialog, and
+15.7. Each custom tab has its own "×" delete button (in the tab bar and in the All tabs panel). Clicking it opens a confirmation dialog, and
 deleting is permanent (no undo). Deleting the active tab falls back to "Project Folders". By
 default, the dialog requires typing the tab's name (§13.5).
 
@@ -494,7 +500,8 @@ to files that don't ("unassociated"), or include both (the default).
 
 15.10. When the tabs don't fit, the tab bar scrolls horizontally instead of wrapping. An "All
 tabs" button next to it opens a panel listing every tab in tab-bar order. Selecting one
-navigates to it and closes the panel.
+navigates to it and closes the panel. Custom tabs are listed with Edit and Delete buttons, which
+close the panel and open the edit panel or the delete confirmation.
 
 15.11. When a status or tag is deleted from the catalog (§17), it is removed from every custom
 tab's locked filter. When a tag is renamed, the custom tabs that reference it are updated to the

@@ -551,6 +551,22 @@ export function createCustomTab(input: {
   return request<CustomTab>(`/custom-tabs`, { method: "POST", body: JSON.stringify(input) });
 }
 
+/** Replaces a custom tab's name, type, filters and options. */
+export function updateCustomTab(
+  id: number,
+  input: {
+    name: string;
+    type: CustomTabType;
+    statuses?: TrackStatus[];
+    scores?: (number | "unscored")[];
+    tags?: string[];
+    association?: "associated" | "unassociated";
+    ordered?: boolean;
+  }
+): Promise<CustomTab> {
+  return request<CustomTab>(`/custom-tabs/${id}`, { method: "PUT", body: JSON.stringify(input) });
+}
+
 /** Moves a file of an ordered custom tab to a 1-based position. */
 export async function moveFileInOrderedTab(tabId: number, fileId: string, position: number): Promise<void> {
   await request(`/custom-tabs/${tabId}/files/order`, { method: "PUT", body: JSON.stringify({ fileId, position }) });

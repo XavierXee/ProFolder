@@ -17,8 +17,9 @@ Feature: Custom tabs — locked filter + live search/sort
     And file "gamma-idea.wav" has status "released", score 1, and tags "alpha, demo"
     And I open the app
 
+  # Column sorting only exists in an unordered tab: Audio Files tabs are ordered by default.
   Scenario: Locked filter controls are hidden but search and sort remain live
-    When I create a custom tab of type "Audio Files" named "Custom Tabs E2E Locked Controls" with status filter "Draft"
+    When I create an unordered custom tab of type "Audio Files" named "Custom Tabs E2E Locked Controls" with status filter "Draft"
     Then I should not see a "Status" filter control
     And I should not see a "Score" filter control
     And I should not see a "Tags" filter control
@@ -37,7 +38,7 @@ Feature: Custom tabs — locked filter + live search/sort
     And I should not see file "gamma-idea.wav" in the table
 
   Scenario: Switching away from a custom tab and back resets live search and sort
-    When I create a custom tab of type "Audio Files" named "Custom Tabs E2E Locked Remount" with status filter "Draft"
+    When I create an unordered custom tab of type "Audio Files" named "Custom Tabs E2E Locked Remount" with status filter "Draft"
     And I search files for "alpha-take"
     And I click the custom tab sort button
     Then the custom tab sort button should indicate active sort

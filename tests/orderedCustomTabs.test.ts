@@ -197,4 +197,17 @@ describe("reordering an ordered tab", () => {
     const plainTabId = await createEpTab(false);
     expect((await move(plainTabId, "EP/a.wav", 1)).status).toBe(404);
   });
+
+  it("keeps the saved order when the tab is edited, and brings it back if turned off then on again", async () => {
+    const tabId = await createEpTab();
+    await move(tabId, "EP/c.wav", 1);
+    const edit = (ordered: boolean) =>
+      request(app).put(`/api/custom-tabs/${tabId}`).send({ name: "Renamed EP", type: "files", tags: ["ep"], ordered });
+
+    expect((await edit(false)).status).toBe(200);
+    expect((await request(app).get("/api/files").query({ orderedTab: tabId })).status).toBe(404);
+
+    await edit(true);
+    expect(await order(tabId)).toEqual(["1 EP/c.wav", "2 EP/a.wav", "3 EP/b.wav"]);
+  });
 });

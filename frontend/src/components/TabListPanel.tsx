@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
-export type TabListItem = { id: string | number; label: string };
+/** `custom`: a user-created tab, listed with Edit and Delete buttons. */
+export type TabListItem = { id: string | number; label: string; custom?: boolean };
 
 type Props = {
   open: boolean;
@@ -8,12 +9,17 @@ type Props = {
   activeTabId: string | number;
   onSelect: (id: string | number) => void;
   onClose: () => void;
+  onEdit?: (id: string | number) => void;
+  onDelete?: (id: string | number) => void;
 };
+
+const iconButton =
+  "flex items-center justify-center w-7 h-7 flex-shrink-0 rounded-[var(--rt-radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-ink-muted hover:text-ink hover:bg-surface-hover";
 
 /** Lists every tab currently in the tab bar (default + custom, in the same order they render
  * there) for the "burger" button next to it — a way to jump straight to a tab that's scrolled
  * out of view rather than scrolling the bar to find it. */
-export default function TabListPanel({ open, tabs, activeTabId, onSelect, onClose }: Props) {
+export default function TabListPanel({ open, tabs, activeTabId, onSelect, onClose, onEdit, onDelete }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -74,29 +80,51 @@ export default function TabListPanel({ open, tabs, activeTabId, onSelect, onClos
           {tabs.map((tab) => {
             const active = tab.id === activeTabId;
             return (
-              <button
-                key={tab.id}
-                onClick={() => handleSelect(tab.id)}
-                aria-current={active}
-                // Distinguishes this from the tab bar's OWN same-labeled button, visually
-                // identical but a real separate element — this panel, like every other one in
-                // this app, stays mounted off-screen while "closed" rather than unmounting (see
-                // the `inert` comment above), so without this they'd be two real DOM buttons
-                // with an identical plain accessible name ("Audio Files"), which jsdom's
-                // accessibility-tree computation (unlike a real browser honoring `inert`) can't
-                // tell apart — any `getByRole("button", { name: ... })` query for a tab's own
-                // bar button would ambiguously match this one too.
-                aria-label={`Go to tab ${tab.label}`}
-                className={`w-full text-left px-3 py-2 rounded-[var(--rt-radius)] text-sm font-mono transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                  active ? "bg-accent text-accent-ink" : "text-ink hover:bg-surface-hover"
-                }`}
-              >
-                {tab.label}
-              </button>
+              <div key={tab.id} className="flex items-center gap-1">
+                <button
+                  onClick={() => handleSelect(tab.id)}
+                  aria-current={active}
+                  // Distinguishes this from the tab bar's OWN same-labeled button, visually
+                  // identical but a real separate element — this panel, like every other one in
+                  // this app, stays mounted off-screen while "closed" rather than unmounting (see
+                  // the `inert` comment above), so without this they'd be two real DOM buttons
+                  // with an identical plain accessible name ("Audio Files"), which jsdom's
+                  // accessibility-tree computation (unlike a real browser honoring `inert`) can't
+                  // tell apart — any `getByRole("button", { name: ... })` query for a tab's own
+                  // bar button would ambiguously match this one too.
+                  aria-label={`Go to tab ${tab.label}`}
+                  className={`flex-1 min-w-0 truncate text-left px-3 py-2 rounded-[var(--rt-radius)] text-sm font-mono transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                    active ? "bg-accent text-accent-ink" : "text-ink hover:bg-surface-hover"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+                {tab.custom && (
+                  <>
+                    {/* Named "Edit <tab>"/"Delete <tab>" rather than the tab bar's own "Edit tab
+                        <tab>"/"Delete tab <tab>", for the same reason as "Go to tab" above. */}
+                    <button onClick={() => onEdit?.(tab.id)} aria-label={`Edit ${tab.label}`} title={`Edit ${tab.label}`} className={iconButton}>
+                      <PencilIcon />
+                    </button>
+                    <button onClick={() => onDelete?.(tab.id)} aria-label={`Delete ${tab.label}`} title={`Delete ${tab.label}`} className={iconButton}>
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  </>
+                )}
+              </div>
             );
           })}
         </div>
       </div>
     </>
+  );
+}
+
+/** Small pencil glyph for "edit" buttons (also used by the tab bar). */
+export function PencilIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.86 4.49l2.65 2.65M4 20l3.6-.8L19.07 7.73a1.5 1.5 0 000-2.12l-.68-.68a1.5 1.5 0 00-2.12 0L4.8 16.4 4 20z" />
+    </svg>
   );
 }

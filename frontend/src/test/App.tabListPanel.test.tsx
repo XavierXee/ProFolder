@@ -152,9 +152,7 @@ describe("App - 'All tabs' burger button and list panel", () => {
     await user.click(screen.getByRole("button", { name: "Show all tabs" }));
 
     const dialog = screen.getByRole("dialog", { name: "All tabs" });
-    const buttons = within(dialog)
-      .getAllByRole("button")
-      .filter((b) => b !== within(dialog).getByRole("button", { name: "Close panel" }));
+    const buttons = within(dialog).getAllByRole("button", { name: /^Go to tab / });
     expect(buttons.map((b) => b.textContent)).toEqual([
       "Project Folders",
       "Audio Files",

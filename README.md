@@ -226,8 +226,9 @@ release's total running time. Audio Files tabs are **Ordered** by default: their
 numbered and you put them in running order by dragging a track onto another. Untick Ordered when
 creating the tab if you'd rather sort it by column.
 
+Click the pencil next to a custom tab to change its name, filters or options, then **Save**.
 Drag tabs to reorder them. When there are more tabs than fit, the tab bar scrolls, and the
-**All tabs** button lists every tab so you can jump straight to one.
+**All tabs** button lists every tab so you can jump straight to one, or edit or delete it.
 
 <table>
   <tr>
@@ -312,10 +313,8 @@ tags come back with it.
 
 ## Roadmap
 
-- custom tabs, add tracks ordering (for project sequencing)
 - advanced option for custom tabs creation (filter by folder)
 - enable giving score and status in tabs instead of just panels
-- add option to exclude unscored items in custom tabs
 - Add Auto play to play next track in the list
 - "Name is required" in custom tabs should dissapear when typing
 - Scan complete notification should dissapear after a few seconds

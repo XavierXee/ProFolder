@@ -142,6 +142,8 @@ async function createCustomTab(
     statusFilter?: string;
     scoreFilter?: string;
     tagFilter?: string;
+    /** Audio Files tabs only: untick "Ordered" (ticked by default) for a column-sortable tab. */
+    unordered?: boolean;
   }
 ): Promise<void> {
   const fullName = `${options.baseName} ${randomUUID()}`;
@@ -155,6 +157,7 @@ async function createCustomTab(
   if (options.statusFilter) await toggleModalFilterOption(page, "Status", options.statusFilter);
   if (options.scoreFilter) await toggleModalFilterOption(page, "Score", options.scoreFilter);
   if (options.tagFilter) await toggleModalFilterOption(page, "Tags", options.tagFilter);
+  if (options.unordered) await dialog.getByRole("checkbox", { name: /Ordered/ }).uncheck();
 
   const [response] = await Promise.all([
     page.waitForResponse(
@@ -178,6 +181,18 @@ When(
   "I create a custom tab of type {string} named {string} with status filter {string}",
   async ({ page }, typeLabel: string, baseName: string, statusFilter: string) => {
     await createCustomTab(page, { baseName, typeLabel: typeLabel as "Project Folders" | "Audio Files", statusFilter });
+  }
+);
+
+When(
+  "I create an unordered custom tab of type {string} named {string} with status filter {string}",
+  async ({ page }, typeLabel: string, baseName: string, statusFilter: string) => {
+    await createCustomTab(page, {
+      baseName,
+      typeLabel: typeLabel as "Project Folders" | "Audio Files",
+      statusFilter,
+      unordered: true,
+    });
   }
 );
 

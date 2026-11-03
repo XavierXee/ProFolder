@@ -5,8 +5,8 @@ prove it. Last audited 2026-11-03 against the current suites:*
 
 | Suite | Location | Size (all passing) |
 |---|---|---|
-| Backend unit + route tests | `tests/*.test.ts` | 59 files, 753 tests |
-| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 61 files, 971 tests |
+| Backend unit + route tests | `tests/*.test.ts` | 59 files, 758 tests |
+| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 61 files, 976 tests |
 | End-to-end (Playwright + Cucumber) | `e2e/features/**/*.feature` | 30 features, 115 scenarios |
 
 *Citations name the test file and, where useful, the `describe`/`it` title, rather than line
@@ -231,7 +231,7 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
 | 15.1 | Creation modal: name, type, filters | BOTH | `customTabsRoute.test.ts`, `CreateCustomTabModal.test.tsx`; `custom-tabs/create-and-delete.feature` |
-| 15.2 | Criteria locked; no edit route or UI | UNIT | `customTabs.ts` exposes no PATCH (checked by inspection); `CustomFilesTabPanel.test.tsx`, `CustomProjectsTabPanel.test.tsx` (locked filters seed the fetch) |
+| 15.2 | Criteria locked while browsing; editing a tab | UNIT | `CustomFilesTabPanel.test.tsx`, `CustomProjectsTabPanel.test.tsx` (locked filters seed the fetch); `customTabsRoute.test.ts` ("PUT /api/custom-tabs/:id (edit)": replace, keep place/date, projects drop association/ordered, validation, 404/400); `orderedCustomTabs.test.ts` (order kept through edits); `CreateCustomTabModal.test.tsx` ("editing an existing tab": prefilled, Save, `updateCustomTab`); `test/App.customTabs.test.tsx` ("editing custom tabs": pencil in the tab bar, rename, open tab reloads with new filters). No e2e scenario for editing. |
 | 15.3 | Live search and sort over the locked set; pickers hidden | BOTH | Both panel tests ("locked pickers are hidden, search/sort stay live"); `custom-tabs/locked-filtering.feature` |
 | 15.4 | Search and sort reset when switching away and back | E2E | `locked-filtering.feature` ("Switching away from a custom tab and back resets live search and sort") |
 | 15.5 | Same row interactions as the default tabs | BOTH | Both panel tests (detail panel and editing, batch edit, reveal, Copy/Move/Delete wiring, selection reset); `locked-filtering.feature` (cascade from a custom tab); `file-ops/custom-tab-reachability.feature` |
@@ -239,7 +239,7 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 | 15.7 | Delete with confirmation; active tab falls back | BOTH | `DeleteTabConfirmDialog.test.tsx`, `test/App.customTabs.test.tsx`; `create-and-delete.feature` (cancel, confirm and fall back) |
 | 15.8 | Association filter for Files tabs | UNIT | `CreateCustomTabModal.test.tsx` (association in payload, cleared when switching type); `customTabRepository.test.ts` (association round-trip); `audioFileRepository.test.ts` (associated/unassociated/omitted) |
 | 15.9 | Drag-and-drop reorder, persisted | BOTH | `customTabRepository.test.ts` (`reorder`), `customTabsRoute.test.ts` (`PUT /api/custom-tabs/reorder`), `test/App.customTabs.test.tsx` (drag-and-drop, rollback on failure, drop onto itself); `custom-tabs/reorder-and-scroll.feature` (persisted across reload) |
-| 15.10 | Horizontal scroll and All tabs panel | BOTH | `TabListPanel.test.tsx`, `test/App.tabListPanel.test.tsx`, `test/App.customTabs.test.tsx`; `reorder-and-scroll.feature` (scrolls instead of wrapping; navigate from All tabs) |
+| 15.10 | Horizontal scroll and All tabs panel (with Edit/Delete for custom tabs) | BOTH | `TabListPanel.test.tsx` (incl. "edit and delete for custom tabs"), `test/App.tabListPanel.test.tsx`, `test/App.customTabs.test.tsx` (Edit/Delete from the panel close it first); `reorder-and-scroll.feature` (scrolls instead of wrapping; navigate from All tabs) |
 | 15.11 | Catalog deletes and renames propagate to tab filters | UNIT | `customTabRepository.test.ts` (`pruneStatusFromAllTabs`, `pruneTagFromAllTabs`, `renameTagInAllTabs`); `test/App.statusCatalog.test.tsx` (active filter pruned) |
 | 15.12 | Total duration on Audio Files custom tabs | UNIT | `audioFileRepository.test.ts` ("sums the duration of every file matching the filters…"); `paginationRoutes.test.ts` (`totalDurationSeconds` across pages); `test/formatDuration.test.ts`; `FilterToolbar.test.tsx` ("total duration": placement between search and count); `CustomFilesTabPanel.test.tsx` ("total duration"); `FilterBar.test.tsx` (default tab shows none). Layout checked once by screenshot only (NOT-HEADLESS). |
 | 15.13 | Ordered tabs: option, "#" column, no sorting, drag to reorder, saved order | UNIT | `orderedCustomTabs.test.ts` (create flag, files-only; numbering by filename; search keeps numbers; paging; move up/down/clamp; new members at the end; order kept across a file move; dropped with the tab; bad input/404); `FileTable.test.tsx` ("ordered tab": "#" column and widths, no sort buttons, drop reports target number, self-drop ignored, colspan); `CustomFilesTabPanel.test.tsx` ("ordered tab": `orderedTabId`, save then reload, error banner); `CreateCustomTabModal.test.tsx` ("ordered option": ticked by default, untick sends false, never for projects). Native drag and drop checked once in a real Chromium only; no e2e scenario. |

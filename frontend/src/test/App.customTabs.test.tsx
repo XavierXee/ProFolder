@@ -21,6 +21,7 @@ vi.mock("../api/client.js", () => ({
   getStatuses: vi.fn(),
   getCustomTabs: vi.fn(),
   createCustomTab: vi.fn(),
+  updateCustomTab: vi.fn(),
   deleteCustomTab: vi.fn(),
   reorderCustomTabs: vi.fn(),
   getConfirmationSettings: vi.fn(),
@@ -324,5 +325,58 @@ describe("App - tab bar horizontal scroll and drag-and-drop reorder", () => {
     fireEvent.dragEnd(tabARow);
 
     expect(mockReorderCustomTabs).not.toHaveBeenCalled();
+  });
+});
+
+describe("App - editing custom tabs", () => {
+  const tab: CustomTab = {
+    id: 5,
+    name: "Drafts",
+    type: "files",
+    statuses: ["draft"],
+    scores: [],
+    tags: [],
+    ordered: false,
+    sortOrder: 0,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+
+  it("edits a tab from its pencil icon in the tab bar, then reloads the open tab with the new filters", async () => {
+    const user = userEvent.setup({ delay: null });
+    mockGetCustomTabs.mockReset().mockResolvedValue([tab]);
+    vi.mocked(api.updateCustomTab).mockReset().mockResolvedValue({ ...tab, name: "Finished", statuses: ["done"] });
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Drafts" }));
+    await waitFor(() => expect(mockGetFiles).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ["draft"] })));
+
+    await user.click(screen.getByRole("button", { name: "Edit tab Drafts" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit custom tab" });
+    expect(within(dialog).getByLabelText("Name")).toHaveValue("Drafts");
+    await user.clear(within(dialog).getByLabelText("Name"));
+    await user.type(within(dialog).getByLabelText("Name"), "Finished");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("button", { name: "Finished" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Drafts" })).not.toBeInTheDocument();
+    await waitFor(() => expect(mockGetFiles).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ["done"] })));
+  });
+
+  it("edits and deletes a tab from the All tabs panel, closing the panel first", async () => {
+    const user = userEvent.setup({ delay: null });
+    mockGetCustomTabs.mockReset().mockResolvedValue([tab]);
+    render(<App />);
+    await screen.findByRole("button", { name: "Drafts" });
+
+    await user.click(screen.getByRole("button", { name: "Show all tabs" }));
+    await user.click(screen.getByRole("button", { name: "Edit Drafts" }));
+    expect(screen.getByRole("button", { name: "Show all tabs" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("dialog", { name: "Edit custom tab" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Show all tabs" }));
+    await user.click(screen.getByRole("button", { name: "Delete Drafts" }));
+    expect(screen.getByRole("button", { name: "Show all tabs" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("dialog", { name: /Delete/ })).toHaveTextContent("Drafts");
   });
 });
