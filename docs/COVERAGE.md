@@ -5,8 +5,8 @@ prove it. Last audited 2026-11-03 against the current suites:*
 
 | Suite | Location | Size (all passing) |
 |---|---|---|
-| Backend unit + route tests | `tests/*.test.ts` | 58 files, 735 tests |
-| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 60 files, 951 tests |
+| Backend unit + route tests | `tests/*.test.ts` | 58 files, 737 tests |
+| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 61 files, 958 tests |
 | End-to-end (Playwright + Cucumber) | `e2e/features/**/*.feature` | 30 features, 115 scenarios |
 
 *Citations name the test file and, where useful, the `describe`/`it` title, rather than line
@@ -31,14 +31,14 @@ rather than behavior, so they have no rows.*
 | Verdict | Rows |
 |---|---|
 | BOTH | 55 |
-| UNIT | 76 |
+| UNIT | 77 |
 | E2E | 2 |
 | PARTIAL | 6 |
 | NONE | 9 |
 | NOT-HEADLESS | 1 |
-| **Total** | **149** |
+| **Total** | **150** |
 
-Fully covered (BOTH + UNIT + E2E): 133 of 149 rows (89%). Several of those rows still carry a
+Fully covered (BOTH + UNIT + E2E): 134 of 150 rows (89%). Several of those rows still carry a
 NOT-HEADLESS sub-clause, noted in the row.
 
 **Open, actionable gaps** (PARTIAL/NONE rows that a test could close):
@@ -241,6 +241,7 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 | 15.9 | Drag-and-drop reorder, persisted | BOTH | `customTabRepository.test.ts` (`reorder`), `customTabsRoute.test.ts` (`PUT /api/custom-tabs/reorder`), `test/App.customTabs.test.tsx` (drag-and-drop, rollback on failure, drop onto itself); `custom-tabs/reorder-and-scroll.feature` (persisted across reload) |
 | 15.10 | Horizontal scroll and All tabs panel | BOTH | `TabListPanel.test.tsx`, `test/App.tabListPanel.test.tsx`, `test/App.customTabs.test.tsx`; `reorder-and-scroll.feature` (scrolls instead of wrapping; navigate from All tabs) |
 | 15.11 | Catalog deletes and renames propagate to tab filters | UNIT | `customTabRepository.test.ts` (`pruneStatusFromAllTabs`, `pruneTagFromAllTabs`, `renameTagInAllTabs`); `test/App.statusCatalog.test.tsx` (active filter pruned) |
+| 15.12 | Total duration on Audio Files custom tabs | UNIT | `audioFileRepository.test.ts` ("sums the duration of every file matching the filters…"); `paginationRoutes.test.ts` (`totalDurationSeconds` across pages); `test/formatDuration.test.ts`; `FilterToolbar.test.tsx` ("total duration": placement between search and count); `CustomFilesTabPanel.test.tsx` ("total duration"); `FilterBar.test.tsx` (default tab shows none). Layout checked once by screenshot only (NOT-HEADLESS). |
 
 ## §16 Copy, Move & Delete
 

@@ -11,6 +11,7 @@ import FileDetailPanel from "./FileDetailPanel.js";
 import BatchEditPanel from "./BatchEditPanel.js";
 import CopyMoveDeleteDialog from "./CopyMoveDeleteDialog.js";
 import type { CopyMoveDeleteOperation, CopyMoveDeleteOutcome, CopyMoveDeleteTarget } from "./CopyMoveDeleteDialog.js";
+import { formatDuration } from "../formatDuration.js";
 
 type SortKey = NonNullable<FileFilters["sortBy"]>;
 
@@ -60,7 +61,7 @@ export default function CustomFilesTabPanel({
   setBanner,
   musicRoot,
 }: Props) {
-  const { files, total, totalPages, page, pageSize, filters, updateFilters, setPage, loading, error, refetch } =
+  const { files, total, totalDurationSeconds, totalPages, page, pageSize, filters, updateFilters, setPage, loading, error, refetch } =
     useAudioFiles({ statuses: tab.statuses, scores: tab.scores, tags: tab.tags, association: tab.association });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -255,6 +256,7 @@ export default function CustomFilesTabPanel({
         onChange={handleFilterChange}
         allTags={allTags}
         resultLabel={loading ? "—" : `${files.length} of ${total} files`}
+        totalDurationLabel={loading ? "—" : `Total ${formatDuration(totalDurationSeconds)}`}
         searchPlaceholder="Search files or paths…"
         searchAriaLabel="Search by filename or path"
         selectedCount={selectedFileIds.size}

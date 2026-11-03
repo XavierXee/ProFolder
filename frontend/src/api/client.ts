@@ -31,6 +31,8 @@ export type FileFilters = {
 export type PagedFiles = {
   files: AudioFile[];
   total: number;
+  /** Summed duration in seconds of every file matching the filters, across all pages. */
+  totalDurationSeconds: number;
   page: number;
   pageSize: number;
   totalPages: number;

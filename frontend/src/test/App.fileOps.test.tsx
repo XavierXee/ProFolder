@@ -141,6 +141,7 @@ function makeDuplicatesResult(overrides: Partial<ProjectDuplicatesResult> = {}):
 const FILES_PAGE: PagedFiles = {
   files: [makeFile({ id: "file-1", filename: "Kick One.wav", relativePath: "Drums/Kick One.wav" })],
   total: 1,
+  totalDurationSeconds: 0,
   page: 1,
   pageSize: 50,
   totalPages: 1,
@@ -356,6 +357,7 @@ describe("App - batch Copy/Move/Delete wiring (Task 10), Files tab", () => {
       makeFile({ id: "file-2", filename: "Snare One.wav", relativePath: "Drums/Snare One.wav" }),
     ],
     total: 2,
+    totalDurationSeconds: 0,
     page: 1,
     pageSize: 50,
     totalPages: 1,

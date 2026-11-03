@@ -500,6 +500,11 @@ navigates to it and closes the panel.
 tab's locked filter. When a tag is renamed, the custom tabs that reference it are updated to the
 new name.
 
+15.12. An Audio Files custom tab shows the total duration of the files it lists (e.g. "Total
+1:02:03", `m:ss` under an hour), between the search box and the result count. The total covers
+every file matching the tab's filters and current search, across all pages, and leaves out files
+whose duration is unknown. The default Audio Files tab shows no total.
+
 ## 16. Copy, Move & Delete
 
 16.1. Copy, Move and Delete are available:

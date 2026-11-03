@@ -47,7 +47,7 @@ const LEGACY_THEME_KEY = "musicLibraryManager.isDark";
 
 beforeEach(() => {
   localStorage.clear();
-  mockGetFiles.mockReset().mockResolvedValue({ files: [], total: 0, page: 1, pageSize: 50, totalPages: 1 });
+  mockGetFiles.mockReset().mockResolvedValue({ files: [], total: 0, totalDurationSeconds: 0, page: 1, pageSize: 50, totalPages: 1 });
   mockGetProjects.mockReset().mockResolvedValue({ projects: [], total: 0, page: 1, pageSize: 50, totalPages: 1 });
   mockGetConfig.mockReset().mockResolvedValue({ musicRoot: "/music", runtimeMode: "web" });
   mockGetLastScan.mockReset().mockResolvedValue(undefined);

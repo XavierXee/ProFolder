@@ -229,6 +229,20 @@ describe("findAllActivePaged", () => {
     expect(page("desc").map((f) => f.id)).toEqual(["long.wav", "short.wav", "unknown.wav"]);
   });
 
+  it("sums the duration of every file matching the filters, across all pages, skipping unknown ones", () => {
+    insertAudioFile(db, makeFile({ id: "a.wav", durationSeconds: 60.5 }));
+    insertAudioFile(db, makeFile({ id: "b.wav", durationSeconds: 120 }));
+    insertAudioFile(db, makeFile({ id: "c.wav" })); // unknown duration
+    insertAudioFile(db, makeFile({ id: "other.wav", durationSeconds: 999 })); // not in the filter
+    for (const id of ["a.wav", "b.wav", "c.wav"]) setTags(db, id, ["sum-test"]);
+
+    const firstPage = findAllActivePaged(db, { tags: ["sum-test"], limit: 1, offset: 0 });
+
+    expect(firstPage.items).toHaveLength(1);
+    expect(firstPage.totalDurationSeconds).toBe(180.5);
+    expect(findAllActivePaged(db, { tags: ["no-such-tag"] }).totalDurationSeconds).toBe(0);
+  });
+
   it("replaces the duration when a changed file's metadata is updated", () => {
     insertAudioFile(db, makeFile({ id: "take.wav", durationSeconds: 10 }));
     updateAudioFileMetadata(db, makeFile({ id: "take.wav", durationSeconds: 42 }));

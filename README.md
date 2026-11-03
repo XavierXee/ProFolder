@@ -221,7 +221,8 @@ files, whether they belong to a project. Search and sorting still work inside it
 
 Custom tabs are also a simple way to organize your discography. Give the tracks of an album or EP
 a shared tag (for example `summer-ep`), then create a tab that filters on that tag: "Summer EP"
-now lists every track of the release, wherever the files live on your drive.
+now lists every track of the release, wherever the files live on your drive, along with the
+release's total running time.
 
 Drag tabs to reorder them. When there are more tabs than fit, the tab bar scrolls, and the
 **All tabs** button lists every tab so you can jump straight to one.

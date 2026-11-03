@@ -300,4 +300,15 @@ describe("pagination HTTP route layer", () => {
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(3);
   });
+
+  it("GET /api/files returns the summed duration of every matching file, not just the current page", async () => {
+    insertAudioFile(db, makeFile({ id: "a.wav", filename: "a.wav", durationSeconds: 90 }));
+    insertAudioFile(db, makeFile({ id: "b.wav", filename: "b.wav", durationSeconds: 30.25 }));
+
+    const res = await request(app).get("/api/files").query({ page: 1, pageSize: 1 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.files).toHaveLength(1);
+    expect(res.body.totalDurationSeconds).toBe(120.25);
+  });
 });

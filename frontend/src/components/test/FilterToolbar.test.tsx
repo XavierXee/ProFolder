@@ -28,6 +28,7 @@ function Harness({
   resultLabel = "10 files",
   sectionLabel,
   showAssociationFilter,
+  totalDurationLabel,
 }: {
   initialFilters?: FilterToolbarFilters;
   allTags?: string[];
@@ -38,6 +39,7 @@ function Harness({
   resultLabel?: string;
   sectionLabel?: string;
   showAssociationFilter?: boolean;
+  totalDurationLabel?: string;
 }) {
   const [filters, setFilters] = useState<FilterToolbarFilters>(initialFilters);
 
@@ -58,6 +60,7 @@ function Harness({
       onOpenBatchPanel={onOpenBatchPanel}
       locked={locked}
       showAssociationFilter={showAssociationFilter}
+      totalDurationLabel={totalDurationLabel}
     />
   );
 }
@@ -139,6 +142,24 @@ describe("FilterToolbar - debounced search", () => {
 
     expect(onChangeSpy).toHaveBeenCalledTimes(1);
     expect(onChangeSpy).toHaveBeenCalledWith({ search: undefined });
+  });
+});
+
+describe("FilterToolbar - total duration", () => {
+  it("shows the total duration between the search box and the result count", () => {
+    render(<Harness locked totalDurationLabel="Total 1:02:03" resultLabel="3 of 3 files" />);
+
+    const search = getSearchInput();
+    const total = screen.getByText("Total 1:02:03");
+    const count = screen.getByText("3 of 3 files");
+    expect(search.compareDocumentPosition(total) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(total.compareDocumentPosition(count) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("shows no total when none is given", () => {
+    render(<Harness />);
+
+    expect(screen.queryByText(/^Total /)).not.toBeInTheDocument();
   });
 });
 

@@ -82,7 +82,7 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
       const associationFilter =
         association === "associated" || association === "unassociated" ? association : undefined;
 
-      const { items, total } = findAllActivePaged(db, {
+      const { items, total, totalDurationSeconds } = findAllActivePaged(db, {
         search: typeof search === "string" ? search : undefined,
         statuses: statuses.length > 0 ? statuses : undefined,
         scores: parseScoreListQueryParam(toStringArray(score)),
@@ -102,6 +102,7 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
           projectPath: f.projectId ? projectPathById.get(f.projectId) : undefined,
         })),
         total,
+        totalDurationSeconds,
         page: pageNum,
         pageSize: pageSizeNum,
         totalPages: Math.max(1, Math.ceil(total / pageSizeNum)),

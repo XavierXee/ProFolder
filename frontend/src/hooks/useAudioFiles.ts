@@ -10,6 +10,7 @@ export function useAudioFiles(initialFilters: Partial<Omit<FileFilters, "page" |
   const itemsPerPage = useItemsPerPage();
   const [files, setFiles] = useState<AudioFile[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalDurationSeconds, setTotalDurationSeconds] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFiltersState] = useState<FileFilters>({
     ...initialFilters,
@@ -56,6 +57,7 @@ export function useAudioFiles(initialFilters: Partial<Omit<FileFilters, "page" |
         if (latestRequestId.current !== requestId || !mountedRef.current) return; // superseded by a newer request
         setFiles(result.files);
         setTotal(result.total);
+        setTotalDurationSeconds(result.totalDurationSeconds);
         setTotalPages(result.totalPages);
       })
       .catch((err) => {
@@ -92,6 +94,7 @@ export function useAudioFiles(initialFilters: Partial<Omit<FileFilters, "page" |
   return {
     files,
     total,
+    totalDurationSeconds,
     totalPages,
     page: filters.page ?? 1,
     pageSize: filters.pageSize ?? DEFAULT_PAGE_SIZE,

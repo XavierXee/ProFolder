@@ -11,6 +11,21 @@ describe("DEFAULT_FILTERS", () => {
 });
 
 describe("FilterBar", () => {
+  it("shows no total duration (only custom Audio Files tabs do)", () => {
+    render(
+      <FilterBar
+        filters={{ page: 1, pageSize: PAGE_SIZE }}
+        onChange={vi.fn()}
+        allTags={[]}
+        resultLabel="3 files"
+        selectedCount={0}
+        onOpenBatchPanel={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText(/^Total /)).not.toBeInTheDocument();
+  });
+
   it("forwards to FilterToolbar with the files-specific search placeholder and aria-label", () => {
     render(
       <FilterBar

@@ -90,6 +90,7 @@ function makeProject(overrides: Partial<ProjectRow> = {}): ProjectRow {
 const FILES_PAGE: PagedFiles = {
   files: [makeFile({ id: "file-1", filename: "Kick One.wav", relativePath: "Drums/Kick One.wav" })],
   total: 1,
+  totalDurationSeconds: 0,
   page: 1,
   pageSize: 50,
   totalPages: 1,

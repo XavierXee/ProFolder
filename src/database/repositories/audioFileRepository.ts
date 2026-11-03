@@ -251,20 +251,20 @@ function sortColumnFor(sortBy: AudioFileFilters["sortBy"]): string {
   return "filename";
 }
 
-/** Paginated, filtered, sorted list of active files, plus the total count matching the filters (ignoring limit/offset). */
+/** Paginated, filtered, sorted list of active files, plus the total count and the summed
+ * duration (in seconds) of every file matching the filters (ignoring limit/offset). Files with
+ * an unknown duration add nothing to the sum. */
 export function findAllActivePaged(
   db: Database.Database,
   filters: AudioFileFilters = {}
-): PagedResult<AudioFile> {
+): PagedResult<AudioFile> & { totalDurationSeconds: number } {
   const { where, params } = buildWhereClause(filters);
   const sortColumn = sortColumnFor(filters.sortBy);
   const sortDir = filters.sortDir === "desc" ? "DESC" : "ASC";
 
-  const total = (
-    db.prepare(`SELECT COUNT(*) AS count FROM audio_files WHERE ${where}`).get(params) as {
-      count: number;
-    }
-  ).count;
+  const { count: total, duration: totalDurationSeconds } = db
+    .prepare(`SELECT COUNT(*) AS count, COALESCE(SUM(duration_seconds), 0) AS duration FROM audio_files WHERE ${where}`)
+    .get(params) as { count: number; duration: number };
 
   const limit = filters.limit ?? total;
   const offset = filters.offset ?? 0;
@@ -278,7 +278,7 @@ export function findAllActivePaged(
   const tagsById = tagsForFiles(db, rows.map((row) => row.id));
   const items = rows.map((row) => rowToAudioFile(row, tagsById.get(row.id) ?? []));
 
-  return { items, total };
+  return { items, total, totalDurationSeconds };
 }
 
 /** Unpaginated convenience wrapper — use sparingly (e.g. small internal lookups), not for the main file list. */

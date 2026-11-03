@@ -73,6 +73,9 @@ const BATCH_EDIT_RESERVE_LABEL = `Batch Edit (${PAGE_SIZE})`;
  * tab and a Projects tab. "projects" is the longer of the two nouns, so it's used unconditionally
  * as the universal reserve, even though this over-reserves slightly on Files tabs. */
 const RESULT_COUNT_RESERVE_LABEL = "999 of 999 projects";
+/** Total-duration label reserve (custom Audio Files tabs only), so the label keeps one width as
+ * the total changes. */
+const TOTAL_DURATION_RESERVE_LABEL = "Total 99:59:59";
 
 export default function FilterToolbar({
   filters,
@@ -85,6 +88,7 @@ export default function FilterToolbar({
   onOpenBatchPanel,
   locked = false,
   showAssociationFilter = false,
+  totalDurationLabel,
 }: {
   filters: FilterToolbarFilters;
   onChange: (patch: FilterToolbarPatch) => void;
@@ -108,6 +112,9 @@ export default function FilterToolbar({
    * defaults to false so Projects tabs (`ProjectsFilterBar`) are unaffected without any change
    * on their end; `FilterBar` (the Files wrapper) is the only caller that passes true. */
   showAssociationFilter?: boolean;
+  /** Summed duration of every listed file (e.g. "Total 1:02:03"), shown between the search box
+   * and the result count. Omitted (not shown) everywhere except custom Audio Files tabs. */
+  totalDurationLabel?: string;
 }) {
   const [searchInput, setSearchInput] = useState(filters.search ?? "");
   const { statuses: catalogStatuses } = useStatusCatalog();
@@ -221,6 +228,22 @@ export default function FilterToolbar({
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          {totalDurationLabel !== undefined && (
+            <span
+              className="inline-grid text-xs font-mono whitespace-nowrap text-ink-muted"
+              title="Total duration of the files listed in this tab"
+            >
+              <span className="invisible whitespace-nowrap [grid-area:1/1]" aria-hidden="true">
+                {TOTAL_DURATION_RESERVE_LABEL}
+              </span>
+              <span className="whitespace-nowrap [grid-area:1/1] text-right">{totalDurationLabel}</span>
+            </span>
+          )}
+          {totalDurationLabel !== undefined && (
+            <span className="text-xs text-ink-faint" aria-hidden="true">
+              ·
+            </span>
+          )}
           <span className="inline-grid text-xs font-mono whitespace-nowrap text-ink-muted">
             {/* Reserve a single fixed width (RESULT_COUNT_RESERVE_LABEL) across every filter bar,
              * regardless of which noun ("files"/"projects") or digit counts the current

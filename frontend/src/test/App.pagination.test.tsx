@@ -90,6 +90,7 @@ const FILES_PAGE: PagedFiles = {
     makeFile({ id: "file-2", filename: "Snare Two.wav", relativePath: "Drums/Snare Two.wav" }),
   ],
   total: 120,
+  totalDurationSeconds: 0,
   page: 1,
   pageSize: 50,
   totalPages: 3,

@@ -84,6 +84,7 @@ function makePaged(overrides: Partial<PagedFiles> = {}): PagedFiles {
   return {
     files: [],
     total: 0,
+    totalDurationSeconds: 0,
     page: 1,
     pageSize: PAGE_SIZE,
     totalPages: 1,
@@ -224,6 +225,15 @@ describe("CustomFilesTabPanel - live sort", () => {
         pageSize: PAGE_SIZE,
       })
     );
+  });
+});
+
+describe("CustomFilesTabPanel - total duration", () => {
+  it("shows the summed duration of the tab's files reported by the API", async () => {
+    mockGetFiles.mockResolvedValue(makePaged({ files: [makeFile({ id: "f1" })], total: 1, totalDurationSeconds: 3723.6 }));
+    renderPanel();
+
+    expect(await screen.findByText("Total 1:02:03")).toBeInTheDocument();
   });
 });
 

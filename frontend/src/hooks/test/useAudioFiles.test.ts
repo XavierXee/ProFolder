@@ -41,6 +41,7 @@ function makePaged(overrides: Partial<PagedFiles> = {}): PagedFiles {
   return {
     files: [],
     total: 0,
+    totalDurationSeconds: 0,
     page: 1,
     pageSize: PAGE_SIZE,
     totalPages: 1,
