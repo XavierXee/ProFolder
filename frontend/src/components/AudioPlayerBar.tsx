@@ -14,9 +14,22 @@ type Props = {
   isPlaying: boolean;
   onPlayingChange: (playing: boolean) => void;
   onClose: () => void;
+  /** Whether the next track in the list starts by itself when this one ends. */
+  autoplay: boolean;
+  onAutoplayChange: (autoplay: boolean) => void;
+  /** The current track played to the end. */
+  onEnded: () => void;
 };
 
-export default function AudioPlayerBar({ file, isPlaying, onPlayingChange, onClose }: Props) {
+export default function AudioPlayerBar({
+  file,
+  isPlaying,
+  onPlayingChange,
+  onClose,
+  autoplay,
+  onAutoplayChange,
+  onEnded,
+}: Props) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -89,7 +102,7 @@ export default function AudioPlayerBar({ file, isPlaying, onPlayingChange, onClo
         src={getFileAudioUrl(file.id)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-        onEnded={() => onPlayingChange(false)}
+        onEnded={onEnded}
         onError={() => setError("Could not play this file — the format may not be supported by your browser.")}
       />
 
@@ -129,6 +142,24 @@ export default function AudioPlayerBar({ file, isPlaying, onPlayingChange, onClo
         >
           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
             <rect x="6" y="6" width="12" height="12" />
+          </svg>
+        </button>
+        <button
+          onClick={() => onAutoplayChange(!autoplay)}
+          aria-label="Autoplay"
+          aria-pressed={autoplay}
+          title={autoplay ? "Autoplay on: the next track in the list plays automatically" : "Autoplay off"}
+          className={`w-8 h-8 rounded-full flex items-center justify-center border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+            autoplay
+              ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-500 profolder:bg-accent profolder:border-chrome-ink-secondary profolder:text-accent-ink"
+              : iconBtn
+          }`}
+        >
+          {/* Play triangle followed by a bar: "play, then go to the next one". */}
+          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 5.5v13l9.5-6.5z" />
+            <rect x="15" y="5.5" width="2.5" height="13" rx="0.5" />
+            <rect x="19.5" y="5.5" width="2.5" height="13" rx="0.5" opacity={autoplay ? 1 : 0.45} />
           </svg>
         </button>
       </div>

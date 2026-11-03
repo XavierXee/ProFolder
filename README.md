@@ -192,7 +192,8 @@ them, or copy, move or delete them together.
 
 Press the play button next to any audio file to listen right away. A player bar appears at the
 bottom of the window, with seeking, stop and elapsed time. It keeps playing while you switch
-tabs.
+tabs. Turn on **Autoplay** (the round button next to Stop) to play the next track in the list
+automatically when one ends, handy for listening through an album or EP tab in order.
 
 <p align="center">
   <img src="docs/screenshots/audio-player.png" alt="The player bar playing a master bounce at the bottom of the window" width="900">
@@ -313,13 +314,11 @@ tags come back with it.
 
 ## Roadmap
 
-- advanced option for custom tabs creation (filter by folder)
-- enable giving score and status in tabs instead of just panels
-- Add Auto play to play next track in the list
+- Add export csv/excel feature
 - "Name is required" in custom tabs should dissapear when typing
 - Scan complete notification should dissapear after a few seconds
-- add edit custom tabs filters
-- Add export csv/excel feature
+- advanced option for custom tabs creation (filter by folder)
+- enable giving score and status in tabs instead of just panels
 - Sync ProFolder tags with macOS Finder tags.
 - Send finished tracks to the Music app, with playlists based on tags.
 - Signed and notarized desktop builds.

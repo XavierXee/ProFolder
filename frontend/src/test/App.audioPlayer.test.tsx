@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App.js";
 import type { AudioFile } from "../types.js";
@@ -134,5 +134,68 @@ describe("App - audio player play/pause toggle (same-file second click pauses, d
 
     await waitFor(() => expect(rowPlayButton()).toHaveAccessibleName("Pause Kick One.wav"));
     expect(barToggleButton()).toHaveAccessibleName("Pause");
+  });
+});
+
+describe("App - autoplay", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  const nowPlaying = () => document.querySelector("audio")!.closest("div")!.querySelector("p")!.textContent;
+  const endTrack = () => fireEvent.ended(document.querySelector("audio")!);
+
+  it("with autoplay on, plays the next file in the list when a track ends", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+
+    await user.click(screen.getByRole("button", { name: "Play Kick One.wav" }));
+    await user.click(screen.getByRole("button", { name: "Autoplay" }));
+    endTrack();
+
+    await waitFor(() => expect(nowPlaying()).toBe("Snare Two.wav"));
+    expect(screen.getByRole("button", { name: /^(Play|Pause)$/ })).toHaveAccessibleName("Pause");
+  });
+
+  it("stops after the last file in the list, even with autoplay on", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+
+    await user.click(screen.getByRole("button", { name: "Play Snare Two.wav" }));
+    await user.click(screen.getByRole("button", { name: "Autoplay" }));
+    endTrack();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /^(Play|Pause)$/ })).toHaveAccessibleName("Play"));
+    expect(nowPlaying()).toBe("Snare Two.wav");
+  });
+
+  it("with autoplay off (the default), stops when a track ends", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await switchToFilesTab(user);
+
+    await user.click(screen.getByRole("button", { name: "Play Kick One.wav" }));
+    expect(screen.getByRole("button", { name: "Autoplay" })).toHaveAttribute("aria-pressed", "false");
+    endTrack();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /^(Play|Pause)$/ })).toHaveAccessibleName("Play"));
+    expect(nowPlaying()).toBe("Kick One.wav");
+  });
+
+  it("remembers the autoplay choice across launches", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<App />);
+    await switchToFilesTab(user);
+    await user.click(screen.getByRole("button", { name: "Play Kick One.wav" }));
+    await user.click(screen.getByRole("button", { name: "Autoplay" }));
+    unmount();
+
+    render(<App />);
+    await switchToFilesTab(user);
+    await user.click(screen.getByRole("button", { name: "Play Kick One.wav" }));
+
+    expect(screen.getByRole("button", { name: "Autoplay" })).toHaveAttribute("aria-pressed", "true");
   });
 });

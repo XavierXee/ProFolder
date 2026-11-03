@@ -703,7 +703,7 @@ describe("CustomFilesTabPanel - playback pass-through (App-level/global, not loc
     await waitFor(() => expect(screen.getByRole("button", { name: "Play kick.wav" })).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Play kick.wav" }));
 
-    expect(onPlayClick).toHaveBeenCalledWith(file);
+    expect(onPlayClick).toHaveBeenCalledWith(file, [file]); // the tab's list, for autoplay
     expect(screen.queryByRole("dialog", { name: "File detail: kick.wav" })).not.toBeInTheDocument();
   });
 
@@ -719,7 +719,7 @@ describe("CustomFilesTabPanel - playback pass-through (App-level/global, not loc
 
     await user.click(within(dialog).getByRole("button", { name: "Play kick.wav" }));
 
-    expect(onPlayClick).toHaveBeenCalledWith(file);
+    expect(onPlayClick).toHaveBeenCalledWith(file, [file]); // the tab's list, for autoplay
   });
 });
 
@@ -778,7 +778,7 @@ describe("CustomFilesTabPanel - arrow-key row navigation", () => {
     fireEvent.keyDown(document.body, { key: "ArrowDown" });
     fireEvent.keyDown(document.body, { key: " " });
 
-    expect(onPlayClick).toHaveBeenCalledWith(file);
+    expect(onPlayClick).toHaveBeenCalledWith(file, [file]); // the tab's list, for autoplay
     expect(screen.queryByRole("dialog", { name: /^File detail:/ })).not.toBeInTheDocument();
   });
 });

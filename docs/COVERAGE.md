@@ -6,7 +6,7 @@ prove it. Last audited 2026-11-03 against the current suites:*
 | Suite | Location | Size (all passing) |
 |---|---|---|
 | Backend unit + route tests | `tests/*.test.ts` | 59 files, 758 tests |
-| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 61 files, 976 tests |
+| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 61 files, 983 tests |
 | End-to-end (Playwright + Cucumber) | `e2e/features/**/*.feature` | 30 features, 115 scenarios |
 
 *Citations name the test file and, where useful, the `describe`/`it` title, rather than line
@@ -31,14 +31,14 @@ rather than behavior, so they have no rows.*
 | Verdict | Rows |
 |---|---|
 | BOTH | 55 |
-| UNIT | 78 |
+| UNIT | 79 |
 | E2E | 2 |
 | PARTIAL | 6 |
 | NONE | 9 |
 | NOT-HEADLESS | 1 |
-| **Total** | **151** |
+| **Total** | **152** |
 
-Fully covered (BOTH + UNIT + E2E): 135 of 151 rows (89%). Several of those rows still carry a
+Fully covered (BOTH + UNIT + E2E): 136 of 152 rows (89%). Several of those rows still carry a
 NOT-HEADLESS sub-clause, noted in the row.
 
 **Open, actionable gaps** (PARTIAL/NONE rows that a test could close):
@@ -191,6 +191,7 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 | 11.3 | Range streaming; inline playback error | UNIT | `audioStreamRoute.test.ts` (Range support); `AudioPlayerBar.test.tsx` (play rejection) |
 | 11.4 | Bottom padding while the bar is visible | NOT-HEADLESS | Layout only. |
 | 11.5 | Streams only the stored path, inside the root | UNIT | `audioStreamRoute.test.ts` (traversal id, absolute-path id, query-string trick, stored path outside root, symlink escaping the root) |
+| 11.6 | Autoplay toggle; next file in the list on track end; stops at the end; remembered | UNIT | `AudioPlayerBar.test.tsx` ("autoplay": round toggle after Stop, `aria-pressed`, click flips, end of track reported); `test/App.audioPlayer.test.tsx` ("autoplay": next file, stops after the last, off by default, remembered); `CustomFilesTabPanel.test.tsx` (play passes the tab's list). Real playback advancing through three files checked once in Chromium; no e2e scenario. |
 
 ## §12 Score & Tag Linking
 

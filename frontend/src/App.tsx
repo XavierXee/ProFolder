@@ -35,6 +35,17 @@ import { applyCatalogFilterEvent } from "./catalogFilterEvents.js";
 type Tab = "projects" | "files" | number;
 
 const THEME_STORAGE_KEY = "musicLibraryManager.theme";
+const AUTOPLAY_STORAGE_KEY = "musicLibraryManager.autoplay";
+
+/** The saved autoplay choice (off unless turned on). Storage can be unavailable (private
+ * windows, blocked site data), which just means the choice isn't remembered. */
+function loadStoredAutoplay(): boolean {
+  try {
+    return localStorage.getItem(AUTOPLAY_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
 const LEGACY_THEME_STORAGE_KEY = "musicLibraryManager.isDark";
 
 /** Reads the persisted theme, migrating the legacy boolean-based key ("musicLibraryManager.isDark")
@@ -150,6 +161,10 @@ export default function App() {
   const [projectOpDialog, setProjectOpDialog] = useState<{ operation: CopyMoveDeleteOperation; target: CopyMoveDeleteTarget; excludedPath?: string } | null>(null);
   const [playingFile, setPlayingFile] = useState<AudioFile | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  // The list a track was started from (the tab's files as shown then), so autoplay knows what
+  // comes next. Empty when playback didn't start from a list.
+  const [playQueue, setPlayQueue] = useState<AudioFile[]>([]);
+  const [autoplay, setAutoplay] = useState(loadStoredAutoplay);
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
   const [showCreateTabModal, setShowCreateTabModal] = useState(false);
   const [deletingTab, setDeletingTab] = useState<CustomTab | null>(null);
@@ -195,7 +210,7 @@ export default function App() {
     onEnter: () => setFilesDetailOpen(true),
     onSpace: (id) => {
       const file = files.find((f) => f.id === id);
-      if (file) handlePlayClick(file);
+      if (file) handlePlayClick(file, files);
     },
   });
 
@@ -499,7 +514,9 @@ export default function App() {
     refreshStats();
   }
 
-  function handlePlayClick(file: AudioFile) {
+  /** `queue`: the list the file was played from (its tab's files), used by autoplay. */
+  function handlePlayClick(file: AudioFile, queue: AudioFile[] = []) {
+    setPlayQueue(queue);
     if (playingFile?.id === file.id) {
       setIsPlaying((p) => !p);
     } else {
@@ -511,6 +528,28 @@ export default function App() {
   function handleClosePlayer() {
     setPlayingFile(null);
     setIsPlaying(false);
+  }
+
+  /** A track played to the end: with autoplay on, start the next one in its list; otherwise
+   * (or after the last one) stop. */
+  function handleTrackEnded() {
+    const index = playQueue.findIndex((f) => f.id === playingFile?.id);
+    const next = autoplay && index !== -1 ? playQueue[index + 1] : undefined;
+    if (next) {
+      setPlayingFile(next);
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(false);
+    }
+  }
+
+  function handleAutoplayChange(on: boolean) {
+    setAutoplay(on);
+    try {
+      localStorage.setItem(AUTOPLAY_STORAGE_KEY, String(on));
+    } catch {
+      // Not remembered across launches; the toggle still works for this session.
+    }
   }
 
   // Clicking the already-highlighted (and open) row toggles the panel closed, keeping the
@@ -921,7 +960,7 @@ export default function App() {
                   onClearFilters={() => handleFilesFilterChange({ search: undefined, statuses: undefined, scores: undefined, tags: undefined, association: undefined, sortBy: undefined, sortDir: undefined })}
                   onToggleSelect={toggleFileSelect}
                   onToggleSelectAll={toggleAllFileSelect}
-                  onPlayClick={handlePlayClick}
+                  onPlayClick={(file) => handlePlayClick(file, files)}
                 />
               </main>
               <footer>
@@ -966,6 +1005,9 @@ export default function App() {
           isPlaying={isPlaying}
           onPlayingChange={setIsPlaying}
           onClose={handleClosePlayer}
+          autoplay={autoplay}
+          onAutoplayChange={handleAutoplayChange}
+          onEnded={handleTrackEnded}
         />
 
         <FileDetailPanel
@@ -980,7 +1022,7 @@ export default function App() {
           onFileOperation={handleFileOperation}
           playingFileId={playingFile?.id ?? null}
           isPlaying={isPlaying}
-          onPlayClick={handlePlayClick}
+          onPlayClick={(file) => handlePlayClick(file, files)}
         />
 
         <ProjectDetailPanel

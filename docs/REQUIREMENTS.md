@@ -370,6 +370,13 @@ file id, which only the scanner writes. It can't be used to read arbitrary paths
 request. As defense in depth, it also refuses to stream any resolved path outside the configured
 music root, even if the database row points there (§20.3).
 
+11.6. **Autoplay.** A round Autoplay toggle next to Stop in the player bar (`aria-pressed` shows
+its state: filled when on, outlined when off) makes the next file in the list start by itself
+when a track ends. "The list" is the Audio Files list (default or custom tab, including an
+ordered tab's order) the track was played from, as shown when its play button was pressed — the
+current page only. After the last file, or with Autoplay off, playback stops at the end of the
+track. Autoplay is off by default; the choice is remembered in the browser (`localStorage`).
+
 ## 12. Score & Tag Linking (Project ↔ Audio File)
 
 12.1. Editing a single file's score or tags recomputes its parent project's score and tags from

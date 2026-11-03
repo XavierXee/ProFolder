@@ -37,7 +37,8 @@ type Props = {
    * the default Files tab (see App.tsx's `playingFile`/`isPlaying`/`handlePlayClick`). */
   playingFileId: string | null;
   isPlaying: boolean;
-  onPlayClick: (file: AudioFile) => void;
+  /** `queue`: this tab's files as listed, for autoplay. */
+  onPlayClick: (file: AudioFile, queue: AudioFile[]) => void;
   /** App-level banner setter (App.tsx's `setBanner`), used to surface a reveal failure the
    * same way App.tsx's own `handleReveal` does — see that function for the exact message. */
   setBanner: (message: string) => void;
@@ -91,7 +92,7 @@ export default function CustomFilesTabPanel({
     onEnter: () => setDetailOpen(true),
     onSpace: (id) => {
       const file = files.find((f) => f.id === id);
-      if (file) onPlayClick(file);
+      if (file) onPlayClick(file, files);
     },
   });
 
@@ -304,7 +305,7 @@ export default function CustomFilesTabPanel({
           onClearFilters={() => handleFilterChange({ search: undefined, sortBy: undefined, sortDir: undefined })}
           onToggleSelect={toggleFileSelect}
           onToggleSelectAll={toggleAllFileSelect}
-          onPlayClick={onPlayClick}
+          onPlayClick={(file) => onPlayClick(file, files)}
           ordered={tab.ordered}
           onReorder={handleReorder}
         />
@@ -325,7 +326,7 @@ export default function CustomFilesTabPanel({
         onFileOperation={handleFileOperation}
         playingFileId={playingFileId}
         isPlaying={isPlaying}
-        onPlayClick={onPlayClick}
+        onPlayClick={(file) => onPlayClick(file, files)}
       />
 
       <BatchEditPanel

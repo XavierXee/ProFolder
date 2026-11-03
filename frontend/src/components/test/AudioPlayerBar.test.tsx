@@ -32,6 +32,9 @@ function renderBar(overrides: Partial<Parameters<typeof AudioPlayerBar>[0]> = {}
     isPlaying: false,
     onPlayingChange: vi.fn(),
     onClose: () => {},
+    autoplay: false,
+    onAutoplayChange: vi.fn(),
+    onEnded: vi.fn(),
     ...overrides,
   };
   const result = render(<AudioPlayerBar {...props} />);
@@ -174,6 +177,9 @@ describe("AudioPlayerBar - reset on file change", () => {
         isPlaying={false}
         onPlayingChange={vi.fn()}
         onClose={() => {}}
+        autoplay={false}
+        onAutoplayChange={vi.fn()}
+        onEnded={vi.fn()}
       />
     );
 
@@ -194,5 +200,38 @@ describe("AudioPlayerBar - play rejection", () => {
     expect(onPlayingChange).toHaveBeenCalledWith(false);
 
     playSpy.mockRestore();
+  });
+});
+
+describe("AudioPlayerBar - autoplay", () => {
+  it("shows a round Autoplay toggle next to Stop, reflecting its state with aria-pressed", () => {
+    const { rerender, props } = renderBar({ autoplay: false });
+    const toggle = screen.getByRole("button", { name: "Autoplay" });
+
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(toggle).toHaveClass("rounded-full");
+    expect(screen.getByRole("button", { name: "Stop" }).nextElementSibling).toBe(toggle);
+
+    rerender(<AudioPlayerBar {...props} autoplay />);
+    expect(screen.getByRole("button", { name: "Autoplay" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("asks to flip autoplay when clicked", async () => {
+    const user = userEvent.setup();
+    const onAutoplayChange = vi.fn();
+    renderBar({ autoplay: true, onAutoplayChange });
+
+    await user.click(screen.getByRole("button", { name: "Autoplay" }));
+
+    expect(onAutoplayChange).toHaveBeenCalledWith(false);
+  });
+
+  it("reports the end of a track", () => {
+    const onEnded = vi.fn();
+    const { audio } = renderBar({ onEnded });
+
+    fireEvent.ended(audio!);
+
+    expect(onEnded).toHaveBeenCalledTimes(1);
   });
 });
