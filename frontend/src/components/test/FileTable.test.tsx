@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FileTable, sortIndicator } from "../FileTable.js";
 import type { AudioFile } from "../../types.js";
@@ -350,5 +350,91 @@ describe("FileTable - header token classes", () => {
       expect(th).toHaveClass("border-b");
       expect(th).toHaveClass("border-divider");
     }
+  });
+});
+
+describe("FileTable - ordered tab", () => {
+  const tracks = [
+    makeFile({ id: "t1", filename: "Intro.wav", trackNumber: 1 }),
+    makeFile({ id: "t2", filename: "Single.wav", trackNumber: 2 }),
+    makeFile({ id: "t3", filename: "Outro.wav", trackNumber: 3 }),
+  ];
+  const dataTransfer = { setData: () => {}, effectAllowed: "" };
+
+  it("adds a narrow '#' column between the checkbox and Track / File, showing each file's number", () => {
+    const { container } = renderTable({ ordered: true, files: tracks });
+
+    const headers = Array.from(container.querySelectorAll("thead th"));
+    expect(headers[1]).toHaveTextContent("#");
+    expect(headers[1]).toHaveClass("w-[3%]");
+    expect(headers[2]).toHaveTextContent("Track / File");
+    const widths = headers.map((th) => Number(Array.from(th.classList).find((c) => /^w-\[\d+%\]$/.test(c))!.match(/\d+/)![0]));
+    expect(widths.reduce((a, b) => a + b, 0)).toBe(100);
+
+    const rows = container.querySelectorAll("tbody tr");
+    expect(rows[0]!.querySelectorAll("td")[1]).toHaveTextContent(/^1$/);
+    expect(rows[2]!.querySelectorAll("td")[1]).toHaveTextContent(/^3$/);
+  });
+
+  it("turns off column sorting", () => {
+    renderTable({ ordered: true, files: tracks });
+    expect(screen.queryByRole("button", { name: /^Sort by / })).not.toBeInTheDocument();
+  });
+
+  it("reports a row dropped onto another with the target row's number", () => {
+    const onReorder = vi.fn();
+    renderTable({ ordered: true, files: tracks, onReorder });
+    const row = (name: string) => screen.getByText(name).closest("tr")!;
+
+    expect(row("Intro.wav")).toHaveAttribute("draggable", "true");
+    fireEvent.dragStart(row("Intro.wav"), { dataTransfer });
+    fireEvent.dragOver(row("Outro.wav"), { dataTransfer });
+    fireEvent.drop(row("Outro.wav"), { dataTransfer });
+
+    expect(onReorder).toHaveBeenCalledWith("t1", 3);
+  });
+
+  it("does nothing when a row is dropped onto itself", () => {
+    const onReorder = vi.fn();
+    renderTable({ ordered: true, files: tracks, onReorder });
+    const intro = screen.getByText("Intro.wav").closest("tr")!;
+
+    fireEvent.dragStart(intro, { dataTransfer });
+    fireEvent.drop(intro, { dataTransfer });
+
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it("has no '#' column and no draggable rows outside an ordered tab", () => {
+    const { container } = renderTable({ files: tracks });
+
+    expect(container.querySelectorAll("thead th")[1]).toHaveTextContent("Track / File");
+    expect(screen.getByText("Intro.wav").closest("tr")).toHaveAttribute("draggable", "false");
+  });
+
+  it("spans the empty state and loading rows across the extra column", () => {
+    const { container, rerender } = renderTable({ ordered: true, files: [] });
+    expect(container.querySelector("tbody td")).toHaveAttribute("colspan", "10");
+
+    rerender(
+      <FileTable
+        files={[]}
+        filters={{}}
+        loading
+        flashId={null}
+        selectedId={null}
+        selectedIds={new Set()}
+        playingFileId={null}
+        isPlaying={false}
+        onSortChange={() => {}}
+        onRowClick={() => {}}
+        onClearFilters={() => {}}
+        onToggleSelect={() => {}}
+        onToggleSelectAll={() => {}}
+        onPlayClick={() => {}}
+        ordered
+      />
+    );
+    expect(container.querySelector("tbody tr")!.querySelectorAll("td")).toHaveLength(10);
   });
 });

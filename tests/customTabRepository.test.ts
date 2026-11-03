@@ -68,6 +68,7 @@ describe("create / findAll round-trip", () => {
       statuses: ["draft", "needs_mixing"],
       scores: [3, "unscored"],
       tags: ["kick", "snare"],
+      ordered: false,
       sortOrder: created.sortOrder,
       createdAt: created.createdAt,
     });

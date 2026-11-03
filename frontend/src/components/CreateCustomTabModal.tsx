@@ -26,6 +26,8 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
   const [scores, setScores] = useState<ScoreOption[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [association, setAssociation] = useState<"associated" | "unassociated" | undefined>(undefined);
+  // Checked by default: an Audio Files tab is usually a release (album, EP) whose track order matters.
+  const [ordered, setOrdered] = useState(true);
   const [nameError, setNameError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -39,6 +41,7 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
     setScores([]);
     setTags([]);
     setAssociation(undefined);
+    setOrdered(true);
     setNameError(undefined);
     setError(undefined);
     setSubmitting(false);
@@ -71,6 +74,7 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
         scores,
         tags,
         association: type === "files" ? association : undefined,
+        ordered: type === "files" && ordered,
       });
       onCreated(tab);
       onClose();
@@ -238,6 +242,27 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
                   </label>
                 </div>
               </fieldset>
+            )}
+
+            {type === "files" && (
+              <div>
+                <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Order</p>
+                <label className="flex items-start gap-2 text-sm cursor-pointer text-ink-secondary">
+                  <input
+                    type="checkbox"
+                    checked={ordered}
+                    onChange={(e) => setOrdered(e.target.checked)}
+                    className="accent-blue-500 mt-1"
+                    aria-describedby="custom-tab-ordered-hint"
+                  />
+                  <span>
+                    Ordered
+                    <span id="custom-tab-ordered-hint" className={`block text-xs ${meta}`}>
+                      Number the files and reorder them by drag and drop, like an album's track list.
+                    </span>
+                  </span>
+                </label>
+              </div>
             )}
 
             {error && <p className="text-sm text-red-400">{error}</p>}

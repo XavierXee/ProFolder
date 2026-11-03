@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import type { AudioFile } from "../types.js";
 import { FileRow } from "./FileRow.js";
 import LoadingRows from "./LoadingRows.js";
@@ -19,13 +19,23 @@ function SortTh({
   onSortChange,
   label,
   className = "text-left",
+  sortable = true,
 }: {
   sortKey: SortKey;
   filters: FileFilters;
   onSortChange: (key: SortKey) => void;
   label: string;
   className?: string;
+  /** False in an ordered tab, which is always listed in its own order: a plain label. */
+  sortable?: boolean;
 }) {
+  if (!sortable) {
+    return (
+      <th scope="col" className={`px-4 py-3 border-b border-divider text-xs font-mono font-medium uppercase tracking-wider text-ink-muted ${className}`}>
+        {label}
+      </th>
+    );
+  }
   const active = filters.sortBy === sortKey;
   return (
     <th scope="col" aria-sort={active ? (filters.sortDir === "asc" ? "ascending" : "descending") : "none"} className={`px-4 py-3 border-b border-divider ${className}`}>
@@ -56,6 +66,8 @@ export function FileTable({
   onToggleSelect,
   onToggleSelectAll,
   onPlayClick,
+  ordered = false,
+  onReorder,
 }: {
   files: AudioFile[];
   filters: FileFilters;
@@ -71,8 +83,42 @@ export function FileTable({
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: () => void;
   onPlayClick: (file: AudioFile) => void;
+  /** An ordered custom tab: adds the "#" column, turns off column sorting, and lets rows be
+   * dragged onto another row to take its place (reported through `onReorder`). */
+  ordered?: boolean;
+  /** Called with the dragged file and the 1-based position (the target row's number) to move it to. */
+  onReorder?: (fileId: string, position: number) => void;
 }) {
   const flashRef = useRef<HTMLTableRowElement | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+
+  function rowDragProps(file: AudioFile) {
+    return {
+      onDragStart: (e: DragEvent<HTMLTableRowElement>) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", file.id); // Firefox only starts a drag with data set
+        setDraggedId(file.id);
+      },
+      onDragOver: (e: DragEvent<HTMLTableRowElement>) => {
+        if (draggedId === null) return;
+        e.preventDefault(); // allows the drop
+        if (dropTargetId !== file.id) setDropTargetId(file.id);
+      },
+      onDrop: (e: DragEvent<HTMLTableRowElement>) => {
+        e.preventDefault();
+        if (draggedId !== null && draggedId !== file.id && file.trackNumber !== undefined) {
+          onReorder?.(draggedId, file.trackNumber);
+        }
+        setDraggedId(null);
+        setDropTargetId(null);
+      },
+      onDragEnd: () => {
+        setDraggedId(null);
+        setDropTargetId(null);
+      },
+    };
+  }
 
   useEffect(() => {
     if (flashRef.current) {
@@ -84,6 +130,10 @@ export function FileTable({
 
   const thBase = "px-4 py-3 text-xs font-mono font-medium uppercase tracking-wider text-ink-muted border-b border-divider";
   const allSelected = files.length > 0 && files.every((f) => selectedIds.has(f.id));
+  // Percent widths sum to 100 either way; an ordered tab narrows Track / File and Tags to fit
+  // "#". Written out in full because Tailwind only generates class names it finds verbatim.
+  const trackWidth = ordered ? "w-[20%]" : "w-[22%]";
+  const tagsWidth = ordered ? "w-[14%]" : "w-[15%]";
 
   return (
     <table className="w-full border-collapse table-fixed" aria-label="Audio files">
@@ -93,21 +143,27 @@ export function FileTable({
           <th scope="col" className={`${thBase} text-center w-[4%]`}>
             <RowCheckbox checked={allSelected} onChange={onToggleSelectAll} ariaLabel="Select all visible files" />
           </th>
-          <SortTh sortKey="name" filters={filters} onSortChange={onSortChange} label="Track / File" className="text-left w-[22%]" />
-          <SortTh sortKey="project" filters={filters} onSortChange={onSortChange} label="Project" className="text-left w-[10%]" />
-          <SortTh sortKey="folder" filters={filters} onSortChange={onSortChange} label="Location" className="text-left w-[14%]" />
-          <SortTh sortKey="duration" filters={filters} onSortChange={onSortChange} label="Duration" className="text-center w-[7%]" />
-          <SortTh sortKey="status" filters={filters} onSortChange={onSortChange} label="Status" className="text-center w-[11%]" />
-          <SortTh sortKey="tags" filters={filters} onSortChange={onSortChange} label="Tags" className="text-center w-[15%]" />
-          <SortTh sortKey="score" filters={filters} onSortChange={onSortChange} label="Score" className="text-center w-[8%]" />
-          <SortTh sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} label="Modified" className="text-center w-[9%]" />
+          {ordered && (
+            <th scope="col" className={`${thBase} text-center w-[3%]`}>
+              <span aria-hidden="true">#</span>
+              <span className="sr-only">Track number</span>
+            </th>
+          )}
+          <SortTh sortable={!ordered} sortKey="name" filters={filters} onSortChange={onSortChange} label="Track / File" className={`text-left ${trackWidth}`} />
+          <SortTh sortable={!ordered} sortKey="project" filters={filters} onSortChange={onSortChange} label="Project" className="text-left w-[10%]" />
+          <SortTh sortable={!ordered} sortKey="folder" filters={filters} onSortChange={onSortChange} label="Location" className="text-left w-[14%]" />
+          <SortTh sortable={!ordered} sortKey="duration" filters={filters} onSortChange={onSortChange} label="Duration" className="text-center w-[7%]" />
+          <SortTh sortable={!ordered} sortKey="status" filters={filters} onSortChange={onSortChange} label="Status" className="text-center w-[11%]" />
+          <SortTh sortable={!ordered} sortKey="tags" filters={filters} onSortChange={onSortChange} label="Tags" className={`text-center ${tagsWidth}`} />
+          <SortTh sortable={!ordered} sortKey="score" filters={filters} onSortChange={onSortChange} label="Score" className="text-center w-[8%]" />
+          <SortTh sortable={!ordered} sortKey="modifiedAt" filters={filters} onSortChange={onSortChange} label="Modified" className="text-center w-[9%]" />
         </tr>
       </thead>
       <tbody>
         {loading ? (
-          <LoadingRows />
+          <LoadingRows columns={ordered ? 10 : 9} />
         ) : files.length === 0 ? (
-          <EmptyState onClear={onClearFilters} />
+          <EmptyState onClear={onClearFilters} colSpan={ordered ? 10 : 9} />
         ) : (
           files.map((file) => (
             <FileRow
@@ -121,6 +177,9 @@ export function FileTable({
               onToggleCheck={() => onToggleSelect(file.id)}
               isPlayingThis={file.id === playingFileId && isPlaying}
               onPlayClick={() => onPlayClick(file)}
+              showTrackNumber={ordered}
+              dragProps={ordered ? rowDragProps(file) : undefined}
+              isDropTarget={ordered && dropTargetId === file.id && draggedId !== file.id}
             />
           ))
         )}

@@ -90,6 +90,7 @@ function makeCustomTab(overrides: Partial<CustomTab> = {}): CustomTab {
     statuses: [],
     scores: [],
     tags: [],
+    ordered: false,
     sortOrder: 0,
     createdAt: "2026-01-01T00:00:00.000Z",
     ...overrides,

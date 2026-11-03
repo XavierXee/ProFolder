@@ -26,6 +26,9 @@ export type FileFilters = {
   sortDir?: "asc" | "desc";
   page?: number;
   pageSize?: number;
+  /** An ordered custom tab's id: lists that tab's files in its order, numbered (`trackNumber`).
+   * The server then uses the tab's own filters and ignores the ones above (search excepted). */
+  orderedTabId?: number;
 };
 
 export type PagedFiles = {
@@ -82,6 +85,7 @@ export function getFiles(filters: FileFilters = {}): Promise<PagedFiles> {
   if (filters.association) params.set("association", filters.association);
   if (filters.sortBy) params.set("sortBy", filters.sortBy);
   if (filters.sortDir) params.set("sortDir", filters.sortDir);
+  if (filters.orderedTabId !== undefined) params.set("orderedTab", String(filters.orderedTabId));
   params.set("page", String(filters.page ?? 1));
   params.set("pageSize", String(filters.pageSize ?? PAGE_SIZE));
   const qs = params.toString();
@@ -542,8 +546,14 @@ export function createCustomTab(input: {
   scores?: (number | "unscored")[];
   tags?: string[];
   association?: "associated" | "unassociated";
+  ordered?: boolean;
 }): Promise<CustomTab> {
   return request<CustomTab>(`/custom-tabs`, { method: "POST", body: JSON.stringify(input) });
+}
+
+/** Moves a file of an ordered custom tab to a 1-based position. */
+export async function moveFileInOrderedTab(tabId: number, fileId: string, position: number): Promise<void> {
+  await request(`/custom-tabs/${tabId}/files/order`, { method: "PUT", body: JSON.stringify({ fileId, position }) });
 }
 
 export async function deleteCustomTab(id: number): Promise<void> {

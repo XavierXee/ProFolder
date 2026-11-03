@@ -29,6 +29,8 @@ type AudioFileRow = {
   first_seen_at: string;
   last_seen_at: string;
   is_removed: number;
+  /** Only present on rows listed for an ordered custom tab (see `findOrderedTabFilesPaged`). */
+  track_number?: number;
 };
 
 export type AudioFileFilters = {
@@ -124,6 +126,7 @@ function rowToAudioFile(row: AudioFileRow, tags: string[]): AudioFile {
     firstSeenAt: row.first_seen_at,
     lastSeenAt: row.last_seen_at,
     isRemoved: row.is_removed === 1,
+    ...(row.track_number !== undefined ? { trackNumber: row.track_number } : {}),
   };
 }
 
@@ -279,6 +282,94 @@ export function findAllActivePaged(
   const items = rows.map((row) => rowToAudioFile(row, tagsById.get(row.id) ?? []));
 
   return { items, total, totalDurationSeconds };
+}
+
+/** An ordered custom tab's membership: its locked filters (search is applied separately). */
+export type OrderedTabMembership = Pick<AudioFileFilters, "statuses" | "scores" | "tags" | "association">;
+
+/**
+ * SQL for an ordered custom tab's members numbered 1..N (`track_number`): first the files with a
+ * saved position, in position order, then any file that joined the tab since the last reorder,
+ * by filename. Numbers are computed over the whole membership before any search, so a file keeps
+ * its number while the list is searched.
+ */
+function rankedTabMembers(membership: OrderedTabMembership): { sql: string; params: Record<string, unknown> } {
+  const { where, params } = buildWhereClause(membership);
+  return {
+    sql: `SELECT audio_files.*, ROW_NUMBER() OVER (
+            ORDER BY p.position IS NULL, p.position, audio_files.filename, audio_files.id
+          ) AS track_number
+          FROM audio_files
+          LEFT JOIN custom_tab_file_positions p ON p.tab_id = @tabId AND p.audio_file_id = audio_files.id
+          WHERE ${where}`,
+    params,
+  };
+}
+
+/** Like `findAllActivePaged`, for an ordered custom tab: its files in the tab's order, each with
+ * its `trackNumber`, optionally narrowed by a search (which doesn't renumber). */
+export function findOrderedTabFilesPaged(
+  db: Database.Database,
+  tabId: number,
+  membership: OrderedTabMembership,
+  options: { search?: string; limit?: number; offset?: number } = {}
+): PagedResult<AudioFile> & { totalDurationSeconds: number } {
+  const ranked = rankedTabMembers(membership);
+  const searchWhere = options.search ? "(filename LIKE @search OR relative_path LIKE @search)" : "1 = 1";
+  const params = { ...ranked.params, tabId, ...(options.search ? { search: `%${options.search}%` } : {}) };
+
+  const { count: total, duration: totalDurationSeconds } = db
+    .prepare(
+      `WITH ranked AS (${ranked.sql})
+       SELECT COUNT(*) AS count, COALESCE(SUM(duration_seconds), 0) AS duration FROM ranked WHERE ${searchWhere}`
+    )
+    .get(params) as { count: number; duration: number };
+
+  const rows = db
+    .prepare(
+      `WITH ranked AS (${ranked.sql})
+       SELECT * FROM ranked WHERE ${searchWhere} ORDER BY track_number LIMIT @limit OFFSET @offset`
+    )
+    .all({ ...params, limit: options.limit ?? total, offset: options.offset ?? 0 }) as AudioFileRow[];
+
+  const tagsById = tagsForFiles(db, rows.map((row) => row.id));
+  const items = rows.map((row) => rowToAudioFile(row, tagsById.get(row.id) ?? []));
+  return { items, total, totalDurationSeconds };
+}
+
+/**
+ * Moves one file of an ordered custom tab to `position` (1-based, clamped to the tab's size),
+ * shifting the files in between by one, and saves the tab's whole order. Throws if the file
+ * isn't in the tab. Saving every member's position also drops positions left behind by files
+ * that have since left the tab.
+ */
+export function moveFileInOrderedTab(
+  db: Database.Database,
+  tabId: number,
+  membership: OrderedTabMembership,
+  fileId: string,
+  position: number
+): void {
+  const ranked = rankedTabMembers(membership);
+  const ids = (
+    db
+      .prepare(`WITH ranked AS (${ranked.sql}) SELECT id FROM ranked ORDER BY track_number`)
+      .all({ ...ranked.params, tabId }) as { id: string }[]
+  ).map((row) => row.id);
+
+  const from = ids.indexOf(fileId);
+  if (from === -1) throw new Error(`File "${fileId}" is not in this tab`);
+  const to = Math.min(Math.max(Math.trunc(position), 1), ids.length) - 1;
+  ids.splice(from, 1);
+  ids.splice(to, 0, fileId);
+
+  const insert = db.prepare(
+    `INSERT INTO custom_tab_file_positions (tab_id, audio_file_id, position) VALUES (?, ?, ?)`
+  );
+  db.transaction(() => {
+    db.prepare(`DELETE FROM custom_tab_file_positions WHERE tab_id = ?`).run(tabId);
+    ids.forEach((id, index) => insert.run(tabId, id, index + 1));
+  })();
 }
 
 /** Unpaginated convenience wrapper — use sparingly (e.g. small internal lookups), not for the main file list. */

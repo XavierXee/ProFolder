@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import type { CustomTab, CustomTabType } from "../../models/CustomTab.js";
 import type { TrackStatus } from "../../models/AudioFile.js";
+import type { OrderedTabMembership } from "./audioFileRepository.js";
 
 type CustomTabRow = {
   id: number;
@@ -10,6 +11,7 @@ type CustomTabRow = {
   scores: string;
   tags: string;
   association: string | null;
+  ordered: number;
   sort_order: number;
   created_at: string;
 };
@@ -23,6 +25,7 @@ function rowToCustomTab(row: CustomTabRow): CustomTab {
     scores: JSON.parse(row.scores),
     tags: JSON.parse(row.tags),
     association: (row.association as "associated" | "unassociated" | null) ?? undefined,
+    ordered: row.ordered === 1,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
   };
@@ -36,6 +39,28 @@ export function findAll(db: Database.Database): CustomTab[] {
   return rows.map(rowToCustomTab);
 }
 
+export function findById(db: Database.Database, id: number): CustomTab | undefined {
+  const row = db.prepare(`SELECT * FROM custom_tabs WHERE id = ?`).get(id) as CustomTabRow | undefined;
+  return row ? rowToCustomTab(row) : undefined;
+}
+
+/** The ordered Audio Files tab with this id, or undefined if there's none (missing tab, a
+ * projects tab, or a tab that isn't ordered). */
+export function findOrderedFilesTab(db: Database.Database, id: number): CustomTab | undefined {
+  const tab = findById(db, id);
+  return tab && tab.type === "files" && tab.ordered ? tab : undefined;
+}
+
+/** A tab's locked filters in the shape the audio file queries take ("unscored" → null). */
+export function membershipOf(tab: CustomTab): OrderedTabMembership {
+  return {
+    statuses: tab.statuses,
+    scores: tab.scores.map((s) => (s === "unscored" ? null : s)),
+    tags: tab.tags,
+    association: tab.association,
+  };
+}
+
 export interface CreateCustomTabInput {
   name: string;
   type: CustomTabType;
@@ -43,6 +68,8 @@ export interface CreateCustomTabInput {
   scores: (number | "unscored")[];
   tags: string[];
   association?: "associated" | "unassociated";
+  /** Ignored (stored as false) for a projects tab. */
+  ordered?: boolean;
 }
 
 export function create(db: Database.Database, input: CreateCustomTabInput): CustomTab {
@@ -51,10 +78,11 @@ export function create(db: Database.Database, input: CreateCustomTabInput): Cust
     maxOrder: number | null;
   };
   const sortOrder = maxOrderRow.maxOrder === null ? 0 : maxOrderRow.maxOrder + 1;
+  const ordered = input.type === "files" && input.ordered === true;
   const result = db
     .prepare(
-      `INSERT INTO custom_tabs (name, type, statuses, scores, tags, association, sort_order, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO custom_tabs (name, type, statuses, scores, tags, association, ordered, sort_order, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name,
@@ -63,6 +91,7 @@ export function create(db: Database.Database, input: CreateCustomTabInput): Cust
       JSON.stringify(input.scores),
       JSON.stringify(input.tags),
       input.association ?? null,
+      ordered ? 1 : 0,
       sortOrder,
       createdAt
     );
@@ -75,6 +104,7 @@ export function create(db: Database.Database, input: CreateCustomTabInput): Cust
     scores: input.scores,
     tags: input.tags,
     association: input.association,
+    ordered,
     sortOrder,
     createdAt,
   };

@@ -505,6 +505,19 @@ new name.
 every file matching the tab's filters and current search, across all pages, and leaves out files
 whose duration is unknown. The default Audio Files tab shows no total.
 
+15.13. **Ordered tabs.** When creating an Audio Files custom tab, the "Ordered" option is ticked
+by default and can be unticked (it isn't offered for Project Folders tabs). An ordered tab:
+- numbers its files 1..N in a narrow "#" column between the checkbox and Track / File;
+- is always listed in its own order: its column headers aren't sortable;
+- lets the user drag a row onto another row to move it to that row's number, shifting the rows in
+  between; the order is saved (`PUT /api/custom-tabs/:id/files/order`) and survives restarts;
+- lists files that join the tab after the last reorder at the end (by filename until the tab is
+  first reordered);
+- keeps each file's number while searching (the search narrows the list, it doesn't renumber);
+- keeps a file's place when it's moved or renamed on disk, and forgets the order when the tab is
+  deleted.
+The listing comes from `GET /api/files?orderedTab=<id>`, which uses the tab's saved filters.
+
 ## 16. Copy, Move & Delete
 
 16.1. Copy, Move and Delete are available:

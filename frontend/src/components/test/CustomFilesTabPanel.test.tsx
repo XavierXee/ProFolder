@@ -23,6 +23,7 @@ vi.mock("../../api/client.js", () => ({
   batchDeleteFiles: vi.fn(),
   getConfirmationSettings: vi.fn(),
   getPaginationSettings: vi.fn(),
+  moveFileInOrderedTab: vi.fn(),
 }));
 
 import * as api from "../../api/client.js";
@@ -74,6 +75,7 @@ function makeTab(overrides: Partial<CustomTab> = {}): CustomTab {
     statuses: ["draft", "done"],
     scores: [3, "unscored"],
     tags: ["kick", "mix"],
+    ordered: false,
     sortOrder: 0,
     createdAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
@@ -234,6 +236,60 @@ describe("CustomFilesTabPanel - total duration", () => {
     renderPanel();
 
     expect(await screen.findByText("Total 1:02:03")).toBeInTheDocument();
+  });
+});
+
+describe("CustomFilesTabPanel - ordered tab", () => {
+  const tracks = [
+    makeFile({ id: "t1", filename: "Intro.wav", trackNumber: 1 }),
+    makeFile({ id: "t2", filename: "Outro.wav", trackNumber: 2 }),
+  ];
+  const dataTransfer = { setData: () => {}, effectAllowed: "" };
+
+  function dragOnto(from: string, to: string) {
+    const row = (name: string) => screen.getByText(name).closest("tr")!;
+    fireEvent.dragStart(row(from), { dataTransfer });
+    fireEvent.dragOver(row(to), { dataTransfer });
+    fireEvent.drop(row(to), { dataTransfer });
+  }
+
+  it("asks for the tab's numbered order and shows the '#' column", async () => {
+    mockGetFiles.mockResolvedValue(makePaged({ files: tracks, total: 2 }));
+    renderPanel({ tab: makeTab({ id: 7, ordered: true }) });
+
+    await screen.findByText("Intro.wav");
+    expect(mockGetFiles).toHaveBeenCalledWith(expect.objectContaining({ orderedTabId: 7 }));
+    expect(screen.getByRole("columnheader", { name: /Track number/ })).toBeInTheDocument();
+  });
+
+  it("saves a drag-and-drop move, then reloads the list", async () => {
+    mockGetFiles.mockResolvedValue(makePaged({ files: tracks, total: 2 }));
+    vi.mocked(api.moveFileInOrderedTab).mockReset().mockResolvedValue(undefined);
+    renderPanel({ tab: makeTab({ id: 7, ordered: true }) });
+    await screen.findByText("Intro.wav");
+    const fetchesBefore = mockGetFiles.mock.calls.length;
+
+    dragOnto("Intro.wav", "Outro.wav");
+
+    expect(api.moveFileInOrderedTab).toHaveBeenCalledWith(7, "t1", 2);
+    await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(fetchesBefore + 1));
+  });
+
+  it("shows a banner when the move can't be saved", async () => {
+    mockGetFiles.mockResolvedValue(makePaged({ files: tracks, total: 2 }));
+    vi.mocked(api.moveFileInOrderedTab).mockReset().mockRejectedValue(new Error("Ordered tab not found"));
+    const { props } = renderPanel({ tab: makeTab({ id: 7, ordered: true }) });
+    await screen.findByText("Intro.wav");
+
+    dragOnto("Intro.wav", "Outro.wav");
+
+    await waitFor(() => expect(props.setBanner).toHaveBeenCalledWith("Ordered tab not found"));
+  });
+
+  it("doesn't ask for an order in a tab that isn't ordered", async () => {
+    renderPanel();
+    await waitFor(() => expect(mockGetFiles).toHaveBeenCalled());
+    expect(mockGetFiles.mock.calls[0]![0]).not.toHaveProperty("orderedTabId");
   });
 });
 

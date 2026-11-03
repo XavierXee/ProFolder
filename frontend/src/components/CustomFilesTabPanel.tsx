@@ -62,7 +62,13 @@ export default function CustomFilesTabPanel({
   musicRoot,
 }: Props) {
   const { files, total, totalDurationSeconds, totalPages, page, pageSize, filters, updateFilters, setPage, loading, error, refetch } =
-    useAudioFiles({ statuses: tab.statuses, scores: tab.scores, tags: tab.tags, association: tab.association });
+    useAudioFiles({
+      statuses: tab.statuses,
+      scores: tab.scores,
+      tags: tab.tags,
+      association: tab.association,
+      ...(tab.ordered ? { orderedTabId: tab.id } : {}),
+    });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Whether the detail panel is actually SHOWN for the currently-highlighted file — decoupled
@@ -113,6 +119,14 @@ export default function CustomFilesTabPanel({
   function handlePageChange(nextPage: number) {
     setPage(nextPage);
     setSelectedFileIds(new Set());
+  }
+
+  /** Ordered tab: a row was dropped onto another; save the move, then reload the numbered list. */
+  function handleReorder(fileId: string, position: number) {
+    api
+      .moveFileInOrderedTab(tab.id, fileId, position)
+      .then(() => refetch())
+      .catch((err) => setBanner(err instanceof Error ? err.message : "Could not reorder the tab"));
   }
 
   function handleSortChange(sortBy: SortKey) {
@@ -291,6 +305,8 @@ export default function CustomFilesTabPanel({
           onToggleSelect={toggleFileSelect}
           onToggleSelectAll={toggleAllFileSelect}
           onPlayClick={onPlayClick}
+          ordered={tab.ordered}
+          onReorder={handleReorder}
         />
       </main>
       <footer>

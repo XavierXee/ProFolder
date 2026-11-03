@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import type { DragEvent, RefObject } from "react";
 import type { AudioFile } from "../types.js";
 import StatusBadge from "./StatusBadge.js";
 import ScoreBadge from "./ScoreBadge.js";
@@ -33,6 +33,9 @@ export function FileRow({
   onToggleCheck,
   isPlayingThis,
   onPlayClick,
+  showTrackNumber = false,
+  dragProps,
+  isDropTarget = false,
 }: {
   file: AudioFile;
   isSelected: boolean;
@@ -43,6 +46,17 @@ export function FileRow({
   onToggleCheck: () => void;
   isPlayingThis: boolean;
   onPlayClick: () => void;
+  /** Ordered custom tab: show the file's number in a "#" cell after the checkbox. */
+  showTrackNumber?: boolean;
+  /** Ordered custom tab: makes the row draggable, with these handlers. */
+  dragProps?: {
+    onDragStart: (e: DragEvent<HTMLTableRowElement>) => void;
+    onDragOver: (e: DragEvent<HTMLTableRowElement>) => void;
+    onDrop: (e: DragEvent<HTMLTableRowElement>) => void;
+    onDragEnd: () => void;
+  };
+  /** Another row is being dragged over this one: marks where it will land. */
+  isDropTarget?: boolean;
 }) {
   const location = computeLocation(file.relativePath);
 
@@ -51,13 +65,20 @@ export function FileRow({
       ref={isFlash ? flashRef : null}
       onClick={onClick}
       aria-selected={isSelected}
+      draggable={dragProps !== undefined}
+      {...dragProps}
       className={`border-b cursor-pointer transition-colors border-border ${
         isSelected ? "bg-surface-selected" : "bg-surface hover:bg-surface-hover"
-      }`}
+      } ${isDropTarget ? "outline outline-2 -outline-offset-2 outline-blue-500" : ""}`}
     >
       <td className="px-4 py-3.5 text-center">
         <RowCheckbox checked={checked} onChange={onToggleCheck} ariaLabel={`Select ${file.filename}`} />
       </td>
+      {showTrackNumber && (
+        <td className="px-1 py-3.5 text-center cursor-grab" title="Drag to reorder">
+          <span className="text-xs font-mono text-ink-muted">{file.trackNumber ?? ""}</span>
+        </td>
+      )}
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-2">
           <button

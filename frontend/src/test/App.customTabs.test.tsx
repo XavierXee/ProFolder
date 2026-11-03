@@ -116,6 +116,7 @@ const NEW_TAB: CustomTab = {
   statuses: [],
   scores: [],
   tags: [],
+  ordered: false,
   sortOrder: 0,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
@@ -194,6 +195,7 @@ describe("App - custom tabs wiring", () => {
       statuses: [],
       scores: [],
       tags: [],
+      ordered: true,
     });
 
     // Modal closes and the new tab becomes active, rendering CustomFilesTabPanel. The modal now
@@ -228,6 +230,7 @@ describe("App - tab bar horizontal scroll and drag-and-drop reorder", () => {
       statuses: [],
       scores: [],
       tags: [],
+      ordered: false,
       sortOrder: 0,
       createdAt: "2026-01-01T00:00:00.000Z",
       ...overrides,

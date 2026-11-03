@@ -33,6 +33,7 @@ function makeTab(overrides: Partial<CustomTab> = {}): CustomTab {
     statuses: [],
     scores: [],
     tags: [],
+    ordered: false,
     sortOrder: 0,
     createdAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
@@ -141,6 +142,7 @@ describe("CreateCustomTabModal - submit payload", () => {
         statuses: ["draft", "done"],
         scores: [5, "unscored"],
         tags: ["rock"],
+        ordered: true,
       })
     );
   });
@@ -159,6 +161,7 @@ describe("CreateCustomTabModal - submit payload", () => {
         statuses: [],
         scores: [],
         tags: [],
+        ordered: false,
       })
     );
   });
@@ -259,6 +262,7 @@ describe("CreateCustomTabModal - dynamic status catalog", () => {
         statuses: ["mastering"],
         scores: [],
         tags: [],
+        ordered: false,
       })
     );
   });
@@ -361,5 +365,45 @@ describe("CreateCustomTabModal - auto-focus on open", () => {
     });
 
     expect(screen.getByRole("button", { name: "Close panel" })).toHaveFocus();
+  });
+});
+
+describe("CreateCustomTabModal - ordered option", () => {
+  it("offers 'Ordered' only for an Audio Files tab, checked by default", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderModal();
+
+    expect(screen.queryByRole("checkbox", { name: /Ordered/ })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Name"), "Summer EP");
+    await user.click(screen.getByRole("radio", { name: "Audio Files" }));
+    expect(screen.getByRole("checkbox", { name: /Ordered/ })).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(mockCreateCustomTab).toHaveBeenCalledWith(expect.objectContaining({ type: "files", ordered: true })));
+  });
+
+  it("sends ordered: false when 'Ordered' is unticked", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderModal();
+
+    await user.type(screen.getByLabelText("Name"), "Ready to Release");
+    await user.click(screen.getByRole("radio", { name: "Audio Files" }));
+    await user.click(screen.getByRole("checkbox", { name: /Ordered/ }));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(mockCreateCustomTab).toHaveBeenCalledWith(expect.objectContaining({ type: "files", ordered: false })));
+  });
+
+  it("never sends ordered for a Project Folders tab, even though it's ticked for Audio Files", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderModal();
+
+    await user.type(screen.getByLabelText("Name"), "Projects");
+    await user.click(screen.getByRole("radio", { name: "Audio Files" }));
+    await user.click(screen.getByRole("radio", { name: "Project Folders" }));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(mockCreateCustomTab).toHaveBeenCalledWith(expect.objectContaining({ type: "projects", ordered: false })));
   });
 });

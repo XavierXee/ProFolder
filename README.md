@@ -222,7 +222,9 @@ files, whether they belong to a project. Search and sorting still work inside it
 Custom tabs are also a simple way to organize your discography. Give the tracks of an album or EP
 a shared tag (for example `summer-ep`), then create a tab that filters on that tag: "Summer EP"
 now lists every track of the release, wherever the files live on your drive, along with the
-release's total running time.
+release's total running time. Audio Files tabs are **Ordered** by default: their tracks are
+numbered and you put them in running order by dragging a track onto another. Untick Ordered when
+creating the tab if you'd rather sort it by column.
 
 Drag tabs to reorder them. When there are more tabs than fit, the tab bar scrolls, and the
 **All tabs** button lists every tab so you can jump straight to one.
@@ -310,7 +312,6 @@ tags come back with it.
 
 ## Roadmap
 
-- show total duration of custom tab
 - custom tabs, add tracks ordering (for project sequencing)
 - advanced option for custom tabs creation (filter by folder)
 - enable giving score and status in tabs instead of just panels

@@ -1,6 +1,14 @@
 import { Router } from "express";
 import type Database from "better-sqlite3";
-import { findAll, create, deleteById, reorder } from "../../database/repositories/customTabRepository.js";
+import {
+  findAll,
+  create,
+  deleteById,
+  reorder,
+  findOrderedFilesTab,
+  membershipOf,
+} from "../../database/repositories/customTabRepository.js";
+import { moveFileInOrderedTab } from "../../database/repositories/audioFileRepository.js";
 import { isKnownStatusKey } from "../../database/repositories/statusRepository.js";
 import { type TrackStatus } from "../../models/AudioFile.js";
 import { isValidScore } from "../../models/Score.js";
@@ -26,13 +34,14 @@ export function createCustomTabsRouter(db: Database.Database): Router {
   router.post(
     "/",
     asyncHandler(async (req, res) => {
-      const { name, type, statuses, scores, tags, association } = req.body as {
+      const { name, type, statuses, scores, tags, association, ordered } = req.body as {
         name?: unknown;
         type?: unknown;
         statuses?: unknown;
         scores?: unknown;
         tags?: unknown;
         association?: unknown;
+        ordered?: unknown;
       };
 
       if (typeof name !== "string" || name.trim().length === 0) {
@@ -74,6 +83,8 @@ export function createCustomTabsRouter(db: Database.Database): Router {
         scores: validScores,
         tags: validTags,
         association: validAssociation,
+        // Files tabs only, like association; the repository stores false for a projects tab.
+        ordered: ordered === true,
       });
       res.status(201).json(tab);
     })
@@ -90,6 +101,35 @@ export function createCustomTabsRouter(db: Database.Database): Router {
         return;
       }
       res.json({ tabs: reorder(db, orderedIds) });
+    })
+  );
+
+  // Moves one file of an ordered Audio Files tab to a new 1-based position.
+  router.put(
+    "/:id/files/order",
+    asyncHandler(async (req, res) => {
+      const id = parseId(req.params.id!);
+      if (id === undefined) {
+        res.status(400).json({ error: "invalid id" });
+        return;
+      }
+      const tab = findOrderedFilesTab(db, id);
+      if (!tab) {
+        res.status(404).json({ error: "Ordered tab not found" });
+        return;
+      }
+      const { fileId, position } = req.body as { fileId?: unknown; position?: unknown };
+      if (typeof fileId !== "string" || typeof position !== "number" || !Number.isInteger(position) || position < 1) {
+        res.status(400).json({ error: "fileId (string) and position (integer ≥ 1) are required" });
+        return;
+      }
+      try {
+        moveFileInOrderedTab(db, tab.id, membershipOf(tab), fileId, position);
+      } catch (err) {
+        res.status(400).json({ error: err instanceof Error ? err.message : "Could not reorder" });
+        return;
+      }
+      res.json({ moved: true });
     })
   );
 

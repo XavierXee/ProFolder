@@ -2,6 +2,7 @@ import { Router } from "express";
 import type Database from "better-sqlite3";
 import {
   findAllActivePaged,
+  findOrderedTabFilesPaged,
   findById,
   updateStatus,
   setTags,
@@ -15,6 +16,7 @@ import {
   markRemoved,
 } from "../../database/repositories/audioFileRepository.js";
 import { findAllActive as findAllActiveProjects } from "../../database/repositories/projectRepository.js";
+import { findOrderedFilesTab, membershipOf } from "../../database/repositories/customTabRepository.js";
 import { syncProjectFromFiles } from "../../database/repositories/linkSync.js";
 import { isKnownStatusKey } from "../../database/repositories/statusRepository.js";
 import { type AudioFile, type TrackStatus } from "../../models/AudioFile.js";
@@ -73,16 +75,32 @@ export function createFilesRouter(db: Database.Database, fileOpsService: FileOps
   router.get(
     "/",
     asyncHandler(async (req, res) => {
-      const { search, status, score, tag, association, sortBy, sortDir, page, pageSize } = req.query;
+      const { search, status, score, tag, association, sortBy, sortDir, page, pageSize, orderedTab } = req.query;
       const pageNum = parsePositiveInt(page, 1);
       const pageSizeNum = parsePositiveInt(pageSize, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+
+      // An ordered custom tab lists its own members (from the tab's saved filters, ignoring any
+      // status/score/tag/association/sort sent alongside) in the tab's order, numbered.
+      let ordered: ReturnType<typeof findOrderedTabFilesPaged> | undefined;
+      if (orderedTab !== undefined) {
+        const tab = findOrderedFilesTab(db, parsePositiveInt(orderedTab, 0));
+        if (!tab) {
+          res.status(404).json({ error: "Ordered tab not found" });
+          return;
+        }
+        ordered = findOrderedTabFilesPaged(db, tab.id, membershipOf(tab), {
+          search: typeof search === "string" && search ? search : undefined,
+          limit: pageSizeNum,
+          offset: (pageNum - 1) * pageSizeNum,
+        });
+      }
 
       const statuses = toStringArray(status).filter((s) => isKnownStatusKey(db, s));
       const tags = toStringArray(tag);
       const associationFilter =
         association === "associated" || association === "unassociated" ? association : undefined;
 
-      const { items, total, totalDurationSeconds } = findAllActivePaged(db, {
+      const { items, total, totalDurationSeconds } = ordered ?? findAllActivePaged(db, {
         search: typeof search === "string" ? search : undefined,
         statuses: statuses.length > 0 ? statuses : undefined,
         scores: parseScoreListQueryParam(toStringArray(score)),

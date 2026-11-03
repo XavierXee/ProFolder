@@ -43,4 +43,7 @@ export type AudioFile = {
   firstSeenAt: string;
   lastSeenAt: string;
   isRemoved: boolean;
+
+  /** 1-based position within an ordered custom tab. Only set on files listed for such a tab. */
+  trackNumber?: number;
 };
