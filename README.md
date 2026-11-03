@@ -314,7 +314,7 @@ tags come back with it.
 
 ## Roadmap
 
-- Add export csv/excel feature
+- Add export and import csv/excel feature
 - "Name is required" in custom tabs should dissapear when typing
 - Scan complete notification should dissapear after a few seconds
 - advanced option for custom tabs creation (filter by folder)
