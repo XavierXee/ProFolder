@@ -20,6 +20,7 @@
     "dist:mac:universal": "npm run build && npm run build:electron && electron-builder --mac --universal",
     "dist:win": "npm run build && npm run build:electron && electron-builder --win --x64",
     "dist:linux": "npm run build && npm run build:electron && electron-builder --linux --x64",
+    "install:mac": "npm run build && npm run build:electron && electron-builder --mac --arm64 --dir && osascript -e 'if application \"ProFolder\" is running then tell application \"ProFolder\" to quit' && sleep 2 && rm -rf /Applications/ProFolder.app && ditto release/mac-arm64/ProFolder.app /Applications/ProFolder.app && echo 'ProFolder installed in /Applications'",
     "scan": "tsx src/cli/scan.ts",
     "build:backend": "tsc -p tsconfig.json && mkdir -p dist/src/database/migrations && cp src/database/migrations/*.sql dist/src/database/migrations/",
     "build:frontend": "vite build",
