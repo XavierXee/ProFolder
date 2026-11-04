@@ -6,7 +6,7 @@
 numbering stable: add new clauses at the end of a section rather than renumbering.*
 
 *The user-facing overview lives in the [README](../README.md). This document holds the
-behavioral detail (§1–§19) and the technical reference (§20–§23).*
+behavioral detail (§1–§19, §24) and the technical reference (§20–§23).*
 
 ---
 
@@ -822,6 +822,55 @@ Pushing a `v*` tag additionally:
 - creates a GitHub Release with every installer attached.
 
 Running the workflow manually builds the desktop packages without releasing them.
+
+---
+
+## 24. Library Export & Import
+
+24.1. **Export format.** The library exports to one Excel workbook (`.xlsx`, written with
+`write-excel-file`), one sheet per table, each with a bold, frozen header row:
+- **Project Folders** and **Audio Files**: every active item with its id (path relative to the
+  music folder), name/location, type or duration, status (by name), tags, score, notes and dates;
+- one sheet **per custom tab** (named after the tab, made safe for Excel: at most 31 characters,
+  none of `[]:*?/\`, unique) listing the tab's items as it shows them; an ordered tab's sheet has
+  a leading `#` column in the tab's order;
+- **Custom Tabs** (each tab's name, type, statuses, scores, tags, locations, ordered flag and
+  sheet), **Statuses** (key, name, color), **Tags**, **Settings** (every scan, confirmation,
+  pagination and metrics setting, by field name), **Scan Exclusions**;
+- **About**: a "ProFolder library export" marker, the format version, the export time and the
+  music folder.
+`src/services/libraryExport.ts` defines the sheet and column names, which the import relies on.
+
+24.2. **Export.** An Export button (a square icon button between Metrics and Settings in the
+header) asks where to save the workbook, suggesting `ProFolder export <date>.xlsx`, then writes it
+there (the File System Access save picker, available in Chromium and the desktop app; other
+browsers download it instead). Cancelling the dialog does nothing. The workbook comes from
+`GET /api/library/export`.
+
+24.3. **Import: items.** An Import button (next to Export) asks for a workbook and sends it to
+`POST /api/library/import`. The import never overwrites: where the library already has a value,
+the library's value wins. Projects and audio files are matched by id; items the library doesn't
+have (not scanned here, or removed) are skipped and counted, never created. For a matched item,
+an Unknown status, an empty score and empty notes are filled in from the file, and the file's tags
+are added to the item's own (a tag differing only in case counts as already there; no tag is
+removed).
+
+24.4. **Import: catalogs and tabs.** Statuses missing from the library are added (matched to the
+library's own by key or by name, case-insensitively; the library's name and color win), and item
+and tab statuses are mapped onto the library's. Missing tags are added to the catalog. Custom tabs
+whose name the library doesn't use yet are added with their definition, and an ordered one gets
+its exported track order; a tab whose name exists is left as it is.
+
+24.5. **Import: settings.** A setting is applied only where the library still has the default
+(never changed it) and the file's value differs, through the setting's own validation (an invalid
+value is ignored). Scan exclusions are applied only to a library that has none. The music folder
+is never imported.
+
+24.6. **Import: safety and feedback.** The file must be an `.xlsx` with the About marker (and a
+format version this app knows), or the import is refused with a message and changes nothing. The
+whole import runs in one database transaction. Afterwards the app reloads, so every list, catalog
+and setting shows the imported data, and a banner summarizes what was filled in, added, applied
+and skipped.
 
 ---
 

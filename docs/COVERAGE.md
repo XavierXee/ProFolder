@@ -1,12 +1,12 @@
 # Test Coverage — `REQUIREMENTS.md` vs. the Test Suites
 
-*Maps each numbered clause of [`REQUIREMENTS.md`](REQUIREMENTS.md) (§1–§22) to the tests that
+*Maps each numbered clause of [`REQUIREMENTS.md`](REQUIREMENTS.md) (§1–§22, §24) to the tests that
 prove it. Last audited 2026-11-03 against the current suites:*
 
 | Suite | Location | Size (all passing) |
 |---|---|---|
-| Backend unit + route tests | `tests/*.test.ts` | 59 files, 758 tests |
-| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 61 files, 983 tests |
+| Backend unit + route tests | `tests/*.test.ts` | 60 files, 778 tests |
+| Frontend component/hook tests | `frontend/src/**/test/*.test.{ts,tsx}` | 63 files, 995 tests |
 | End-to-end (Playwright + Cucumber) | `e2e/features/**/*.feature` | 30 features, 115 scenarios |
 
 *Citations name the test file and, where useful, the `describe`/`it` title, rather than line
@@ -31,14 +31,14 @@ rather than behavior, so they have no rows.*
 | Verdict | Rows |
 |---|---|
 | BOTH | 55 |
-| UNIT | 79 |
+| UNIT | 84 |
 | E2E | 2 |
-| PARTIAL | 6 |
+| PARTIAL | 7 |
 | NONE | 9 |
 | NOT-HEADLESS | 1 |
-| **Total** | **152** |
+| **Total** | **158** |
 
-Fully covered (BOTH + UNIT + E2E): 136 of 152 rows (89%). Several of those rows still carry a
+Fully covered (BOTH + UNIT + E2E): 141 of 158 rows (89%). Several of those rows still carry a
 NOT-HEADLESS sub-clause, noted in the row.
 
 **Open, actionable gaps** (PARTIAL/NONE rows that a test could close):
@@ -47,6 +47,7 @@ NOT-HEADLESS sub-clause, noted in the row.
 - §2.11: no regression test proves a scan leaves the files on disk untouched.
 - §2.12: the command-line scan (`src/cli/scan.ts`) has no test.
 - §22.1: the environment defaults are only partly asserted.
+- §24.6: no test makes an import fail part-way to prove the transaction rolls everything back.
 
 The remaining NONE rows (§16.8, §20.4, §20.5, §21.1, §21.3, §21.6, §22.3) are either deliberately
 deferred limitations or desktop/packaging/container behavior. That behavior is verified by
@@ -315,3 +316,15 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 | 22.2 | Web mode: dev proxy; production serves API and frontend from one origin | UNIT | `staticFrontendServing.test.ts`. The dev proxy is used by every e2e run. |
 | 22.3 | Docker image and compose setup | NONE | Built by the CI `docker` job; not run in a test |
 | 22.4 | Migrations run on open | UNIT | Every backend test opens a fresh database through `runMigrations`; `statusRepository.test.ts` ("returns the 4 seeded defaults … after migration") |
+
+## §24 Library Export & Import
+
+| # | Clause | Verdict | Citation |
+|---|---|---|---|
+| 24.1 | Workbook layout: item sheets, a sheet per custom tab, definitions, catalogs, settings, About | UNIT | `libraryTransfer.test.ts` ("export": sheet order, item rows, ordered tab `#` sheet and definition, catalogs/settings/exclusions/About; `uniqueSheetName`) |
+| 24.2 | Export button: save dialog first, then write; cancel; download fallback | UNIT | `LibraryTransferButtons.test.tsx` ("export"); `test/App.libraryTransfer.test.tsx` (placed between Metrics and Settings); `libraryTransfer.test.ts` (dated `.xlsx` download headers). Checked once in Chromium (download fallback) and that Electron offers the save picker; the native dialog itself was never driven. |
+| 24.3 | Import fills only gaps; tags added, never removed; unmatched or removed items skipped | UNIT | `libraryTransfer.test.ts` ("fills in only what the library doesn't have…", project folders, case-insensitive tags, removed items, not-in-library, own export changes nothing) |
+| 24.4 | Statuses, tags and custom tabs added; existing ones win; ordered order imported | UNIT | `libraryTransfer.test.ts` (statuses by name with another key, tags, custom tabs incl. ordered order) |
+| 24.5 | Settings only where still default and different; exclusions only if none; invalid ignored | UNIT | `libraryTransfer.test.ts` (settings, scan exclusions, invalid setting value, own export applies nothing) |
+| 24.6 | Rejects non-workbooks and foreign workbooks; one transaction; reload with a summary | PARTIAL | `libraryTransfer.test.ts` (not a workbook, not an export, empty upload); `LibraryTransferButtons.test.tsx` (`describeImport`, reload, error without reload); `test/App.libraryTransfer.test.tsx` (summary shown once after the reload, under StrictMode). Rollback of a part-way failure isn't tested. |
+

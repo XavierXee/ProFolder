@@ -4,6 +4,7 @@ import type {
   CustomTabType,
   DawType,
   EntityStats,
+  ImportSummary,
   Project,
   ProjectDuplicateMatch,
   TrackStatus,
@@ -565,6 +566,28 @@ export function updateCustomTab(
   }
 ): Promise<CustomTab> {
   return request<CustomTab>(`/custom-tabs/${id}`, { method: "PUT", body: JSON.stringify(input) });
+}
+
+const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+/** Downloads the whole-library export workbook, with the file name the server suggests. */
+export async function exportLibrary(): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(`${API_BASE}/library/export`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Export failed: ${res.status}`);
+  }
+  const match = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "");
+  return { blob: await res.blob(), filename: match?.[1] ?? "ProFolder export.xlsx" };
+}
+
+/** Uploads an export workbook to fill in this library's missing data. */
+export function importLibrary(file: Blob): Promise<ImportSummary> {
+  return request<ImportSummary>(`/library/import`, {
+    method: "POST",
+    headers: { "Content-Type": XLSX_MIME },
+    body: file,
+  });
 }
 
 /** Moves a file of an ordered custom tab to a 1-based position. */

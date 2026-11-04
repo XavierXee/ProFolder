@@ -11,3 +11,4 @@ export type { DawType } from "../../src/scanner/dawTypes.js";
 export { DAW_LABELS } from "../../src/scanner/dawTypes.js";
 export type { ProjectDuplicateMatch } from "../../src/models/ProjectDuplicate.js";
 export type { CustomTab, CustomTabType } from "../../src/models/CustomTab.js";
+export type { ImportSummary } from "../../src/models/LibraryImport.js";

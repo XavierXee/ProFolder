@@ -19,6 +19,10 @@ import AudioPlayerBar from "./components/AudioPlayerBar.js";
 import RootPathControl from "./components/RootPathControl.js";
 import CreateCustomTabModal from "./components/CreateCustomTabModal.js";
 import TabListPanel, { PencilIcon, type TabListItem } from "./components/TabListPanel.js";
+import LibraryTransferButtons, {
+  clearPendingImportMessage,
+  peekPendingImportMessage,
+} from "./components/LibraryTransferButtons.js";
 import DeleteTabConfirmDialog from "./components/DeleteTabConfirmDialog.js";
 import CustomFilesTabPanel from "./components/CustomFilesTabPanel.js";
 import CustomProjectsTabPanel from "./components/CustomProjectsTabPanel.js";
@@ -132,7 +136,9 @@ export default function App() {
 
   const [musicRoot, setMusicRoot] = useState<string | undefined>();
   const [lastScanChanges, setLastScanChanges] = useState<number | null>(null);
-  const [banner, setBanner] = useState<string | undefined>();
+  // Starts with the summary of an import that just reloaded the app, if there was one.
+  const [banner, setBanner] = useState<string | undefined>(peekPendingImportMessage);
+  useEffect(() => clearPendingImportMessage(), []);
   const [theme, setTheme] = useState<Theme>(loadStoredTheme);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -769,6 +775,8 @@ export default function App() {
                 />
               )}
             </div>
+
+            <LibraryTransferButtons onMessage={setBanner} />
 
             <button
               onClick={() => {

@@ -19,6 +19,7 @@ import { createFoldersRouter } from "./routes/folders.js";
 import { createConfigRouter } from "./routes/config.js";
 import { createTagsRouter } from "./routes/tags.js";
 import { createCustomTabsRouter } from "./routes/customTabs.js";
+import { createLibraryRouter } from "./routes/library.js";
 import { createStatusesRouter } from "./routes/statuses.js";
 import { hostCheck, resolveAllowedHosts } from "./hostCheck.js";
 
@@ -98,6 +99,7 @@ export function createServer(db: ReturnType<typeof openDb>, services: ServerServ
   app.use("/api/tags", createTagsRouter(db));
   app.use("/api/custom-tabs", createCustomTabsRouter(db));
   app.use("/api/statuses", createStatusesRouter(db));
+  app.use("/api/library", createLibraryRouter(db));
 
   // Serves the built frontend (npm run build:frontend -> dist/frontend), for running the
   // app as a single deployable unit (also needed by the upcoming Electron packaging, whose

@@ -363,12 +363,17 @@ export function moveFileInOrderedTab(
   ids.splice(from, 1);
   ids.splice(to, 0, fileId);
 
+  saveOrderedTabPositions(db, tabId, ids);
+}
+
+/** Replaces an ordered tab's saved order with `ids`, first to last. */
+export function saveOrderedTabPositions(db: Database.Database, tabId: number, ids: string[]): void {
   const insert = db.prepare(
     `INSERT INTO custom_tab_file_positions (tab_id, audio_file_id, position) VALUES (?, ?, ?)`
   );
   db.transaction(() => {
     db.prepare(`DELETE FROM custom_tab_file_positions WHERE tab_id = ?`).run(tabId);
-    ids.forEach((id, index) => insert.run(tabId, id, index + 1));
+    [...new Set(ids)].forEach((id, index) => insert.run(tabId, id, index + 1));
   })();
 }
 

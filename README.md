@@ -37,6 +37,7 @@
   - [Duplicate project detection](#duplicate-project-detection)
   - [Scanning you control](#scanning-you-control)
   - [Settings, safety and themes](#settings-safety-and-themes)
+  - [Export and import](#export-and-import)
 - [Privacy and safety](#privacy-and-safety)
 - [Roadmap](#roadmap)
 - [For developers](#for-developers)
@@ -301,6 +302,18 @@ tags come back with it.
   </tr>
 </table>
 
+### Export and import
+
+The two buttons between **Metrics** and **Settings** save and load your whole library as an Excel
+workbook (`.xlsx`). **Export** asks where to save it. In the workbook, every tab (the default ones
+and your custom tabs) has its own sheet, and so do your statuses, tags, custom tab definitions and
+settings, so it's easy to browse, share or keep as a backup.
+
+**Import** reads an exported workbook back, for example to bring your statuses, scores, tags and
+notes over to another computer. It only fills in what's missing: anything you've already set is
+kept, tags are added but never removed, and files that aren't in your library are skipped. A
+summary tells you what changed.
+
 ## Privacy and safety
 
 - **Local only.** Your music and its details never leave your computer. ProFolder has no account,
@@ -314,7 +327,6 @@ tags come back with it.
 
 ## Roadmap
 
-- Add export and import csv/excel feature
 - "Name is required" in custom tabs should dissapear when typing
 - Scan complete notification should dissapear after a few seconds
 - advanced option for custom tabs creation (filter by folder)
