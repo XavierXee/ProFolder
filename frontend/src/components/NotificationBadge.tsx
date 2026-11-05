@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export const NOTIFICATION_DURATION_MS = 2000;
+export const NOTIFICATION_DURATION_MS = 5000;
 
 /**
  * A short-lived notification floating at the top of the window, above everything else. It

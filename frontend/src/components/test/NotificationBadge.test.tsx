@@ -10,13 +10,13 @@ describe("NotificationBadge", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Scan complete.");
   });
 
-  it("dismisses itself after 2 seconds", () => {
+  it("dismisses itself after 5 seconds", () => {
     vi.useFakeTimers();
     const onDismiss = vi.fn();
     render(<NotificationBadge message="Scan complete." onDismiss={onDismiss} />);
 
-    expect(NOTIFICATION_DURATION_MS).toBe(2000);
-    vi.advanceTimersByTime(1999);
+    expect(NOTIFICATION_DURATION_MS).toBe(5000);
+    vi.advanceTimersByTime(4999);
     expect(onDismiss).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(onDismiss).toHaveBeenCalledTimes(1);
@@ -37,7 +37,7 @@ describe("NotificationBadge", () => {
     const second = vi.fn();
     const { rerender } = render(<NotificationBadge message="Scan complete." onDismiss={first} />);
 
-    vi.advanceTimersByTime(1500);
+    vi.advanceTimersByTime(4500);
     rerender(<NotificationBadge message="Scan complete." onDismiss={second} />);
     vi.advanceTimersByTime(500);
 

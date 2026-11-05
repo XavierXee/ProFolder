@@ -73,7 +73,7 @@ When("I start a scan from the scan settings panel", async ({ page }) => {
 });
 
 // App.tsx's scan-complete notification (handleScanComplete) — a NotificationBadge that dismisses
-// itself after 2 seconds, matched by its fixed text shape only. The actual counts reflect the whole scratch music root (every
+// itself after 5 seconds, matched by its fixed text shape only. The actual counts reflect the whole scratch music root (every
 // scan triggered here is a full production-folder scan, not scoped to this task's own fixture),
 // so this deliberately doesn't assert specific numbers — table presence/absence assertions
 // elsewhere in these scenarios are what prove this task's own fixture's outcome.
