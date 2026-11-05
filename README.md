@@ -235,11 +235,11 @@ Drag tabs to reorder them. When there are more tabs than fit, the tab bar scroll
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/custom-tab.png" alt="A custom tab called Ready to Release listing only finished audio files"></td>
-    <td width="50%"><img src="docs/screenshots/custom-tab-ep.png" alt="A custom tab called Summer EP listing the three tracks tagged summer-ep"></td>
+    <td width="50%"><img src="docs/screenshots/custom-tab-ep.png" alt="An ordered custom tab called Summer EP listing its three tracks numbered in running order, with their durations and the total running time"></td>
   </tr>
   <tr>
     <td align="center">Ready to Release: every finished file</td>
-    <td align="center">Summer EP: one release's tracks</td>
+    <td align="center">Summer EP: one release's tracks, in running order</td>
   </tr>
 </table>
 
@@ -327,6 +327,8 @@ summary tells you what changed.
 
 ## Roadmap
 
+- batch edit missing batch statuses
+- make notification batch for all notifications (file copied, deleted etc...)
 - advanced option for custom tabs creation (filter by folder)
 - enable giving score and status in tabs instead of just panels
 - Sync ProFolder tags with macOS Finder tags.

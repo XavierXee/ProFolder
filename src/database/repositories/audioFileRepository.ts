@@ -710,11 +710,11 @@ export function cloneFile(
   const tx = db.transaction(() => {
     db.prepare(
       `INSERT INTO audio_files (
-        id, path, relative_path, filename, extension, size, created_at, modified_at,
+        id, path, relative_path, filename, extension, size, duration_seconds, created_at, modified_at,
         containing_folder, project_id, status, score,
         first_seen_at, last_seen_at, is_removed
       ) VALUES (
-        @id, @path, @relativePath, @filename, @extension, @size, @createdAt, @modifiedAt,
+        @id, @path, @relativePath, @filename, @extension, @size, @durationSeconds, @createdAt, @modifiedAt,
         @containingFolder, @projectId, @status, @score,
         @firstSeenAt, @lastSeenAt, 0
       )`
@@ -725,6 +725,7 @@ export function cloneFile(
       filename: location.filename,
       extension: location.extension,
       size: source.size,
+      durationSeconds: source.durationSeconds,
       createdAt: source.createdAt ?? null,
       modifiedAt: source.modifiedAt,
       containingFolder: location.containingFolder,

@@ -17,6 +17,7 @@ import {
   markRemoved,
   moveFile,
   cloneFile,
+  setDuration,
   type AudioFileUpsertInput,
 } from "../src/database/repositories/audioFileRepository.js";
 import {
@@ -784,6 +785,7 @@ describe("cloneFile", () => {
     updateStatus(db, "ProjectA/track1.wav", "released");
     setScore(db, "ProjectA/track1.wav", 4);
     setTags(db, "ProjectA/track1.wav", ["mix", "vocals"]);
+    setDuration(db, "ProjectA/track1.wav", 204.5);
 
     const before = findById(db, "ProjectA/track1.wav")!;
     const tagCountBefore = (db.prepare(`SELECT COUNT(*) AS c FROM tags`).get() as { c: number }).c;
@@ -799,6 +801,7 @@ describe("cloneFile", () => {
     expect(clone.status).toBe("released");
     expect(clone.score).toBe(4);
     expect(clone.tags.sort()).toEqual(["mix", "vocals"]);
+    expect(clone.durationSeconds).toBe(204.5);
     expect(clone.projectId).toBe("ProjectA");
 
     // Source row is completely untouched.

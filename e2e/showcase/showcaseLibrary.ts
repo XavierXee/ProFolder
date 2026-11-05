@@ -18,7 +18,7 @@ export const SHOWCASE_MUSIC_ROOT = path.join(SHOWCASE_LIBRARY_DIR, "Music");
 export const SHOWCASE_DB_PATH = path.join(SHOWCASE_LIBRARY_DIR, "showcase.db");
 
 type Entry =
-  | { kind: "wav"; path: string; freq: number; seconds?: number }
+  | { kind: "wav"; path: string; freq: number; seconds: number }
   | { kind: "marker"; path: string }
   | { kind: "dir"; path: string };
 
@@ -26,36 +26,36 @@ const LIBRARY: Entry[] = [
   // Ableton (detected via its "Ableton Project Info" folder)
   { kind: "marker", path: "Midnight Drive/Ableton Project Info/Project.cfg" },
   { kind: "marker", path: "Midnight Drive/Midnight Drive.als" },
-  { kind: "wav", path: "Midnight Drive/Midnight Drive - Master.wav", freq: 220 },
-  { kind: "wav", path: "Midnight Drive/Midnight Drive - Instrumental.wav", freq: 246.94 },
-  { kind: "wav", path: "Midnight Drive/Samples/Kick 01.wav", freq: 55 },
+  { kind: "wav", path: "Midnight Drive/Midnight Drive - Master.wav", freq: 220, seconds: 225 },
+  { kind: "wav", path: "Midnight Drive/Midnight Drive - Instrumental.wav", freq: 246.94, seconds: 225 },
+  { kind: "wav", path: "Midnight Drive/Samples/Kick 01.wav", freq: 55, seconds: 2 },
   // FL Studio
   { kind: "marker", path: "Neon Horizon/Neon Horizon.flp" },
-  { kind: "wav", path: "Neon Horizon/Neon Horizon - Mix 1.wav", freq: 261.63 },
-  { kind: "wav", path: "Neon Horizon/Neon Horizon - Mix 2.wav", freq: 293.66 },
+  { kind: "wav", path: "Neon Horizon/Neon Horizon - Mix 1.wav", freq: 261.63, seconds: 262 },
+  { kind: "wav", path: "Neon Horizon/Neon Horizon - Mix 2.wav", freq: 293.66, seconds: 259 },
   // Pro Tools
   { kind: "marker", path: "Ocean Echoes/Ocean Echoes.ptx" },
-  { kind: "wav", path: "Ocean Echoes/Ocean Echoes - Demo.wav", freq: 196 },
+  { kind: "wav", path: "Ocean Echoes/Ocean Echoes - Demo.wav", freq: 196, seconds: 318 },
   // Reaper
   { kind: "marker", path: "Paper Planes/Paper Planes.rpp" },
-  { kind: "wav", path: "Paper Planes/Paper Planes - Rough Mix.wav", freq: 329.63 },
-  { kind: "wav", path: "Paper Planes/Paper Planes - Vocals Only.wav", freq: 349.23 },
-  { kind: "wav", path: "Paper Planes/Backup/Paper Planes - Old Mix.wav", freq: 311.13 },
+  { kind: "wav", path: "Paper Planes/Paper Planes - Rough Mix.wav", freq: 329.63, seconds: 196 },
+  { kind: "wav", path: "Paper Planes/Paper Planes - Vocals Only.wav", freq: 349.23, seconds: 196 },
+  { kind: "wav", path: "Paper Planes/Backup/Paper Planes - Old Mix.wav", freq: 311.13, seconds: 188 },
   // Studio One
   { kind: "marker", path: "Golden Hour/Golden Hour.song" },
-  { kind: "wav", path: "Golden Hour/Golden Hour - Final.wav", freq: 392 },
+  { kind: "wav", path: "Golden Hour/Golden Hour - Final.wav", freq: 392, seconds: 241 },
   // Bitwig
   { kind: "marker", path: "Static Bloom/Static Bloom.bwproject" },
-  { kind: "wav", path: "Static Bloom/Static Bloom - Sketch.wav", freq: 174.61 },
+  { kind: "wav", path: "Static Bloom/Static Bloom - Sketch.wav", freq: 174.61, seconds: 94 },
   // Cubase
   { kind: "marker", path: "Velvet Thunder/Velvet Thunder.cpr" },
-  { kind: "wav", path: "Velvet Thunder/Velvet Thunder - Master.wav", freq: 164.81 },
+  { kind: "wav", path: "Velvet Thunder/Velvet Thunder - Master.wav", freq: 164.81, seconds: 287 },
   // Loose bounces, not inside any DAW project
-  { kind: "wav", path: "Exports/Summer Single - Radio Edit.wav", freq: 440 },
-  { kind: "wav", path: "Exports/Summer Single - Extended Mix.wav", freq: 415.3 },
-  { kind: "wav", path: "Exports/Club Remix.wav", freq: 369.99 },
-  { kind: "wav", path: "Voice Memos/Idea 01.wav", freq: 523.25 },
-  { kind: "wav", path: "Voice Memos/Idea 02.wav", freq: 493.88 },
+  { kind: "wav", path: "Exports/Summer Single - Radio Edit.wav", freq: 440, seconds: 204 },
+  { kind: "wav", path: "Exports/Summer Single - Extended Mix.wav", freq: 415.3, seconds: 372 },
+  { kind: "wav", path: "Exports/Club Remix.wav", freq: 369.99, seconds: 308 },
+  { kind: "wav", path: "Voice Memos/Idea 01.wav", freq: 523.25, seconds: 41 },
+  { kind: "wav", path: "Voice Memos/Idea 02.wav", freq: 493.88, seconds: 27 },
   // Empty destination for the copy demo
   { kind: "dir", path: "Archive" },
 ];
@@ -75,7 +75,7 @@ export function buildShowcaseLibrary(): void {
     if (entry.kind === "marker") {
       fs.writeFileSync(abs, "showcase placeholder\n");
     } else {
-      fs.writeFileSync(abs, synthWav(entry.freq, entry.seconds ?? 6));
+      fs.writeFileSync(abs, synthWav(entry.freq, entry.seconds));
     }
   }
 }
@@ -84,9 +84,11 @@ export function removeShowcaseLibrary(): void {
   fs.rmSync(SHOWCASE_LIBRARY_DIR, { recursive: true, force: true });
 }
 
-/** A soft major-triad tone with a fade in/out: 16-bit mono PCM, 22.05kHz. */
+/** A soft major-triad tone with a fade in/out: 16-bit mono PCM. Tracks run their real-song lengths
+ * so the duration column and an EP's running time look realistic; the low sample rate (ample for
+ * these tones, whose highest partial is well under 1kHz) keeps the generated library small. */
 function synthWav(freq: number, seconds: number): Buffer {
-  const sampleRate = 22050;
+  const sampleRate = 11025;
   const sampleCount = Math.floor(sampleRate * seconds);
   const data = Buffer.alloc(sampleCount * 2);
   const fade = sampleRate * 0.5;

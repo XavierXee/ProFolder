@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { SHOWCASE_MUSIC_ROOT, SHOWCASE_OUTPUT_DIR } from "./showcaseLibrary.js";
@@ -12,6 +13,7 @@ import { SHOWCASE_MUSIC_ROOT, SHOWCASE_OUTPUT_DIR } from "./showcaseLibrary.js";
  */
 
 const VIDEO_PATH = path.join(SHOWCASE_OUTPUT_DIR, "showcase.webm");
+const EXPORT_PATH = path.join(SHOWCASE_OUTPUT_DIR, "ProFolder export.xlsx");
 const SCREENSHOTS_DIR = path.resolve(import.meta.dirname, "..", "..", "docs", "screenshots");
 
 // Headless video has no mouse pointer, so draw one (plus a click pulse) and a caption bar.
@@ -33,7 +35,10 @@ const OVERLAY_SCRIPT = `
       }
     };
     // Runs again after its own edits, but finds nothing left to replace, so it settles at once.
-    new MutationObserver(hidePath).observe(document.body, { childList: true, subtree: true, characterData: true });
+    new MutationObserver(() => {
+      hidePath();
+      liftCaption();
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
     hidePath();
 
     const cursor = document.createElement("div");
@@ -47,6 +52,8 @@ const OVERLAY_SCRIPT = `
     let x = -100, y = -100;
     const place = (scale) => { cursor.style.transform = "translate(" + x + "px," + y + "px) scale(" + scale + ")"; };
     window.addEventListener("mousemove", (e) => { x = e.clientX; y = e.clientY; place(1); }, true);
+    // While a drag-and-drop is in progress the browser sends dragover instead of mousemove.
+    window.addEventListener("dragover", (e) => { x = e.clientX; y = e.clientY; place(0.75); }, true);
     window.addEventListener("mousedown", () => { cursor.style.background = "rgba(255,190,60,0.8)"; place(0.75); }, true);
     window.addEventListener("mouseup", () => { cursor.style.background = "rgba(255,255,255,0.35)"; place(1); }, true);
 
@@ -56,8 +63,13 @@ const OVERLAY_SCRIPT = `
     caption.style.cssText = "position:fixed;left:24px;bottom:24px;max-width:560px;padding:14px 18px;" +
       "border-radius:10px;background:rgba(12,12,16,0.88);color:#fff;font:15px/1.4 system-ui,sans-serif;" +
       "box-shadow:0 8px 30px rgba(0,0,0,0.35);pointer-events:none;z-index:2147483646;" +
-      "opacity:0;transition:opacity 300ms ease;";
+      "opacity:0;transition:opacity 300ms ease, bottom 300ms ease;";
     document.body.appendChild(caption);
+    // The player bar runs along the bottom of the window: keep the caption above it while it's open.
+    const liftCaption = () => {
+      const player = document.querySelector('[aria-label="Close player"]')?.parentElement;
+      caption.style.bottom = (24 + (player ? player.getBoundingClientRect().height : 0)) + "px";
+    };
     window.__showcaseCaption = (title, subtitle) => {
       caption.innerHTML = "";
       const heading = document.createElement("div");
@@ -81,6 +93,10 @@ const OVERLAY_SCRIPT = `
       overlays.forEach((el) => { el.style.visibility = "visible"; });
     };
   });
+
+  // Export asks for a location through the browser's save picker when there is one, a native
+  // dialog the recording can't drive. Without it the app falls back to a regular download.
+  window.showSaveFilePicker = undefined;
 `;
 
 test("ProFolder feature showcase", async ({ page }) => {
@@ -248,10 +264,38 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.click(createTab.getByRole("button", { name: /^Tags/ }));
   await show.click(createTab.getByRole("listbox", { name: "Filter by tags" }).locator("label", { hasText: /^summer-ep$/ }));
   await show.wait(600);
+  // Ordered is on by default for Audio Files tabs: the tab keeps its own track list order.
+  await show.hover(createTab.getByRole("checkbox", { name: /^Ordered/ }));
+  await show.wait(1200);
   await show.click(createTab.getByRole("button", { name: "Create" }));
   await expect(page.getByRole("button", { name: "Summer EP", exact: true })).toBeVisible();
+  const epTracks = page.getByRole("main", { name: "Summer EP files" }).getByRole("table", { name: "Audio files" });
+  const epTrack = (filename: string) => epTracks.locator("tbody tr", { hasText: filename });
+  await expect(epTrack("Club Remix.wav")).toBeVisible();
   await show.wait(2500);
+
+  await show.chapter("Track sequencing", "Drag tracks into running order — the radio edit opens the EP, the club remix closes it.");
+  await show.dragTrack(epTrack("Summer Single - Radio Edit.wav"), epTrack("Club Remix.wav"));
+  await show.wait(1200);
+  await show.dragTrack(epTrack("Summer Single - Extended Mix.wav"), epTrack("Club Remix.wav"));
+  await expect(epTracks.locator("tbody tr").first()).toContainText("Summer Single - Radio Edit.wav");
+  await expect(epTracks.locator("tbody tr").last()).toContainText("Club Remix.wav");
+  await show.wait(2000);
   await show.snap("custom-tab-ep");
+
+  await show.chapter("Autoplay", "Listen through the EP in order: with Autoplay on, the next track starts when one ends.");
+  await show.click(epTracks.getByRole("button", { name: "Play Summer Single - Radio Edit.wav", exact: true }));
+  const player = page.getByRole("button", { name: "Close player" }).locator("..");
+  await show.wait(1500);
+  await show.click(player.getByRole("button", { name: "Autoplay" }));
+  await expect(player.getByRole("button", { name: "Autoplay" })).toHaveAttribute("aria-pressed", "true");
+  await show.wait(1200);
+  // Skip to the last seconds of the track so the recording doesn't sit through all of it.
+  await show.clickAt(player.getByRole("slider", { name: "Seek" }), 0.985);
+  await expect(player.getByText("Summer Single - Extended Mix.wav", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await show.wait(3000);
+  await show.click(page.getByRole("button", { name: "Close player" }));
+  await show.wait(800);
 
   await show.click(page.getByRole("button", { name: "Show all tabs" }));
   const allTabs = page.getByRole("dialog", { name: "All tabs" });
@@ -284,6 +328,40 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.click(page.getByRole("button", { name: "Close metrics panel" }));
   await show.wait(800);
 
+  await show.chapter("Export & import", "Back up the whole library to an Excel workbook — every tab, status, tag and setting on its own sheet.");
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    show.click(page.getByRole("button", { name: "Export library" })),
+  ]);
+  fs.rmSync(EXPORT_PATH, { force: true });
+  await download.saveAs(EXPORT_PATH);
+  await expect(page.getByText("Library exported.", { exact: true })).toBeVisible();
+  await show.wait(2000);
+
+  await show.chapter("Restore from a backup", "Importing only fills in what's missing — here it brings back a deleted tab and keeps everything else as it is.");
+  await show.click(page.getByRole("button", { name: "Delete tab Ready to Release", exact: true }));
+  const deleteTab = page.getByRole("dialog", { name: "Delete tab confirmation" });
+  await expect(deleteTab).toBeVisible();
+  await show.wait(800);
+  const confirmTabName = deleteTab.getByLabel('Type "Ready to Release" to confirm');
+  if ((await confirmTabName.count()) > 0) await show.type(confirmTabName, "Ready to Release");
+  await show.click(deleteTab.getByRole("button", { name: "Delete", exact: true }));
+  await expect(page.getByRole("button", { name: "Ready to Release", exact: true })).toHaveCount(0);
+  await show.wait(1500);
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    show.click(page.getByRole("button", { name: "Import library" })),
+  ]);
+  await show.wait(800);
+  await chooser.setFiles(EXPORT_PATH);
+  // The app reloads once the import is done, then shows what it changed.
+  await expect(page.getByText(/^Import complete: .*1 custom tab added/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ready to Release", exact: true })).toBeVisible();
+  await page.mouse.move(720, 450);
+  await show.wait(1000);
+  await show.hover(page.getByRole("button", { name: "Ready to Release", exact: true }));
+  await show.wait(2500);
+
   await show.chapter("Scanning", "Choose which folders to index, then rescan to pick up new work.");
   await show.click(page.getByRole("button", { name: "Scan Library", exact: true }));
   const scanPanel = page.getByRole("dialog", { name: "Production folder scan settings" });
@@ -291,7 +369,7 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.wait(2000);
   await show.snap("scan-settings");
   await show.click(scanPanel.getByRole("button", { name: "Scan", exact: true }));
-  // The panel closes itself once the scan finishes, leaving the result banner on screen.
+  // The panel closes itself once the scan finishes, and the result pops up as a notification.
   await expect(page.getByText(/^Scan complete:/)).toBeVisible();
   await show.wait(2500);
 
@@ -352,6 +430,35 @@ class Showcase {
   async click(locator: Locator) {
     await this.hover(locator);
     await locator.click();
+    await this.wait(300);
+  }
+
+  /** Clicks inside the element at a fraction of its width, e.g. a point along a slider. */
+  async clickAt(locator: Locator, fraction: number) {
+    await locator.scrollIntoViewIfNeeded();
+    const box = await locator.boundingBox();
+    if (!box) throw new Error("[showcase] element to click has no box");
+    await this.page.mouse.move(box.x + box.width * fraction, box.y + box.height / 2, { steps: 30 });
+    await this.wait(400);
+    await this.page.mouse.down();
+    await this.page.mouse.up();
+    await this.wait(300);
+  }
+
+  /** Drags an ordered tab's track row onto another row, with the cursor visibly carrying it, and
+   * waits for the new order to be saved. */
+  async dragTrack(source: Locator, target: Locator) {
+    await this.hover(source.locator("td").first());
+    const saved = this.page.waitForResponse(
+      (res) => res.request().method() === "PUT" && /\/api\/custom-tabs\/\d+\/files\/order$/.test(new URL(res.url()).pathname)
+    );
+    await this.page.mouse.down();
+    const box = await target.boundingBox();
+    if (!box) throw new Error("[showcase] drop target has no box");
+    await this.page.mouse.move(box.x + 40, box.y + box.height / 2, { steps: 40 });
+    await this.wait(500);
+    await this.page.mouse.up();
+    await saved;
     await this.wait(300);
   }
 
