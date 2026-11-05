@@ -303,6 +303,8 @@ visible" checkbox in the header. The selection is cleared whenever the filters, 
 active tab change.
 
 9.2. A "Batch Edit" button (enabled only once 2+ rows are selected) opens a batch panel offering:
+- set status: applies immediately to every selected item, **overwriting** each item's existing
+  status. Status isn't linked between a project and its files, so it doesn't cascade either way;
 - set score: applies immediately to every selected item, **overwriting** each item's existing
   score;
 - add tag: applies immediately, **adding** to each item's existing tags (union, not replace);
@@ -404,7 +406,7 @@ persisted across restarts.
 13.2. The "Scan Library" panel shows the folder tree, so the user can choose which subfolders to
 include or exclude from scanning (§4). It has Select All / Unselect All and an exclusion
 summary, and starts a scan directly. When the scan finishes, the panel closes and a result
-banner shows the file counts (new, modified, removed).
+notification shows the file counts (new, modified, removed).
 
 13.3. The Settings panel exposes the scan-time ignore toggles (§3.1, §3.2, §3.6) with save-state
 feedback ("Saving…"/"Saved"/"Failed"). The duplicate-detection threshold (§3.5) and the folder
@@ -576,7 +578,7 @@ from the new location (the nearest DAW project ancestor, or none) rather than ca
 16.7. Batch Copy/Move/Delete report success and failure per item rather than all-or-nothing.
 Each id is processed independently, and a failure on one item (not found, name collision,
 outside the root, filesystem error) doesn't roll back or block the items that succeeded. The
-batch panel shows a banner with the actual succeeded/failed counts.
+app shows a notification with the actual succeeded/failed counts.
 
 16.8. Known limitations, deliberately deferred:
 - `POST /api/files/batch/copy` doesn't deduplicate an id repeated within one request; it
@@ -869,7 +871,7 @@ is never imported.
 24.6. **Import: safety and feedback.** The file must be an `.xlsx` with the About marker (and a
 format version this app knows), or the import is refused with a message and changes nothing. The
 whole import runs in one database transaction. Afterwards the app reloads, so every list, catalog
-and setting shows the imported data, and a banner summarizes what was filled in, added, applied
+and setting shows the imported data, and a notification summarizes what was filled in, added, applied
 and skipped.
 
 ---

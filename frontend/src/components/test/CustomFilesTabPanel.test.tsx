@@ -107,7 +107,7 @@ function renderPanel(overrides: Partial<Parameters<typeof CustomFilesTabPanel>[0
     playingFileId: null as string | null,
     isPlaying: false,
     onPlayClick: vi.fn(),
-    setBanner: vi.fn(),
+    notify: vi.fn(),
     musicRoot: "/music",
     ...overrides,
   };
@@ -283,7 +283,7 @@ describe("CustomFilesTabPanel - ordered tab", () => {
 
     dragOnto("Intro.wav", "Outro.wav");
 
-    await waitFor(() => expect(props.setBanner).toHaveBeenCalledWith("Ordered tab not found"));
+    await waitFor(() => expect(props.notify).toHaveBeenCalledWith("Ordered tab not found"));
   });
 
   it("doesn't ask for an order in a tab that isn't ordered", async () => {
@@ -481,7 +481,7 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
         playingFileId={null}
         isPlaying={false}
         onPlayClick={() => {}}
-        setBanner={() => {}}
+        notify={() => {}}
         musicRoot="/music"
       />
     );
@@ -499,7 +499,7 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
         playingFileId={null}
         isPlaying={false}
         onPlayClick={() => {}}
-        setBanner={() => {}}
+        notify={() => {}}
         musicRoot="/music"
       />
     );
@@ -526,7 +526,7 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
         playingFileId={null}
         isPlaying={false}
         onPlayClick={() => {}}
-        setBanner={() => {}}
+        notify={() => {}}
         musicRoot="/music"
       />
     );
@@ -546,7 +546,7 @@ describe("CustomFilesTabPanel - scanCompletionSignal", () => {
         playingFileId={null}
         isPlaying={false}
         onPlayClick={() => {}}
-        setBanner={() => {}}
+        notify={() => {}}
         musicRoot="/music"
       />
     );
@@ -570,19 +570,19 @@ describe("CustomFilesTabPanel - reveal", () => {
     expect(mockReveal).toHaveBeenCalledWith("/music/Song/kick.wav");
   });
 
-  it("calls setBanner with the error message when the reveal rejects, mirroring App.tsx's handleReveal", async () => {
+  it("calls notify with the error message when the reveal rejects, mirroring App.tsx's handleReveal", async () => {
     const file = makeFile({ id: "f1", filename: "kick.wav", path: "/music/Song/kick.wav" });
     mockGetFiles.mockResolvedValue(makePaged({ files: [file], total: 1 }));
     mockReveal.mockRejectedValue(new Error("Path is outside the music root"));
-    const setBanner = vi.fn();
+    const notify = vi.fn();
     const user = userEvent.setup();
-    renderPanel({ setBanner });
+    renderPanel({ notify });
 
     await waitFor(() => expect(screen.getByText("kick.wav")).toBeInTheDocument());
     await user.click(screen.getByText("kick.wav"));
     await user.click(screen.getByRole("button", { name: "Reveal file in Finder" }));
 
-    await waitFor(() => expect(setBanner).toHaveBeenCalledWith("Path is outside the music root"));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith("Path is outside the music root"));
   });
 });
 
@@ -601,7 +601,7 @@ describe("CustomFilesTabPanel - Copy/Move/Delete wiring", () => {
     expect(screen.getByRole("dialog", { name: 'Move "kick.wav"' })).toBeInTheDocument();
   });
 
-  it("on a successful Delete: calls api.deleteFile, refetches locally, calls refreshStats + refetchProjects, sets the banner, and closes the detail panel", async () => {
+  it("on a successful Delete: calls api.deleteFile, refetches locally, calls refreshStats + refetchProjects, shows the notification, and closes the detail panel", async () => {
     const file = makeFile({ id: "f1", filename: "kick.wav" });
     mockGetFiles.mockResolvedValue(makePaged({ files: [file], total: 1 }));
     const user = userEvent.setup();
@@ -620,7 +620,7 @@ describe("CustomFilesTabPanel - Copy/Move/Delete wiring", () => {
     await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(callsBefore + 1));
     expect(props.refreshStats).toHaveBeenCalledTimes(1);
     expect(props.refetchProjects).toHaveBeenCalledTimes(1);
-    expect(props.setBanner).toHaveBeenCalledWith("File moved to Trash.");
+    expect(props.notify).toHaveBeenCalledWith("File moved to Trash.");
     expect(screen.queryByRole("dialog", { name: "File detail: kick.wav" })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: 'Move to Trash "kick.wav"' })).not.toBeInTheDocument();
   });
@@ -644,7 +644,7 @@ describe("CustomFilesTabPanel - batch Copy/Move/Delete wiring", () => {
     expect(screen.getByRole("dialog", { name: "Move 2 files" })).toBeInTheDocument();
   });
 
-  it("on a successful batch Delete: calls api.batchDeleteFiles with both ids, refetches locally, calls refreshStats + refetchProjects, and sets the banner", async () => {
+  it("on a successful batch Delete: calls api.batchDeleteFiles with both ids, refetches locally, calls refreshStats + refetchProjects, and shows the notification", async () => {
     const files = [makeFile({ id: "f1", filename: "a.wav" }), makeFile({ id: "f2", filename: "b.wav" })];
     mockGetFiles.mockResolvedValue(makePaged({ files, total: 2 }));
     const user = userEvent.setup();
@@ -666,7 +666,7 @@ describe("CustomFilesTabPanel - batch Copy/Move/Delete wiring", () => {
     await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(callsBefore + 1));
     expect(props.refreshStats).toHaveBeenCalledTimes(1);
     expect(props.refetchProjects).toHaveBeenCalledTimes(1);
-    expect(props.setBanner).toHaveBeenCalledWith("2 files moved to Trash.");
+    expect(props.notify).toHaveBeenCalledWith("2 files moved to Trash.");
     // The batch panel itself stays open (mirrors the existing batch score/tag behavior).
     // BatchEditPanel is permanently mounted (CSS transform toggles visibility rather than
     // unmounting), so its dialog role/name is in the DOM regardless of open/closed state —

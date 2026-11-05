@@ -39,9 +39,9 @@ type Props = {
   isPlaying: boolean;
   /** `queue`: this tab's files as listed, for autoplay. */
   onPlayClick: (file: AudioFile, queue: AudioFile[]) => void;
-  /** App-level banner setter (App.tsx's `setBanner`), used to surface a reveal failure the
+  /** Shows an app-level notification (App.tsx's `notify`), used to surface a reveal failure the
    * same way App.tsx's own `handleReveal` does — see that function for the exact message. */
-  setBanner: (message: string) => void;
+  notify: (message: string) => void;
   /** App.tsx's own `musicRoot` state (an absolute filesystem path, or `undefined` before
    * `api.getConfig()` resolves) — passed straight through to this panel's own
    * `CopyMoveDeleteDialog`, which needs it to convert the destination picker's root-relative
@@ -59,7 +59,7 @@ export default function CustomFilesTabPanel({
   playingFileId,
   isPlaying,
   onPlayClick,
-  setBanner,
+  notify,
   musicRoot,
 }: Props) {
   const { files, total, totalDurationSeconds, totalPages, page, pageSize, filters, updateFilters, setPage, loading, error, refetch } =
@@ -127,7 +127,7 @@ export default function CustomFilesTabPanel({
     api
       .moveFileInOrderedTab(tab.id, fileId, position)
       .then(() => refetch())
-      .catch((err) => setBanner(err instanceof Error ? err.message : "Could not reorder the tab"));
+      .catch((err) => notify(err instanceof Error ? err.message : "Could not reorder the tab"));
   }
 
   function handleSortChange(sortBy: SortKey) {
@@ -164,7 +164,7 @@ export default function CustomFilesTabPanel({
     try {
       await api.reveal(path);
     } catch (err) {
-      setBanner(err instanceof Error ? err.message : "Could not reveal in Finder");
+      notify(err instanceof Error ? err.message : "Could not reveal in Finder");
     }
   }
 
@@ -206,6 +206,12 @@ export default function CustomFilesTabPanel({
   async function handleFileNotesSave(id: string, notes: string) {
     await api.updateFileNotes(id, notes);
     refetch();
+  }
+
+  async function handleBatchFileStatus(status: TrackStatus) {
+    await api.batchUpdateFileStatus([...selectedFileIds], status);
+    refetch();
+    refreshStats();
   }
 
   async function handleBatchFileScore(score: number | null) {
@@ -257,7 +263,7 @@ export default function CustomFilesTabPanel({
       // identical comment on its own handleFileOpSuccess.
       setSelectedFileIds(new Set());
     }
-    setBanner(fileOpSuccessMessage(operation, outcome));
+    notify(fileOpSuccessMessage(operation, outcome));
     refetch();
     refreshStats();
     refetchProjects(); // a file's project membership/aggregate counts can shift on copy/move/delete
@@ -337,6 +343,7 @@ export default function CustomFilesTabPanel({
         itemType="files"
         selectedIds={[...selectedFileIds]}
         onClose={() => setShowBatchPanel(false)}
+        onApplyStatus={handleBatchFileStatus}
         onApplyScore={handleBatchFileScore}
         onApplyTag={handleBatchFileTag}
         onBatchOperation={handleBatchOperation}
@@ -350,7 +357,7 @@ export default function CustomFilesTabPanel({
         musicRoot={musicRoot}
         onClose={() => setFileOpDialog(null)}
         onSuccess={handleFileOpSuccess}
-        onError={setBanner}
+        onError={notify}
       />
     </>
   );

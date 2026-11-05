@@ -502,6 +502,12 @@ export function updateStatus(db: Database.Database, id: string, status: TrackSta
   db.prepare(`UPDATE audio_files SET status = ? WHERE id = ?`).run(status, id);
 }
 
+export function setStatusForFiles(db: Database.Database, ids: string[], status: TrackStatus): void {
+  if (ids.length === 0) return;
+  const placeholders = ids.map(() => "?").join(",");
+  db.prepare(`UPDATE audio_files SET status = ? WHERE id IN (${placeholders})`).run(status, ...ids);
+}
+
 export function setTags(db: Database.Database, id: string, tagNames: string[]): void {
   const unique = [...new Set(tagNames.map((t) => t.trim()).filter(Boolean))];
   const tx = db.transaction(() => {

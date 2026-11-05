@@ -53,6 +53,22 @@ Feature: Audio Files tab batch edit — selection mechanics and batch score/tag 
     And the file "Batch E2E Files Bravo.wav" row should show score 4
     And the file "Batch E2E Files Charlie.wav" row should show no score
 
+  Scenario: Batch-setting a status only applies to the selected rows, not an unselected one
+    Given file "Batch E2E Files Alpha.wav" has status "unknown"
+    And file "Batch E2E Files Bravo.wav" has status "unknown"
+    And file "Batch E2E Files Charlie.wav" has status "unknown"
+    And I open the app
+    And I switch to the "Audio Files" tab
+    And I search files for "Batch E2E Files"
+    When I select file "Batch E2E Files Alpha.wav"
+    And I select file "Batch E2E Files Bravo.wav"
+    And I open the "audio files" batch edit panel
+    And I set the batch status to "Done" in the "audio files" batch edit panel
+    And I close the "audio files" batch edit panel
+    Then the file "Batch E2E Files Alpha.wav" row should show status "Done"
+    And the file "Batch E2E Files Bravo.wav" row should show status "Done"
+    And the file "Batch E2E Files Charlie.wav" row should show status "Unknown"
+
   # Alpha starts with its own pre-existing tag; Bravo starts with none. Bravo ending up with just
   # "batch-ready" and Alpha ending up with BOTH tags is what proves batch tag application is a
   # union (addTagsToFiles — see linkSync.ts / audioFileRepository.ts), not a replace.

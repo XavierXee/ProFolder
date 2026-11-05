@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState, type DragEvent } from "react";
 import { useAudioFiles } from "./hooks/useAudioFiles.js";
 import { useProjects } from "./hooks/useProjects.js";
 import { useRowKeyboardNav } from "./hooks/useRowKeyboardNav.js";
@@ -91,7 +91,7 @@ function tabButtonClassName(active: boolean, theme?: string): string {
     : `${base} border-transparent text-slate-500 hover:text-ink profolder:bg-surface profolder:text-ink-muted profolder:border-border`;
 }
 
-/** Banner text for a completed single-item copy/move/delete, shared by the default and
+/** Notification text for a completed single-item copy/move/delete, shared by the default and
  * custom Files/Projects tabs. A single-item request either resolves as a full success
  * (outcome.succeededCount === 1) or throws (handled via onError, never onSuccess) — see
  * CopyMoveDeleteDialog's `runSingle`/doc comment — so no partial-failure wording is needed. */
@@ -137,10 +137,16 @@ export default function App() {
 
   const [musicRoot, setMusicRoot] = useState<string | undefined>();
   const [lastScanChanges, setLastScanChanges] = useState<number | null>(null);
-  // Starts with the summary of an import that just reloaded the app, if there was one.
-  const [banner, setBanner] = useState<string | undefined>(peekPendingImportMessage);
-  // The floating, self-dismissing notification; the id gives each one a fresh timer.
-  const [notification, setNotification] = useState<{ id: number; message: string } | null>(null);
+  // The floating, self-dismissing notification; the id gives each one a fresh timer. It starts
+  // with the summary of an import that just reloaded the app, if there was one.
+  const [notification, setNotification] = useState<{ id: number; message: string } | null>(() => {
+    const message = peekPendingImportMessage();
+    return message === undefined ? null : { id: 1, message };
+  });
+  const notify = useCallback(
+    (message: string) => setNotification((prev) => ({ id: (prev?.id ?? 0) + 1, message })),
+    []
+  );
   useEffect(() => clearPendingImportMessage(), []);
   const [theme, setTheme] = useState<Theme>(loadStoredTheme);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -309,10 +315,9 @@ export default function App() {
 
   function handleScanComplete(stats: ScanStats) {
     setLastScanChanges(stats.newFiles + stats.modifiedFiles + stats.removedFiles);
-    setNotification((prev) => ({
-      id: (prev?.id ?? 0) + 1,
-      message: `Scan complete: ${stats.audioFilesFound} audio files (${stats.newFiles} new, ${stats.modifiedFiles} modified, ${stats.removedFiles} removed).`,
-    }));
+    notify(
+      `Scan complete: ${stats.audioFilesFound} audio files (${stats.newFiles} new, ${stats.modifiedFiles} modified, ${stats.removedFiles} removed).`
+    );
     refetch();
     refreshStats();
     refetchProjects();
@@ -424,6 +429,12 @@ export default function App() {
     setSelectedProjectIds(new Set());
   }
 
+  async function handleBatchFileStatus(status: TrackStatus) {
+    await api.batchUpdateFileStatus([...selectedFileIds], status);
+    refetch();
+    refreshStats();
+  }
+
   async function handleBatchFileScore(score: number | null) {
     await api.batchUpdateFileScore([...selectedFileIds], score);
     refetch();
@@ -436,6 +447,11 @@ export default function App() {
     refetch();
     refetchProjects(); // tags are linked: this may have changed the affected projects' tags too
     refreshTags();
+  }
+
+  async function handleBatchProjectStatus(status: TrackStatus) {
+    await api.batchUpdateProjectStatus([...selectedProjectIds], status);
+    refetchProjects();
   }
 
   async function handleBatchProjectScore(score: number | null) {
@@ -455,14 +471,14 @@ export default function App() {
   async function handleRootPathSave(newPath: string) {
     const { musicRoot: resolved } = await api.setMusicRoot(newPath);
     setMusicRoot(resolved);
-    setBanner("Production folder updated. Open Prod Folder and run a scan to index the new location.");
+    notify("Production folder updated. Open Prod Folder and run a scan to index the new location.");
   }
 
   async function handleReveal(path: string) {
     try {
       await api.reveal(path);
     } catch (err) {
-      setBanner(err instanceof Error ? err.message : "Could not reveal in Finder");
+      notify(err instanceof Error ? err.message : "Could not reveal in Finder");
     }
   }
 
@@ -505,7 +521,7 @@ export default function App() {
       // staying intact there is fine (and arguably useful — same items are still valid).
       setSelectedFileIds(new Set());
     }
-    setBanner(copyMoveDeleteSuccessMessage(operation, "File", outcome));
+    notify(copyMoveDeleteSuccessMessage(operation, "File", outcome));
     refetch();
     refreshStats();
     refetchProjects(); // a file's project membership/aggregate counts can shift on copy/move/delete
@@ -518,7 +534,7 @@ export default function App() {
       // See handleFileOpSuccess's identical comment above.
       setSelectedProjectIds(new Set());
     }
-    setBanner(copyMoveDeleteSuccessMessage(operation, "Folder", outcome));
+    notify(copyMoveDeleteSuccessMessage(operation, "Folder", outcome));
     refetchProjects();
     refetch(); // a project's member files move/disappear along with it on move/delete
     refreshStats();
@@ -619,7 +635,7 @@ export default function App() {
       setCustomTabs((prev) => prev.filter((t) => t.id !== id));
       if (activeTab === id) handleTabChange("projects");
     } catch (err) {
-      setBanner(err instanceof Error ? err.message : "Failed to delete tab");
+      notify(err instanceof Error ? err.message : "Failed to delete tab");
     } finally {
       setDeletingTab(null);
     }
@@ -780,7 +796,7 @@ export default function App() {
               )}
             </div>
 
-            <LibraryTransferButtons onMessage={setBanner} />
+            <LibraryTransferButtons onMessage={notify} />
 
             <button
               onClick={() => {
@@ -901,12 +917,6 @@ export default function App() {
             </div>
           </div>
 
-          {banner && (
-            <div className="mx-6 mt-3 px-3 py-2 rounded-[var(--rt-radius)] text-xs font-mono bg-info-surface text-info">
-              {banner}
-            </div>
-          )}
-
           {activeTab === "projects" ? (
             <>
               <ProjectsFilterBar
@@ -993,7 +1003,7 @@ export default function App() {
                 playingFileId={playingFile?.id ?? null}
                 isPlaying={isPlaying}
                 onPlayClick={handlePlayClick}
-                setBanner={setBanner}
+                notify={notify}
                 musicRoot={musicRoot}
               />
             ) : (
@@ -1005,7 +1015,7 @@ export default function App() {
                 refreshTags={refreshTags}
                 refetchFiles={refetch}
                 scanCompletionSignal={lastScanChanges}
-                setBanner={setBanner}
+                notify={notify}
                 musicRoot={musicRoot}
               />
             ))
@@ -1057,7 +1067,7 @@ export default function App() {
           musicRoot={musicRoot}
           onClose={() => setFileOpDialog(null)}
           onSuccess={handleFileOpSuccess}
-          onError={setBanner}
+          onError={notify}
         />
 
         <CopyMoveDeleteDialog
@@ -1069,7 +1079,7 @@ export default function App() {
           musicRoot={musicRoot}
           onClose={() => setProjectOpDialog(null)}
           onSuccess={handleProjectOpSuccess}
-          onError={setBanner}
+          onError={notify}
         />
 
         <ScanFolderPanel
@@ -1077,10 +1087,7 @@ export default function App() {
           musicRoot={musicRoot}
           onClose={() => setShowScanPanel(false)}
           onScanComplete={handleScanComplete}
-          onScanStart={() => {
-            setBanner(undefined);
-            setNotification(null);
-          }}
+          onScanStart={() => setNotification(null)}
         />
 
         {notification && (
@@ -1123,6 +1130,7 @@ export default function App() {
           itemType="files"
           selectedIds={[...selectedFileIds]}
           onClose={() => setShowFilesBatchPanel(false)}
+          onApplyStatus={handleBatchFileStatus}
           onApplyScore={handleBatchFileScore}
           onApplyTag={handleBatchFileTag}
           onBatchOperation={handleFilesBatchOperation}
@@ -1137,6 +1145,7 @@ export default function App() {
           selectedIds={[...selectedProjectIds]}
           projectPaths={projects.map((p) => ({ id: p.id, path: p.path }))}
           onClose={() => setShowProjectsBatchPanel(false)}
+          onApplyStatus={handleBatchProjectStatus}
           onApplyScore={handleBatchProjectScore}
           onApplyTag={handleBatchProjectTag}
           onBatchOperation={handleProjectsBatchOperation}

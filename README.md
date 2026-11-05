@@ -182,8 +182,8 @@ highlighted one, and Space plays or pauses an audio file.
 
 ### Batch edit
 
-Tick several rows and press **Batch Edit** to give them all the same score, add a tag to all of
-them, or copy, move or delete them together.
+Tick several rows and press **Batch Edit** to give them all the same status or score, add a tag
+to all of them, or copy, move or delete them together.
 
 <p align="center">
   <img src="docs/screenshots/batch-edit.png" alt="The batch edit panel applying a score and a tag to two selected projects" width="900">
@@ -327,8 +327,6 @@ summary tells you what changed.
 
 ## Roadmap
 
-- batch edit missing batch statuses
-- make notification batch for all notifications (file copied, deleted etc...)
 - advanced option for custom tabs creation (filter by folder)
 - enable giving score and status in tabs instead of just panels
 - Sync ProFolder tags with macOS Finder tags.

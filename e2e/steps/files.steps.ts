@@ -125,6 +125,13 @@ Given("file {string} has no score", async ({ request }, filename: string) => {
   expect(scoreRes.ok(), `PATCH /api/files/${id}/score failed with status ${scoreRes.status()}`).toBeTruthy();
 });
 
+// Mirrors projects.steps.ts's "project {string} has status {string}" exactly.
+Given("file {string} has status {string}", async ({ request }, filename: string, status: string) => {
+  const id = await findFileIdByFilename(request, filename);
+  const res = await request.patch(`/api/files/${encodeURIComponent(id)}/status`, { data: { status } });
+  expect(res.ok(), `PATCH /api/files/${id}/status failed with status ${res.status()}`).toBeTruthy();
+});
+
 function filesTable(page: Page) {
   return page.getByRole("table", { name: "Audio files" });
 }
@@ -153,6 +160,11 @@ When("I search files for {string}", async ({ page }, term: string) => {
     }),
     input.fill(term),
   ]);
+});
+
+// StatusBadge.tsx labels itself "Status: <name>", mirroring projects.steps.ts's row equivalent.
+Then("the file {string} row should show status {string}", async ({ page }, filename: string, label: string) => {
+  await expect(fileRow(page, filename).locator(`[aria-label="Status: ${label}"]`)).toBeVisible();
 });
 
 Then("the file {string} row should show score {int}", async ({ page }, filename: string, value: number) => {

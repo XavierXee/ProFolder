@@ -316,6 +316,12 @@ export function setNotes(db: Database.Database, id: string, notes: string): void
 }
 
 /** Batch version of setScore — overwrites the score for every listed project. */
+export function setStatusForProjects(db: Database.Database, ids: string[], status: TrackStatus): void {
+  if (ids.length === 0) return;
+  const placeholders = ids.map(() => "?").join(",");
+  db.prepare(`UPDATE projects SET status = ? WHERE id IN (${placeholders})`).run(status, ...ids);
+}
+
 export function setScoreForProjects(db: Database.Database, ids: string[], score: number | null): void {
   if (ids.length === 0) return;
   const placeholders = ids.map(() => "?").join(",");

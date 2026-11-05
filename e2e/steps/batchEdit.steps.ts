@@ -104,6 +104,19 @@ When(
   }
 );
 
+// Status isn't linked between projects and their files, so each panel refetches only its own list.
+When(
+  "I set the batch status to {string} in the {string} batch edit panel",
+  async ({ page }, label: string, kind: string) => {
+    const dialog = batchEditDialog(page, kind);
+    await Promise.all([
+      isPatchTo(page, "/batch/status"),
+      kind === "project folders" ? isProjectsRefetch(page) : isFilesRefetch(page),
+      dialog.getByRole("group", { name: "Set status" }).getByRole("button", { name: label, exact: true }).click(),
+    ]);
+  }
+);
+
 When(
   "I add the batch tag {string} in the {string} batch edit panel",
   async ({ page }, tag: string, kind: string) => {

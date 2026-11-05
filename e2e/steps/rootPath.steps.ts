@@ -157,8 +157,8 @@ Then("the displayed production folder path should be the original scratch produc
   await expect(page.getByTitle(scratchMusicRoot(), { exact: true })).toBeVisible();
 });
 
-// App.tsx's `handleRootPathSave` banner — a plain, non-live-region `<div>`, matched by its fixed
-// text (see the scan-complete banner's own equivalent step in scanning.steps.ts).
+// App.tsx's `handleRootPathSave` notification (a NotificationBadge that dismisses itself after 5
+// seconds), matched by its fixed text (see the scan-complete equivalent in scanning.steps.ts).
 Then("I should see the production folder updated banner", async ({ page }) => {
   await expect(
     page.getByText("Production folder updated. Open Prod Folder and run a scan to index the new location.", {

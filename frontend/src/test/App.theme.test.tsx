@@ -312,7 +312,7 @@ describe("App - Task 4 token-converted elements", () => {
     expect(errorBanner).toHaveClass("text-danger");
   });
 
-  it("gives the production-folder-updated banner the info token classes", async () => {
+  it("shows the production-folder-updated message as an info-colored notification", async () => {
     mockSetMusicRoot.mockResolvedValue({ musicRoot: "/new/music/root" });
     const user = userEvent.setup();
     render(<App />);
@@ -323,8 +323,9 @@ describe("App - Task 4 token-converted elements", () => {
     await user.clear(input);
     await user.type(input, "/new/music/root{Enter}");
 
-    const banner = await screen.findByText(/Production folder updated/);
-    expect(banner).toHaveClass("bg-info-surface");
-    expect(banner).toHaveClass("text-info");
+    const notification = await screen.findByRole("status");
+    expect(notification).toHaveTextContent(/Production folder updated/);
+    expect(notification).toHaveClass("bg-info-surface");
+    expect(notification).toHaveClass("text-info");
   });
 });

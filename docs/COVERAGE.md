@@ -164,7 +164,7 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
 | 9.1 | Multi-select, select-all, cleared on filter/page/tab change | BOTH | `files-tab/` and `projects-tab/batch-edit.feature` (header checkbox, clear on filter and tab change); `test/App.pagination.test.tsx` (clear on page change) |
-| 9.2 | Batch Edit at 2+; score overwrites; tag unions; Copy/Move/Delete | BOTH | `batch-edit.feature` (both tabs); `BatchEditPanel.test.tsx` (score, tag, Copy/Move/Delete actions); `file-ops/batch-delete.feature` |
+| 9.2 | Batch Edit at 2+; status and score overwrite; tag unions; Copy/Move/Delete | BOTH | `batch-edit.feature` (both tabs); `BatchEditPanel.test.tsx` (status, score, tag, Copy/Move/Delete actions); `batchRoutes.test.ts` (batch status); `file-ops/batch-delete.feature` |
 | 9.3 | Project batch edits cascade to files | BOTH | `batchTagCascadeRoute.test.ts`, `batchRoutes.test.ts`; `projects-tab/batch-edit.feature` (score and tag cascade, unselected project untouched) |
 | 9.4 | File batch edits re-sync each affected project | BOTH | `batchFileTagsRoute.test.ts` ("re-syncs the owning project…"); `files-tab/batch-edit-cascade.feature` |
 
@@ -211,7 +211,7 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 | # | Clause | Verdict | Citation |
 |---|---|---|---|
 | 13.1 | Music root: text field or native picker, validated, persisted | BOTH | `scanning-settings/root-path-control.feature` (invalid path, cancel, save); `musicRoot.test.ts`; `RootPathControl.test.tsx`; `folderPickerService.test.ts`, `electronFolderPickerService.test.ts`. The real native dialog is NOT-HEADLESS. |
-| 13.2 | Scan Library panel: tree, Select All/Unselect All, scan, result banner | BOTH | `ScanFolderPanel.test.tsx`; `exclusion-toggles.feature` (exclude and rescan, Select All / Unselect All) |
+| 13.2 | Scan Library panel: tree, Select All/Unselect All, scan, result notification | BOTH | `ScanFolderPanel.test.tsx`; `exclusion-toggles.feature` (exclude and rescan, Select All / Unselect All) |
 | 13.3 | Settings toggles with save feedback; Apply-buttoned fields | BOTH | `SettingsPanel.test.tsx` ("Saving…"/"Failed", threshold and pattern Apply); `scan-settings.feature` |
 | 13.4 | Reveal refused outside the root | UNIT | `revealRoute.test.ts`, `finderService.test.ts`, `electronFinderService.test.ts` |
 | 13.5 | Six typed-confirmation toggles, on by default | BOTH | `confirmationSettings.test.ts` ("defaults all six confirmation toggles to true"); `SettingsPanel.test.tsx`; `ConfirmTextInput.test.tsx`, `useTypedConfirmation.test.ts`, `useConfirmationRequired.test.ts`; `CopyMoveDeleteDialog.test.tsx`, `DeleteTabConfirmDialog.test.tsx`, `DeleteStatusConfirmDialog.test.tsx`, `DeleteCatalogTagConfirmDialog.test.tsx`; e2e file-op and tab-delete steps type the confirmation word or name (`e2e/steps/fileOps.steps.ts`, `customTabs.steps.ts`) |
@@ -256,7 +256,7 @@ launching the packaged app or by the CI build jobs, not by an automated assertio
 | 16.4 | Project subtree moved or copied atomically with metadata | BOTH | `subtreeRekey.test.ts` (nesting, rollback, literal prefix match); `projectOpsRoutes.test.ts`; `project-move.feature` |
 | 16.5 | Single file keeps metadata; project association recomputed | BOTH | `audioFileRepository.test.ts` (`moveFile`/`cloneFile`, DAW vs plain folder association); `fileOpsRoutes.test.ts`; `move.feature`, `copy.feature` |
 | 16.6 | Move rejects collisions; Copy auto-renames | UNIT | `fileOpsService.test.ts` (NameConflictError, Finder-style renames); `fileOpsRoutes.test.ts`, `projectOpsRoutes.test.ts` (409). No e2e scenario creates a collision. |
-| 16.7 | Batch results per item; partial failure kept | BOTH | `fileOpsRoutes.test.ts`, `projectOpsRoutes.test.ts` (partial failure doesn't roll back); `test/App.fileOps.test.tsx` (summary banner); `batch-delete.feature` (all-succeed case only) |
+| 16.7 | Batch results per item; partial failure kept | BOTH | `fileOpsRoutes.test.ts`, `projectOpsRoutes.test.ts` (partial failure doesn't roll back); `test/App.fileOps.test.tsx` (summary notification); `batch-delete.feature` (all-succeed case only) |
 | 16.8 | Deferred API limitations | NONE | Documented, deliberately not fixed. The UI-side guard `excludeNestedProjectIds` is tested in `BatchEditPanel.test.tsx` and `CustomProjectsTabPanel.test.tsx`. |
 
 ## §17 Statuses & Tags Catalog

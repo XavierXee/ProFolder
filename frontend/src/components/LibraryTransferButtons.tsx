@@ -67,7 +67,7 @@ export default function LibraryTransferButtons({
   onMessage,
   reload = () => window.location.reload(),
 }: {
-  /** Shows a message to the user (the app's banner). */
+  /** Shows a message to the user (the app's notification badge). */
   onMessage: (message: string) => void;
   reload?: () => void;
 }) {

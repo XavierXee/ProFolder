@@ -35,9 +35,9 @@ type Props = {
   /** Changes whenever a scan completes (App.tsx's scan-completion counter). This panel's own
    * local `useProjects` instance has no other way to hear about a scan finishing. */
   scanCompletionSignal: number | null;
-  /** App-level banner setter (App.tsx's `setBanner`), used to surface a reveal failure the
+  /** Shows an app-level notification (App.tsx's `notify`), used to surface a reveal failure the
    * same way App.tsx's own `handleReveal` does — see that function for the exact message. */
-  setBanner: (message: string) => void;
+  notify: (message: string) => void;
   /** App.tsx's own `musicRoot` state (an absolute filesystem path, or `undefined` before
    * `api.getConfig()` resolves) — passed straight through to this panel's own
    * `CopyMoveDeleteDialog`, which needs it to convert the destination picker's root-relative
@@ -53,7 +53,7 @@ export default function CustomProjectsTabPanel({
   refreshTags,
   refetchFiles,
   scanCompletionSignal,
-  setBanner,
+  notify,
   musicRoot,
 }: Props) {
   const { projects, total, totalPages, page, pageSize, filters, updateFilters, setPage, loading, refetch } = useProjects({
@@ -147,7 +147,7 @@ export default function CustomProjectsTabPanel({
     try {
       await api.reveal(path);
     } catch (err) {
-      setBanner(err instanceof Error ? err.message : "Could not reveal in Finder");
+      notify(err instanceof Error ? err.message : "Could not reveal in Finder");
     }
   }
 
@@ -180,6 +180,11 @@ export default function CustomProjectsTabPanel({
   // panel's own project list — mirrors App.tsx's own handleProjectNotesSave exactly.
   async function handleProjectNotesSave(id: string, notes: string) {
     await api.updateProjectNotes(id, notes);
+    refetch();
+  }
+
+  async function handleBatchProjectStatus(status: TrackStatus) {
+    await api.batchUpdateProjectStatus([...selectedProjectIds], status);
     refetch();
   }
 
@@ -232,7 +237,7 @@ export default function CustomProjectsTabPanel({
       // identical comment on its own handleProjectOpSuccess.
       setSelectedProjectIds(new Set());
     }
-    setBanner(projectOpSuccessMessage(operation, outcome));
+    notify(projectOpSuccessMessage(operation, outcome));
     refetch();
     refetchFiles(); // a project's member files move/disappear along with it on move/delete
     refreshStats();
@@ -293,6 +298,7 @@ export default function CustomProjectsTabPanel({
         selectedIds={[...selectedProjectIds]}
         projectPaths={projects.map((p) => ({ id: p.id, path: p.path }))}
         onClose={() => setShowBatchPanel(false)}
+        onApplyStatus={handleBatchProjectStatus}
         onApplyScore={handleBatchProjectScore}
         onApplyTag={handleBatchProjectTag}
         onBatchOperation={handleBatchOperation}
@@ -307,7 +313,7 @@ export default function CustomProjectsTabPanel({
         musicRoot={musicRoot}
         onClose={() => setProjectOpDialog(null)}
         onSuccess={handleProjectOpSuccess}
-        onError={setBanner}
+        onError={notify}
       />
     </>
   );

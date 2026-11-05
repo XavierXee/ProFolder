@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import BatchEditPanel from "../BatchEditPanel.js";
+import { StatusCatalogProvider } from "../../contexts/StatusCatalogContext.js";
+import * as api from "../../api/client.js";
+
+vi.mock("../../api/client.js", () => ({ getStatuses: vi.fn() }));
+const mockGetStatuses = vi.mocked(api.getStatuses);
 
 function renderPanel(overrides: Partial<Parameters<typeof BatchEditPanel>[0]> = {}) {
   const props = {
@@ -12,6 +17,7 @@ function renderPanel(overrides: Partial<Parameters<typeof BatchEditPanel>[0]> = 
     itemType: "files" as const,
     selectedIds: ["file-1", "file-2", "file-3"],
     onClose: () => {},
+    onApplyStatus: vi.fn().mockResolvedValue(undefined),
     onApplyScore: vi.fn().mockResolvedValue(undefined),
     onApplyTag: vi.fn().mockResolvedValue(undefined),
     onBatchOperation: vi.fn(),
@@ -34,10 +40,15 @@ describe("BatchEditPanel - basic rendering / count wording", () => {
     expect(screen.getByText("1 audio file selected")).toBeInTheDocument();
   });
 
-  it("reflects count and itemLabel in the score/tag helper copy too", () => {
+  it("reflects count and itemLabel in the status/score/tag helper copy too", () => {
     renderPanel({ count: 1, itemLabel: "project folder" });
 
-    expect(screen.getByText(/Applies immediately to all 1 selected project folder,/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Applies immediately to all 1 selected project folder, overwriting whatever status/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Applies immediately to all 1 selected project folder, overwriting whatever score/)
+    ).toBeInTheDocument();
     expect(screen.getByText(/Each tag is added to all 1 selected project folder,/)).toBeInTheDocument();
   });
 });
@@ -50,6 +61,81 @@ describe("BatchEditPanel - Escape to close", () => {
 
     await user.keyboard("{Escape}");
 
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("BatchEditPanel - set status", () => {
+  const CATALOG = [
+    { key: "draft", name: "Draft", color: "#f59e0b", sortOrder: 1, createdAt: "2026-01-01T00:00:00.000Z" },
+    { key: "done", name: "Done", color: "#10b981", sortOrder: 2, createdAt: "2026-01-01T00:00:00.000Z" },
+  ];
+
+  function renderWithCatalog(overrides: Partial<Parameters<typeof BatchEditPanel>[0]> = {}) {
+    mockGetStatuses.mockResolvedValue(CATALOG);
+    const onApplyStatus = vi.fn().mockResolvedValue(undefined);
+    const props = {
+      open: true,
+      count: 3,
+      itemLabel: "audio file",
+      itemType: "files" as const,
+      selectedIds: ["file-1", "file-2", "file-3"],
+      onClose: () => {},
+      onApplyStatus,
+      onApplyScore: vi.fn().mockResolvedValue(undefined),
+      onApplyTag: vi.fn().mockResolvedValue(undefined),
+      onBatchOperation: vi.fn(),
+      ...overrides,
+    };
+    render(
+      <StatusCatalogProvider>
+        <BatchEditPanel {...props} />
+      </StatusCatalogProvider>
+    );
+    return props;
+  }
+
+  it("offers Unknown plus every catalog status, with none selected to begin with", async () => {
+    renderWithCatalog();
+    const group = screen.getByRole("group", { name: "Set status" });
+
+    await waitFor(() => expect(within(group).getByRole("button", { name: "Done" })).toBeInTheDocument());
+    const pills = within(group).getAllByRole("button");
+    expect(pills.map((b) => b.textContent)).toEqual(["Unknown", "Draft", "Done"]);
+    for (const pill of pills) expect(pill).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("applies the clicked status to the batch and then shows it as selected", async () => {
+    const user = userEvent.setup();
+    const { onApplyStatus } = renderWithCatalog();
+    const group = screen.getByRole("group", { name: "Set status" });
+    const done = await within(group).findByRole("button", { name: "Done" });
+
+    await user.click(done);
+
+    expect(onApplyStatus).toHaveBeenCalledWith("done");
+    await waitFor(() => expect(done).toHaveAttribute("aria-pressed", "true"));
+    expect(within(group).getByRole("button", { name: "Draft" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("shows an error and selects nothing when applying fails", async () => {
+    const user = userEvent.setup();
+    renderWithCatalog({ onApplyStatus: vi.fn().mockRejectedValue(new Error("boom")) });
+    const group = screen.getByRole("group", { name: "Set status" });
+    const draft = await within(group).findByRole("button", { name: "Draft" });
+
+    await user.click(draft);
+
+    expect(await screen.findByText("Failed to apply status")).toBeInTheDocument();
+    expect(draft).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("keeps the footer's close button distinct from the Done status", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderWithCatalog({ onClose });
+
+    await user.click(screen.getByRole("button", { name: "Done editing" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
@@ -252,6 +338,7 @@ describe("BatchEditPanel - reset on open", () => {
         itemType="files"
         selectedIds={["file-1", "file-2", "file-3"]}
         onClose={() => {}}
+        onApplyStatus={async () => {}}
         onApplyScore={onApplyScore}
         onApplyTag={onApplyTag}
         onBatchOperation={() => {}}
@@ -266,6 +353,7 @@ describe("BatchEditPanel - reset on open", () => {
         itemType="files"
         selectedIds={["file-1", "file-2", "file-3"]}
         onClose={() => {}}
+        onApplyStatus={async () => {}}
         onApplyScore={onApplyScore}
         onApplyTag={onApplyTag}
         onBatchOperation={() => {}}
@@ -301,6 +389,7 @@ describe("BatchEditPanel - reset on open", () => {
         itemType="files"
         selectedIds={["file-1", "file-2", "file-3"]}
         onClose={() => {}}
+        onApplyStatus={async () => {}}
         onApplyScore={onApplyScore}
         onApplyTag={onApplyTag}
         onBatchOperation={() => {}}
@@ -315,6 +404,7 @@ describe("BatchEditPanel - reset on open", () => {
         itemType="files"
         selectedIds={["file-1", "file-2", "file-3"]}
         onClose={() => {}}
+        onApplyStatus={async () => {}}
         onApplyScore={onApplyScore}
         onApplyTag={onApplyTag}
         onBatchOperation={() => {}}

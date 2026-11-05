@@ -139,7 +139,7 @@ function renderPanel(overrides: Partial<Parameters<typeof CustomProjectsTabPanel
     refreshTags: vi.fn(),
     refetchFiles: vi.fn(),
     scanCompletionSignal: null as number | null,
-    setBanner: vi.fn(),
+    notify: vi.fn(),
     musicRoot: "/music",
     ...overrides,
   };
@@ -467,7 +467,7 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
-        setBanner={() => {}}
+        notify={() => {}}
         musicRoot="/music"
         scanCompletionSignal={null}
       />
@@ -482,7 +482,7 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
-        setBanner={() => {}}
+        notify={() => {}}
         musicRoot="/music"
         scanCompletionSignal={3}
       />
@@ -506,7 +506,7 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
-        setBanner={() => {}}
+        notify={() => {}}
         musicRoot="/music"
         scanCompletionSignal={5}
       />
@@ -523,7 +523,7 @@ describe("CustomProjectsTabPanel - scanCompletionSignal", () => {
         refreshStats={() => {}}
         refreshTags={() => {}}
         refetchFiles={() => {}}
-        setBanner={() => {}}
+        notify={() => {}}
         musicRoot="/music"
         scanCompletionSignal={6}
       />
@@ -553,14 +553,14 @@ describe("CustomProjectsTabPanel - reveal", () => {
     expect(mockReveal).toHaveBeenCalledWith("/music/Amen Break");
   });
 
-  it("calls setBanner with the error message when the reveal rejects, mirroring App.tsx's handleReveal", async () => {
+  it("calls notify with the error message when the reveal rejects, mirroring App.tsx's handleReveal", async () => {
     const project = makeProject({ id: "p1", name: "Amen Break", path: "/music/Amen Break" });
     mockGetProjects.mockResolvedValue(makePaged({ projects: [project], total: 1 }));
     mockGetProjectDetail.mockResolvedValue(makeDetail({ id: "p1", name: "Amen Break", path: "/music/Amen Break" }));
     mockReveal.mockRejectedValue(new Error("Path is outside the music root"));
-    const setBanner = vi.fn();
+    const notify = vi.fn();
     const user = userEvent.setup();
-    renderPanel({ setBanner });
+    renderPanel({ notify });
 
     await waitFor(() => expect(screen.getByText("Amen Break")).toBeInTheDocument());
     await user.click(screen.getByText("Amen Break"));
@@ -568,7 +568,7 @@ describe("CustomProjectsTabPanel - reveal", () => {
     const dialog = await screen.findByRole("dialog", { name: "Folder detail: Amen Break" });
     await user.click(within(dialog).getByRole("button", { name: "Reveal in Finder" }));
 
-    await waitFor(() => expect(setBanner).toHaveBeenCalledWith("Path is outside the music root"));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith("Path is outside the music root"));
   });
 });
 
@@ -608,7 +608,7 @@ describe("CustomProjectsTabPanel - Copy/Move/Delete wiring", () => {
     await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(callsBefore + 1));
     expect(props.refetchFiles).toHaveBeenCalledTimes(1);
     expect(props.refreshStats).toHaveBeenCalledTimes(1);
-    expect(props.setBanner).toHaveBeenCalledWith("Folder moved to Trash.");
+    expect(props.notify).toHaveBeenCalledWith("Folder moved to Trash.");
     expect(screen.queryByRole("dialog", { name: "Folder detail: Amen Break" })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: 'Move to Trash "Amen Break"' })).not.toBeInTheDocument();
   });
@@ -662,7 +662,7 @@ describe("CustomProjectsTabPanel - batch Copy/Move/Delete wiring", () => {
     await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(callsBefore + 1));
     expect(props.refetchFiles).toHaveBeenCalledTimes(1);
     expect(props.refreshStats).toHaveBeenCalledTimes(1);
-    expect(props.setBanner).toHaveBeenCalledWith("2 folders moved to Trash.");
+    expect(props.notify).toHaveBeenCalledWith("2 folders moved to Trash.");
     // The batch panel itself stays open (mirrors the existing batch score/tag behavior).
     // BatchEditPanel is permanently mounted (CSS transform toggles visibility rather than
     // unmounting), so its dialog role/name is in the DOM regardless of open/closed state —

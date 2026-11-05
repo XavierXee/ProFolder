@@ -3,6 +3,11 @@ import { ScoreEditor } from "./ScoreEditor.js";
 import { TagAutocompleteInput } from "./TagAutocompleteInput.js";
 import { isDescendantOrSelf } from "./ScanFolderPanel.js";
 import type { CopyMoveDeleteItemType, CopyMoveDeleteOperation } from "./CopyMoveDeleteDialog.js";
+import type { TrackStatus } from "../types.js";
+import { UNKNOWN_STATUS_KEY } from "../types.js";
+import { buildStatusOptions, STATUS_PILL, STATUS_PILL_UNSELECTED } from "../statusStyles.js";
+import { statusPillStyle } from "../statusColor.js";
+import { useStatusCatalog } from "../contexts/StatusCatalogContext.js";
 
 /** For a Projects batch, removes any id whose path is a descendant of another id's path also
  * present in the same batch. Why: `POST /api/projects/batch/move`/`batch/copy` process `ids`
@@ -47,6 +52,7 @@ type Props = {
    * itemType === "files". */
   projectPaths?: { id: string; path: string }[];
   onClose: () => void;
+  onApplyStatus: (status: TrackStatus) => Promise<void>;
   onApplyScore: (score: number | null) => Promise<void>;
   onApplyTag: (tag: string) => Promise<void>;
   /** Opens the CopyMoveDeleteDialog (owned by the parent, not this panel) for the current
@@ -64,10 +70,15 @@ export default function BatchEditPanel({
   selectedIds,
   projectPaths = [],
   onClose,
+  onApplyStatus,
   onApplyScore,
   onApplyTag,
   onBatchOperation,
 }: Props) {
+  const { statuses: catalogStatuses } = useStatusCatalog();
+  const [lastStatus, setLastStatus] = useState<TrackStatus | null>(null);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [statusError, setStatusError] = useState(false);
   const [lastScore, setLastScore] = useState<number | null>(null);
   const [scoreSaving, setScoreSaving] = useState(false);
   const [scoreError, setScoreError] = useState(false);
@@ -79,6 +90,8 @@ export default function BatchEditPanel({
 
   useEffect(() => {
     if (open) {
+      setLastStatus(null);
+      setStatusError(false);
       setLastScore(null);
       setTagInput("");
       setAppliedTags([]);
@@ -95,6 +108,20 @@ export default function BatchEditPanel({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  async function handleStatusChange(status: TrackStatus) {
+    if (statusSaving) return;
+    setStatusError(false);
+    setStatusSaving(true);
+    try {
+      await onApplyStatus(status);
+      setLastStatus(status);
+    } catch {
+      setStatusError(true);
+    } finally {
+      setStatusSaving(false);
+    }
+  }
 
   async function handleScoreChange(score: number | null) {
     if (scoreSaving) return;
@@ -178,6 +205,43 @@ export default function BatchEditPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          <div>
+            <p className={`text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 ${meta}`}>
+              Set Status
+              {statusSaving && <span className="normal-case tracking-normal">Applying…</span>}
+              {statusError && <span className="normal-case tracking-normal text-red-400">Failed to apply status</span>}
+            </p>
+            <p className={`text-xs mb-3 ${meta}`}>
+              Applies immediately to all {count} selected {itemLabel}
+              {count === 1 ? "" : "s"}, overwriting whatever status each already has.
+            </p>
+            {/* No pill starts selected: the selection can mix statuses. Once one is applied, it
+                shows as selected, like the score below. */}
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Set status">
+              {buildStatusOptions(catalogStatuses).map((opt) => {
+                const selected = lastStatus === opt.value;
+                const isUnknown = opt.value === UNKNOWN_STATUS_KEY;
+                const catalogEntry = isUnknown ? undefined : catalogStatuses.find((s) => s.key === opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleStatusChange(opt.value)}
+                    disabled={statusSaving}
+                    aria-pressed={selected}
+                    style={selected && catalogEntry ? statusPillStyle(catalogEntry.color) : undefined}
+                    className={`px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-mono font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed ${
+                      selected ? (isUnknown ? `ring-1 ${STATUS_PILL.unknown}` : "") : STATUS_PILL_UNSELECTED
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className={`border-t ${divider}`} />
+
           <div>
             <p className={`text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 ${meta}`}>
               Set Score
@@ -268,8 +332,10 @@ export default function BatchEditPanel({
         </div>
 
         <div className={`px-6 py-4 border-t ${divider}`}>
+          {/* Named apart from the "Done" status pill above. */}
           <button
             onClick={onClose}
+            aria-label="Done editing"
             className={`w-full ${outlineBtn}`}
           >
             Done

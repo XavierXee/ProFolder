@@ -67,6 +67,14 @@ Given("project {string} has no score", async ({ request }, name: string) => {
   expect(scoreRes.ok(), `PATCH /api/projects/${id}/score failed with status ${scoreRes.status()}`).toBeTruthy();
 });
 
+// Status-only variant, taking a status key (e.g. "unknown", "done"): resets a shared fixture's
+// status before a scenario asserts which rows a batch status edit changed.
+Given("project {string} has status {string}", async ({ request }, name: string, status: string) => {
+  const id = await findProjectIdByName(request, name);
+  const res = await request.patch(`/api/projects/${encodeURIComponent(id)}/status`, { data: { status } });
+  expect(res.ok(), `PATCH /api/projects/${id}/status failed with status ${res.status()}`).toBeTruthy();
+});
+
 // Tags-only variant (no status/score touched) — used by the detail-panel tag-suggestion scenario
 // to seed a tag into the global tag dictionary (the `tags` table row survives even after it's
 // removed from this project again, since removal only deletes the `project_tags` join row — see

@@ -217,7 +217,7 @@ async function selectDestination(user: ReturnType<typeof userEvent.setup>, name 
 }
 
 describe("App - file operations (Copy/Move/Delete) wiring, Files tab", () => {
-  it("on a successful Delete: calls api.deleteFile, refetches files/stats/projects, sets the banner, and closes the detail panel", async () => {
+  it("on a successful Delete: calls api.deleteFile, refetches files/stats/projects, shows the notification, and closes the detail panel", async () => {
     const user = userEvent.setup();
     render(<App />);
     await switchToFilesTab(user);
@@ -236,11 +236,11 @@ describe("App - file operations (Copy/Move/Delete) wiring, Files tab", () => {
     await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(filesCallsBefore + 1));
     await waitFor(() => expect(mockGetStats.mock.calls.length).toBe(statsCallsBefore + 1));
     await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(projectsCallsBefore + 1));
-    expect(screen.getByText("File moved to Trash.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("File moved to Trash.");
     expect(screen.queryByRole("dialog", { name: "File detail: Kick One.wav" })).not.toBeInTheDocument();
   });
 
-  it("on a successful Move: calls api.moveFile with the chosen destination, sets the banner, and closes the detail panel", async () => {
+  it("on a successful Move: calls api.moveFile with the chosen destination, shows the notification, and closes the detail panel", async () => {
     const user = userEvent.setup();
     render(<App />);
     await switchToFilesTab(user);
@@ -254,11 +254,11 @@ describe("App - file operations (Copy/Move/Delete) wiring, Files tab", () => {
     await user.click(within(opDialog).getByRole("button", { name: "Move" }));
 
     await waitFor(() => expect(mockMoveFile).toHaveBeenCalledWith("file-1", "/music/Other"));
-    expect(screen.getByText("File moved.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("File moved.");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "File detail: Kick One.wav" })).not.toBeInTheDocument());
   });
 
-  it("on a successful Copy: calls api.copyFile with the chosen destination, sets the banner, refetches, and leaves the detail panel open (same id)", async () => {
+  it("on a successful Copy: calls api.copyFile with the chosen destination, shows the notification, refetches, and leaves the detail panel open (same id)", async () => {
     const user = userEvent.setup();
     render(<App />);
     await switchToFilesTab(user);
@@ -274,7 +274,7 @@ describe("App - file operations (Copy/Move/Delete) wiring, Files tab", () => {
 
     await waitFor(() => expect(mockCopyFile).toHaveBeenCalledWith("file-1", "/music/Other"));
     await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(filesCallsBefore + 1));
-    expect(screen.getByText("File copied.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("File copied.");
     // The original file's id is untouched by a copy, so the still-open panel stays open.
     expect(screen.getByRole("dialog", { name: "File detail: Kick One.wav" })).toBeInTheDocument();
   });
@@ -298,7 +298,7 @@ describe("App - file operations (Copy/Move/Delete) wiring, Files tab", () => {
 });
 
 describe("App - file operations (Copy/Move/Delete) wiring, Projects tab", () => {
-  it("on a successful Delete: calls api.deleteProject, refetches projects/files/stats, sets the banner, and closes the detail panel", async () => {
+  it("on a successful Delete: calls api.deleteProject, refetches projects/files/stats, shows the notification, and closes the detail panel", async () => {
     const user = userEvent.setup();
     render(<App />);
     // "Project Folders" is the default active tab.
@@ -318,7 +318,7 @@ describe("App - file operations (Copy/Move/Delete) wiring, Projects tab", () => 
     await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(projectsCallsBefore + 1));
     await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(filesCallsBefore + 1));
     await waitFor(() => expect(mockGetStats.mock.calls.length).toBe(statsCallsBefore + 1));
-    expect(screen.getByText("Folder moved to Trash.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Folder moved to Trash.");
     expect(screen.queryByRole("dialog", { name: "Folder detail: Alpha Sessions" })).not.toBeInTheDocument();
   });
 
@@ -363,7 +363,7 @@ describe("App - batch Copy/Move/Delete wiring (Task 10), Files tab", () => {
     totalPages: 1,
   };
 
-  it("on a successful batch Move: calls api.batchMoveFiles with both ids and the chosen destination, refetches files/stats/projects, sets a pluralized banner, and leaves the batch panel open", async () => {
+  it("on a successful batch Move: calls api.batchMoveFiles with both ids and the chosen destination, refetches files/stats/projects, shows a pluralized notification, and leaves the batch panel open", async () => {
     mockGetFiles.mockResolvedValue(TWO_FILES_PAGE);
     mockBatchMoveFiles.mockResolvedValue({ succeeded: ["file-1", "file-2"], failed: [] });
     const user = userEvent.setup();
@@ -389,7 +389,7 @@ describe("App - batch Copy/Move/Delete wiring (Task 10), Files tab", () => {
     await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(filesCallsBefore + 1));
     await waitFor(() => expect(mockGetStats.mock.calls.length).toBe(statsCallsBefore + 1));
     await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(projectsCallsBefore + 1));
-    expect(screen.getByText("2 Files moved.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("2 Files moved.");
     // The batch panel stays open after a successful operation — mirrors the existing batch
     // score/tag actions, which also don't close it (see BatchEditPanel.test.tsx). BatchEditPanel
     // is permanently mounted (CSS transform toggles visibility, unlike CopyMoveDeleteDialog which
@@ -412,7 +412,7 @@ describe("App - batch Copy/Move/Delete wiring (Task 10), Projects tab", () => {
     totalPages: 1,
   };
 
-  it("on a successful batch Delete: calls api.batchDeleteProjects with both ids, refetches projects/files/stats, and sets a pluralized banner", async () => {
+  it("on a successful batch Delete: calls api.batchDeleteProjects with both ids, refetches projects/files/stats, and shows a pluralized notification", async () => {
     mockGetProjects.mockResolvedValue(TWO_PROJECTS_PAGE);
     mockBatchDeleteProjects.mockResolvedValue({ succeeded: ["proj-1", "proj-2"], failed: [] });
     const user = userEvent.setup();
@@ -436,7 +436,7 @@ describe("App - batch Copy/Move/Delete wiring (Task 10), Projects tab", () => {
     await waitFor(() => expect(mockGetProjects.mock.calls.length).toBe(projectsCallsBefore + 1));
     await waitFor(() => expect(mockGetFiles.mock.calls.length).toBe(filesCallsBefore + 1));
     await waitFor(() => expect(mockGetStats.mock.calls.length).toBe(statsCallsBefore + 1));
-    expect(screen.getByText("2 Folders moved to Trash.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("2 Folders moved to Trash.");
     expect(screen.getByRole("dialog", { name: "Batch edit project folders" })).toBeInTheDocument();
   });
 });

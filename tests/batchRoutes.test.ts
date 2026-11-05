@@ -2,8 +2,12 @@ import Database from "better-sqlite3";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "../src/database/db.js";
-import { insertAudioFile, type AudioFileUpsertInput } from "../src/database/repositories/audioFileRepository.js";
-import { upsertProject } from "../src/database/repositories/projectRepository.js";
+import {
+  insertAudioFile,
+  findById as findFileById,
+  type AudioFileUpsertInput,
+} from "../src/database/repositories/audioFileRepository.js";
+import { upsertProject, findById as findProjectById } from "../src/database/repositories/projectRepository.js";
 import type { Project } from "../src/models/Project.js";
 import { createServer } from "../src/api/server.js";
 import { MacFinderService } from "../src/services/FinderService.js";
@@ -104,6 +108,35 @@ describe("batch route registration order and validation", () => {
       expect(res.body).toEqual({ updated: 2 });
     });
 
+    it("PATCH batch/status sets the status of the given files only, skipping unknown ids", async () => {
+      insertAudioFile(db, makeFile({ id: "file-c.wav" }));
+
+      const res = await request(app)
+        .patch("/api/files/batch/status")
+        .send({ ids: ["file-a.wav", "file-b.wav", "missing.wav"], status: "done" });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ updated: 2 });
+      expect(findFileById(db, "file-a.wav")!.status).toBe("done");
+      expect(findFileById(db, "file-b.wav")!.status).toBe("done");
+      expect(findFileById(db, "file-c.wav")!.status).toBe("unknown");
+    });
+
+    it("returns 400 for batch/status with an unknown status, changing nothing", async () => {
+      const res = await request(app)
+        .patch("/api/files/batch/status")
+        .send({ ids: ["file-a.wav"], status: "bogus" });
+
+      expect(res.status).toBe(400);
+      expect(findFileById(db, "file-a.wav")!.status).toBe("unknown");
+    });
+
+    it("returns 400 for batch/status with a missing ids array", async () => {
+      const res = await request(app).patch("/api/files/batch/status").send({ status: "done" });
+
+      expect(res.status).toBe(400);
+    });
+
     it("returns 400 for batch/score with a missing ids array", async () => {
       const res = await request(app).patch("/api/files/batch/score").send({ score: 3 });
 
@@ -149,6 +182,29 @@ describe("batch route registration order and validation", () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ updated: 2 });
+    });
+
+    it("PATCH batch/status sets the status of the given projects only, skipping unknown ids", async () => {
+      upsertProject(db, makeProject({ id: "Project C" }));
+
+      const res = await request(app)
+        .patch("/api/projects/batch/status")
+        .send({ ids: ["Project A", "Project B", "Missing"], status: "needs_mixing" });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ updated: 2 });
+      expect(findProjectById(db, "Project A")!.status).toBe("needs_mixing");
+      expect(findProjectById(db, "Project B")!.status).toBe("needs_mixing");
+      expect(findProjectById(db, "Project C")!.status).toBe("unknown");
+    });
+
+    it("returns 400 for batch/status with an unknown status, changing nothing", async () => {
+      const res = await request(app)
+        .patch("/api/projects/batch/status")
+        .send({ ids: ["Project A"], status: "bogus" });
+
+      expect(res.status).toBe(400);
+      expect(findProjectById(db, "Project A")!.status).toBe("unknown");
     });
 
     it("returns 400 for batch/score with an empty ids array", async () => {

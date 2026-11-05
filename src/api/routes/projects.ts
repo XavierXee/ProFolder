@@ -10,6 +10,7 @@ import {
   setScore,
   setNotes,
   setScoreForProjects,
+  setStatusForProjects,
   addTagsToProjects,
   filterExistingProjectIds,
   markRemoved as markProjectsRemoved,
@@ -156,6 +157,25 @@ export function createProjectsRouter(db: Database.Database, fileOpsService: File
   );
 
   // Registered before /:id/* so "batch" is never captured as an :id value.
+  router.patch(
+    "/batch/status",
+    asyncHandler(async (req, res) => {
+      const ids = parseIdsBody(req.body);
+      const { status } = req.body as { status: TrackStatus };
+      if (!ids) {
+        res.status(400).json({ error: "ids must be a non-empty array of strings" });
+        return;
+      }
+      if (typeof status !== "string" || !isKnownStatusKey(db, status)) {
+        res.status(400).json({ error: `status must be a known status key (got "${status}")` });
+        return;
+      }
+      const knownIds = filterExistingProjectIds(db, ids);
+      setStatusForProjects(db, knownIds, status);
+      res.json({ updated: knownIds.length });
+    })
+  );
+
   router.patch(
     "/batch/score",
     asyncHandler(async (req, res) => {

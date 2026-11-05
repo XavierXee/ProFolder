@@ -125,6 +125,10 @@ export function updateFileScore(id: string, score: number | null): Promise<Audio
   });
 }
 
+export function batchUpdateFileStatus(ids: string[], status: TrackStatus): Promise<{ updated: number }> {
+  return request(`/files/batch/status`, { method: "PATCH", body: JSON.stringify({ ids, status }) });
+}
+
 export function batchUpdateFileScore(ids: string[], score: number | null): Promise<{ updated: number }> {
   return request(`/files/batch/score`, { method: "PATCH", body: JSON.stringify({ ids, score }) });
 }
@@ -267,6 +271,10 @@ export function updateProjectNotes(id: string, notes: string): Promise<Project> 
     method: "PATCH",
     body: JSON.stringify({ notes }),
   });
+}
+
+export function batchUpdateProjectStatus(ids: string[], status: TrackStatus): Promise<{ updated: number }> {
+  return request(`/projects/batch/status`, { method: "PATCH", body: JSON.stringify({ ids, status }) });
 }
 
 export function batchUpdateProjectScore(ids: string[], score: number | null): Promise<{ updated: number }> {

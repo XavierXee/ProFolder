@@ -60,6 +60,22 @@ Feature: Projects tab batch edit — selection mechanics and batch score/tag cas
     And the projects table row for "Batch E2E Projects Bravo" should show score 4
     And the projects table row for "Batch E2E Projects Charlie" should show no score
 
+  Scenario: Batch-setting a status only applies to the selected rows, not an unselected one
+    Given project "Batch E2E Projects Alpha" has status "unknown"
+    And project "Batch E2E Projects Bravo" has status "unknown"
+    And project "Batch E2E Projects Charlie" has status "unknown"
+    And I open the app
+    And I switch to the "Project Folders" tab
+    And I search projects for "Batch E2E Projects"
+    When I select project folder "Batch E2E Projects Alpha"
+    And I select project folder "Batch E2E Projects Bravo"
+    And I open the "project folders" batch edit panel
+    And I set the batch status to "Need Mixing" in the "project folders" batch edit panel
+    And I close the "project folders" batch edit panel
+    Then the projects table row for "Batch E2E Projects Alpha" should show status "Need Mixing"
+    And the projects table row for "Batch E2E Projects Bravo" should show status "Need Mixing"
+    And the projects table row for "Batch E2E Projects Charlie" should show status "Unknown"
+
   # Alpha starts with its own pre-existing tag; Bravo starts with none. Bravo ending up with just
   # "batch-ready" and Alpha ending up with BOTH tags is what proves batch tag application is a
   # union (addTagsToProjects — see linkSync.ts / projectRepository.ts), not a replace.
