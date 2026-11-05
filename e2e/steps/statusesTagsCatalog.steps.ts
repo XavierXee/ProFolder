@@ -353,21 +353,30 @@ When("I set the file status to my status {string}", async ({ page }, baseName: s
   ]);
 });
 
+// The panel shows the file's status as the selected (aria-pressed) pill of its status picker.
+function selectedStatusPill(page: Page, fullName: string) {
+  return fileDetailPanel(page)
+    .getByRole("group", { name: "Select status" })
+    .getByRole("button", { name: fullName, exact: true });
+}
+
 Then("the file detail panel should show my status {string}", async ({ page }, baseName: string) => {
   const { fullName } = resolveStatus(page, baseName);
-  await expect(fileDetailPanel(page).locator(`[aria-label="Status: ${fullName}"]`)).toBeVisible();
+  await expect(selectedStatusPill(page, fullName)).toHaveAttribute("aria-pressed", "true");
 });
 
 // The color half of a status rename/edit was never actually verified —
-// every existing assertion checks the badge's aria-label (name propagation) only. StatusBadge.tsx
-// sets its color via inline `color-mix(...)` style properties embedding the literal hex, so the
+// every existing assertion checks the status name only. The panel's selected status pill
+// (statusPillStyle) sets its color via inline `color-mix(...)` style properties embedding the literal hex, so the
 // raw `style` HTML attribute (not the CSSOM-normalized `element.style.*` getters, which a real
 // browser may resolve into rgb()) is the one property guaranteed to still contain that literal
 // hex string exactly as passed — checking it directly proves the new color actually reached the
 // DOM without needing to compute the resulting color-mix() output.
 Then("the file detail panel's status badge for {string} should have color {string}", async ({ page }, baseName: string, hex: string) => {
   const { fullName } = resolveStatus(page, baseName);
-  const style = await fileDetailPanel(page).locator(`[aria-label="Status: ${fullName}"]`).getAttribute("style");
+  const pill = selectedStatusPill(page, fullName);
+  await expect(pill).toHaveAttribute("aria-pressed", "true");
+  const style = await pill.getAttribute("style");
   expect(style).toContain(hex);
 });
 

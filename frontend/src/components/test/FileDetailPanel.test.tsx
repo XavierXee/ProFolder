@@ -138,6 +138,16 @@ describe("FileDetailPanel - basic rendering", () => {
     expect(screen.getByText("/music/Song/beat.wav")).toBeInTheDocument();
   });
 
+  it("adds the duration to the header when it's known, under a 'Project Location' section", () => {
+    renderPanel({
+      file: makeFile({ size: 2048, modifiedAt: "2026-01-15T10:30:00.000Z", durationSeconds: 82.4 }),
+    });
+
+    expect(screen.getByText("Updated Jan 15, 2026, 10:30 | Size 2.0 KB | Duration 1:22")).toBeInTheDocument();
+    expect(screen.getByText("Project Location")).toBeInTheDocument();
+    expect(screen.queryByText("Project")).not.toBeInTheDocument();
+  });
+
   // The title (<h2>) already truncates on its own — this covers the header's "Updated .../Size
   // ..." subtitle line, which previously had no overflow handling at all.
   it("truncates the header subtitle to a single line, with the full text still available via a title attribute", () => {

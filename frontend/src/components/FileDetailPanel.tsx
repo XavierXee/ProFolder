@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import type { AudioFile, TrackStatus } from "../types.js";
 import { UNKNOWN_STATUS_KEY } from "../types.js";
 import type { CopyMoveDeleteOperation } from "./CopyMoveDeleteDialog.js";
-import StatusBadge from "./StatusBadge.js";
-import ScoreBadge from "./ScoreBadge.js";
 import { ScoreEditor } from "./ScoreEditor.js";
 import { TagEditor } from "./TagEditor.js";
 import { buildStatusOptions, STATUS_PILL, STATUS_PILL_UNSELECTED } from "../statusStyles.js";
 import { statusPillStyle } from "../statusColor.js";
 import { useStatusCatalog } from "../contexts/StatusCatalogContext.js";
+import { formatDuration } from "../formatDuration.js";
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -183,6 +182,13 @@ export default function FileDetailPanel({
   const dangerBtn =
     "px-3 py-1.5 rounded-[var(--rt-radius)] text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 border-danger-border text-danger hover:bg-danger-surface";
   const inputBg = "bg-canvas border-border text-ink placeholder-ink-muted";
+  const headerDetails = file
+    ? [
+        `Updated ${formatFull(file.modifiedAt)}`,
+        `Size ${formatBytes(file.size)}`,
+        ...(file.durationSeconds === null ? [] : [`Duration ${formatDuration(file.durationSeconds)}`]),
+      ].join(" | ")
+    : "";
 
   return (
     <>
@@ -231,11 +237,8 @@ export default function FileDetailPanel({
                   </button>
                   <h2 className="text-base font-mono font-medium text-blue-400 truncate">{file.filename}</h2>
                 </div>
-                <p
-                  className={`text-xs mt-1 truncate ${meta}`}
-                  title={`Updated ${formatFull(file.modifiedAt)} | Size ${formatBytes(file.size)}`}
-                >
-                  Updated {formatFull(file.modifiedAt)} | Size {formatBytes(file.size)}
+                <p className={`text-xs mt-1 truncate ${meta}`} title={headerDetails}>
+                  {headerDetails}
                 </p>
               </div>
               <button
@@ -252,17 +255,7 @@ export default function FileDetailPanel({
 
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
               <div>
-                <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Project</p>
-                <p className="text-lg font-semibold truncate">{file.projectId ?? "Unassociated"}</p>
-                <div className="flex items-center gap-3 mt-2 flex-wrap">
-                  <StatusBadge status={status} />
-                  <ScoreBadge score={score} />
-                  <span className={`text-xs font-mono ${meta}`}>{file.extension}</span>
-                </div>
-              </div>
-
-              <div>
-                <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Location</p>
+                <p className={`text-xs font-mono uppercase tracking-wider mb-2 ${meta}`}>Project Location</p>
                 <p className="text-sm leading-relaxed break-all text-ink">{file.relativePath}</p>
                 <p className={`text-xs font-mono mt-2 break-all ${meta}`}>{file.path}</p>
                 <div className="flex gap-2 mt-3">

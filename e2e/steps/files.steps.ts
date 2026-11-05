@@ -496,8 +496,11 @@ When("I set the file status to {string}", async ({ page }, label: string) => {
   ]);
 });
 
+// The panel shows the file's status as the selected (aria-pressed) pill of its status picker.
 Then("the file detail panel should show status {string}", async ({ page }, label: string) => {
-  await expect(fileDetailPanel(page).locator(`[aria-label="Status: ${label}"]`)).toBeVisible();
+  await expect(
+    fileDetailPanel(page).getByRole("group", { name: "Select status" }).getByRole("button", { name: label, exact: true })
+  ).toHaveAttribute("aria-pressed", "true");
 });
 
 // A file's own score edit DOES cascade onto its project (App.tsx's handleFileScoreSave calls
@@ -516,8 +519,11 @@ When("I set the file score to {int}", async ({ page }, value: number) => {
   ]);
 });
 
+// The panel shows the file's score as the checked radio of its score editor.
 Then("the file detail panel should show score {int}", async ({ page }, value: number) => {
-  await expect(fileDetailPanel(page).locator(`[aria-label="Score: ${value} of 5"]`)).toBeVisible();
+  await expect(
+    fileDetailPanel(page).getByRole("radiogroup", { name: "Set score" }).getByRole("radio", { name: `${value} of 5` })
+  ).toBeChecked();
 });
 
 // Tags (Task 5b.2). A file's own tag edit ALSO cascades onto its project (App.tsx's
