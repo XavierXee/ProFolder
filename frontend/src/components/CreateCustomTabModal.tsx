@@ -146,7 +146,10 @@ export default function CreateCustomTabModal({ open, allTags, onClose, onCreated
                 id="custom-tab-name"
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setNameError(undefined);
+                }}
                 className={`w-full border rounded-[var(--rt-radius)] text-sm px-2.5 py-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500/50 transition-colors ${inputBg}`}
                 aria-invalid={nameError ? true : undefined}
                 aria-describedby={nameError ? "custom-tab-name-error" : undefined}

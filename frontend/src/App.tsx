@@ -28,6 +28,7 @@ import CustomFilesTabPanel from "./components/CustomFilesTabPanel.js";
 import CustomProjectsTabPanel from "./components/CustomProjectsTabPanel.js";
 import CopyMoveDeleteDialog from "./components/CopyMoveDeleteDialog.js";
 import Logo from "./components/Logo.js";
+import NotificationBadge from "./components/NotificationBadge.js";
 import SplashScreen from "./components/SplashScreen.js";
 import type { CopyMoveDeleteOperation, CopyMoveDeleteOutcome, CopyMoveDeleteTarget } from "./components/CopyMoveDeleteDialog.js";
 import * as api from "./api/client.js";
@@ -138,6 +139,8 @@ export default function App() {
   const [lastScanChanges, setLastScanChanges] = useState<number | null>(null);
   // Starts with the summary of an import that just reloaded the app, if there was one.
   const [banner, setBanner] = useState<string | undefined>(peekPendingImportMessage);
+  // The floating, self-dismissing notification; the id gives each one a fresh timer.
+  const [notification, setNotification] = useState<{ id: number; message: string } | null>(null);
   useEffect(() => clearPendingImportMessage(), []);
   const [theme, setTheme] = useState<Theme>(loadStoredTheme);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -306,9 +309,10 @@ export default function App() {
 
   function handleScanComplete(stats: ScanStats) {
     setLastScanChanges(stats.newFiles + stats.modifiedFiles + stats.removedFiles);
-    setBanner(
-      `Scan complete: ${stats.audioFilesFound} audio files (${stats.newFiles} new, ${stats.modifiedFiles} modified, ${stats.removedFiles} removed).`
-    );
+    setNotification((prev) => ({
+      id: (prev?.id ?? 0) + 1,
+      message: `Scan complete: ${stats.audioFilesFound} audio files (${stats.newFiles} new, ${stats.modifiedFiles} modified, ${stats.removedFiles} removed).`,
+    }));
     refetch();
     refreshStats();
     refetchProjects();
@@ -1073,8 +1077,19 @@ export default function App() {
           musicRoot={musicRoot}
           onClose={() => setShowScanPanel(false)}
           onScanComplete={handleScanComplete}
-          onScanStart={() => setBanner(undefined)}
+          onScanStart={() => {
+            setBanner(undefined);
+            setNotification(null);
+          }}
         />
+
+        {notification && (
+          <NotificationBadge
+            key={notification.id}
+            message={notification.message}
+            onDismiss={() => setNotification(null)}
+          />
+        )}
 
         <SettingsPanel
           theme={theme}

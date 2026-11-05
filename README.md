@@ -327,8 +327,6 @@ summary tells you what changed.
 
 ## Roadmap
 
-- "Name is required" in custom tabs should dissapear when typing
-- Scan complete notification should dissapear after a few seconds
 - advanced option for custom tabs creation (filter by folder)
 - enable giving score and status in tabs instead of just panels
 - Sync ProFolder tags with macOS Finder tags.

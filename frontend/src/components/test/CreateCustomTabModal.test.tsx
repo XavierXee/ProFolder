@@ -85,6 +85,19 @@ describe("CreateCustomTabModal - name validation", () => {
     expect(mockCreateCustomTab).not.toHaveBeenCalled();
   });
 
+  it("hides the validation message once the user starts typing a name", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderModal();
+
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    expect(screen.getByText("Name is required")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Name"), "M");
+
+    expect(screen.queryByText("Name is required")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).not.toHaveAttribute("aria-invalid");
+  });
+
   it("does not call the API when the name is only whitespace", async () => {
     const user = userEvent.setup({ delay: null });
     renderModal();
