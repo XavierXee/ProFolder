@@ -7,6 +7,8 @@ import path from "node:path";
 // typed precisely.
 import type Database from "better-sqlite3";
 import type { Server as HttpServer } from "node:http";
+// Static import is fine here: unlike the backend modules above, it has no load-time side effects.
+import { createWindowLauncher } from "../src/config/windowLauncher.js";
 
 /**
  * Electron main process entry point.
@@ -333,10 +335,14 @@ async function createProductionWindow(): Promise<void> {
 }
 
 // Dispatches to whichever window-creation function matches the current mode — shared by the
-// initial `whenReady` boot and the macOS `activate` handler below, so both stay in sync.
-function createWindowForCurrentMode(): Promise<void> {
-  return app.isPackaged ? createProductionWindow() : createWindow();
-}
+// initial `whenReady` boot, the macOS `activate` handler and the `second-instance` handler below,
+// so they stay in sync. Each call waits until the app is ready (macOS can send `activate` before
+// then, and creating a window that early throws), and calls made during a startup that's still
+// running join it instead of starting a second one.
+const createWindowForCurrentMode = createWindowLauncher(
+  () => app.whenReady(),
+  () => (app.isPackaged ? createProductionWindow() : createWindow()),
+);
 
 // Single-instance lock (Task 12). Must be requested before `app.whenReady()` — a second launch
 // of the same packaged binary while one is already running is normal, expected behavior (e.g. a
@@ -386,7 +392,7 @@ if (!gotSingleInstanceLock) {
   // this handler — this `.catch()` additionally surfaces it as a native dialog too (reusing the
   // same log+dialog+quit convention as every other startup failure in this file), which is a
   // strict improvement with no extra dev-mode-specific code needed, rather than a gap left open.
-  app.whenReady().then(createWindowForCurrentMode).catch((err) => {
+  createWindowForCurrentMode().catch((err) => {
     console.error("ProFolder failed to start:", err);
     dialog.showErrorBox(
       "Failed to start",
