@@ -817,11 +817,13 @@ e2e/            Playwright + Cucumber features, steps and fixtures; showcase rec
 The e2e suite has its own workflow (`.github/workflows/e2e.yml`) that only runs when started by
 hand from the Actions tab. It runs on macOS, with one retry on CI.
 
-Pushing a `v*` tag additionally:
+Pushing a `v*` tag, or publishing a release with a new `v*` tag from GitHub's release page
+(which creates the tag), additionally:
 - publishes the image to `ghcr.io/xavierxee/profolder`;
 - packages the desktop app in four parallel jobs (macOS arm64, macOS universal, Windows, Linux)
   with the tag's version stamped in;
-- creates a GitHub Release with every installer attached.
+- attaches every installer to that tag's GitHub Release, creating the release with generated
+  notes if it doesn't exist yet.
 
 Running the workflow manually builds the desktop packages without releasing them.
 

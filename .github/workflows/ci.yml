@@ -189,7 +189,17 @@ jobs:
           pattern: desktop-*
           merge-multiple: true
           path: release
+      # Works both ways a version can be released: pushing a v* tag (the release is created here,
+      # with generated notes), or publishing a release from GitHub's "Draft a new release" page,
+      # which creates the tag itself and so triggers this run with the release already there
+      # (its builds are then added to it, keeping the notes written there). --clobber replaces a
+      # file of the same name, so re-running a failed run doesn't fail on the files it uploaded.
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --generate-notes
+          fi
