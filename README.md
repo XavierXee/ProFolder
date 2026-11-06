@@ -62,7 +62,7 @@ your files: ProFolder only reads your folder and keeps its own small database ne
 ProFolder runs as a desktop app (macOS, with Windows and Linux builds), or in your browser
 from Docker or the source code.
 
-[showcase.webm](https://github.com/user-attachments/assets/eeda0884-2f85-446d-a55c-61441b2b7773)
+[showcase.webm](https://github.com/user-attachments/assets/418324c0-41f4-40a3-8f34-e77783d35838)
 
 [Watch the feature tour video](docs/screenshots/showcase.webm) if it doesn't play above.
 
