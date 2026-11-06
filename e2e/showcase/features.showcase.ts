@@ -150,13 +150,15 @@ test("ProFolder feature showcase", async ({ page }) => {
   await show.click(folderPanel.getByRole("button", { name: "Close panel" }));
   await show.wait(800);
 
-  await show.chapter("Batch edit", "Select several projects and update them all at once.");
+  await show.chapter("Batch edit", "Select several projects and set their status, score or tags all at once.");
   await show.click(projects.getByRole("checkbox", { name: "Select Static Bloom" }));
   await show.click(projects.getByRole("checkbox", { name: "Select Ocean Echoes" }));
   await show.click(page.getByRole("button", { name: /^Batch Edit/ }));
   const projectBatch = page.getByRole("dialog", { name: "Batch edit project folders" });
   await expect(projectBatch).toBeVisible();
   await show.wait(1000);
+  await show.click(projectBatch.getByRole("group", { name: "Set status" }).getByRole("button", { name: "Need Mixing", exact: true }));
+  await show.wait(500);
   await show.click(projectBatch.getByRole("radiogroup", { name: "Set score" }).getByRole("radio", { name: "3 of 5" }));
   await show.wait(500);
   await show.addTag(projectBatch.getByPlaceholder("Add tag, press Enter…"), "wip");

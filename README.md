@@ -122,7 +122,9 @@ npm run dev            # then open http://localhost:5173
 1. **Pick your production folder.** Click the folder path at the top of the window, then type a
    path or browse to one. By default ProFolder uses your Music folder.
 2. **Scan it.** Press **Scan Library**, untick any folders you want to skip, and press **Scan**.
-   A large library may take a minute the first time; later scans are quicker.
+   A large library may take a minute the first time; later scans are quicker. When it finishes, a
+   notification at the top of the window tells you how many files were found, added, changed or
+   removed.
 3. **Review and organize.** Browse **Project Folders** and **Audio Files**, open items to set a
    status, score and tags, and create custom tabs for the views you use most.
 4. **Rescan whenever you've been working.** New bounces and projects show up, and everything you
@@ -163,11 +165,15 @@ Open any project or file to describe it:
 - **Tags**: anything you like (`summer`, `collab`, `EP 2`). Existing tags are suggested as you type.
 - **Notes**: free text, saved as you type.
 
+A project's panel also shows its DAW, how many audio files it holds, what's inside its folder, and
+buttons to reveal, copy, move or delete it. A file's panel shows when it last changed, its size and
+its length, and which project and folder it belongs to.
+
 Projects and their files stay in sync. Score or tag a project, and its audio files get the
 same. Score a file, and its project's score becomes the best score among its files.
 
 <p align="center">
-  <img src="docs/screenshots/project-detail.png" alt="A project's detail panel with status, score, tags, notes and folder contents" width="900">
+  <img src="docs/screenshots/project-detail.png" alt="A project's detail panel with its DAW, the Reveal, Copy, Move and Delete buttons, status, score, tags, notes and folder contents" width="900">
 </p>
 
 ### Search, filter and sort
@@ -182,11 +188,19 @@ highlighted one, and Space plays or pauses an audio file.
 
 ### Batch edit
 
-Tick several rows and press **Batch Edit** to give them all the same status or score, add a tag
-to all of them, or copy, move or delete them together.
+Tick several rows, or every row with the checkbox in the header, and press **Batch Edit**. From
+there you can:
+
+- set the same status on all of them;
+- give them all the same score;
+- add a tag to all of them, keeping the tags they already have;
+- copy, move or delete them together.
+
+A status or score applies as soon as you click it. Batch edit works in Project Folders, Audio
+Files and your custom tabs.
 
 <p align="center">
-  <img src="docs/screenshots/batch-edit.png" alt="The batch edit panel applying a score and a tag to two selected projects" width="900">
+  <img src="docs/screenshots/batch-edit.png" alt="The batch edit panel setting the status Need Mixing, a score of 3 and the tag wip on two selected projects" width="900">
 </p>
 
 ### Built-in player
@@ -210,6 +224,8 @@ another folder inside your library. Its status, score, tags and notes go with it
   this off in Settings.
 - Copying onto an existing name makes `Song copy.wav`, the way Finder does.
 - Moving never overwrites anything.
+- A notification at the top of the window confirms what was done, and for several items, how many
+  succeeded or failed.
 
 <p align="center">
   <img src="docs/screenshots/copy-move-delete.png" alt="The copy dialog with a destination folder picked inside the library" width="900">
@@ -341,6 +357,9 @@ The technical documentation is in [`docs/`](docs):
 - [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) describes how every feature behaves and covers
   the architecture, configuration, commands, desktop packaging and CI.
 - [`docs/COVERAGE.md`](docs/COVERAGE.md) maps each requirement to the tests that cover it.
+
+To build the desktop app and install it in `/Applications` on an Apple Silicon Mac, run
+`npm run install:mac`. It quits ProFolder first if it's running.
 
 To regenerate the screenshots and the video in this README, run `npm run showcase`, then
 `npm run showcase:compress` to shrink the video under GitHub's 10MB limit.

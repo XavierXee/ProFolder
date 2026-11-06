@@ -378,7 +378,9 @@ When("I set the folder status to {string}", async ({ page }, label: string) => {
 });
 
 Then("the folder detail panel should show status {string}", async ({ page }, label: string) => {
-  await expect(folderDetailPanel(page).locator(`[aria-label="Status: ${label}"]`)).toBeVisible();
+  await expect(
+    folderDetailPanel(page).getByRole("group", { name: "Select status" }).getByRole("button", { name: label, exact: true })
+  ).toHaveAttribute("aria-pressed", "true");
 });
 
 Then("the projects table row for {string} should show status {string}", async ({ page }, name: string, label: string) => {
@@ -400,7 +402,9 @@ When("I set the folder score to {int}", async ({ page }, value: number) => {
 });
 
 Then("the folder detail panel should show score {int}", async ({ page }, value: number) => {
-  await expect(folderDetailPanel(page).locator(`[aria-label="Score: ${value} of 5"]`)).toBeVisible();
+  await expect(
+    folderDetailPanel(page).getByRole("radiogroup", { name: "Set score" }).getByRole("radio", { name: `${value} of 5` })
+  ).toBeChecked();
 });
 
 Then("the projects table row for {string} should show score {int}", async ({ page }, name: string, value: number) => {

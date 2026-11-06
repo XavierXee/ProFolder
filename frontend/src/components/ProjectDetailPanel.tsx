@@ -4,8 +4,6 @@ import type { FolderNode, ProjectDetail, ProjectDuplicatesResult } from "../api/
 import type { Project, TrackStatus } from "../types.js";
 import { DAW_LABELS, UNKNOWN_STATUS_KEY } from "../types.js";
 import type { CopyMoveDeleteOperation } from "./CopyMoveDeleteDialog.js";
-import StatusBadge from "./StatusBadge.js";
-import ScoreBadge from "./ScoreBadge.js";
 import { ScoreEditor } from "./ScoreEditor.js";
 import { TagEditor } from "./TagEditor.js";
 import { buildStatusOptions, STATUS_BADGE, STATUS_PILL, STATUS_PILL_UNSELECTED } from "../statusStyles.js";
@@ -247,8 +245,6 @@ export default function ProjectDetailPanel({ project, allTags = [], onClose, onR
                 >
                   {typeLabel}
                 </span>
-                <StatusBadge status={status} />
-                <ScoreBadge score={score} />
                 <span className={`text-xs font-mono ${meta}`}>{project.audioFileCount} audio files</span>
               </div>
 
